@@ -1,0 +1,547 @@
+import React, { useState } from 'react';
+import { 
+  Users, 
+  UserPlus, 
+  Search, 
+  Trash2, 
+  SlidersHorizontal,
+  Edit2
+} from 'lucide-react';
+import { Mahasiswa, Dosen } from '../types';
+import CsvImporter from './CsvImporter';
+import DataActions from './DataActions';
+import { exportToExcel } from '../lib/exportUtils';
+import { ToastOptions } from './Toast';
+import { SkeletonTable } from './Skeleton';
+
+interface MahasiswaTabProps {
+  mahasiswa: Mahasiswa[];
+  dosen: Dosen[];
+  loading?: boolean;
+  onSaveMahasiswa: (mhs: Mahasiswa) => void;
+  onDeleteMahasiswa: (npm: string) => void;
+  onBulkImportMahasiswa: (data: any[]) => Promise<void>;
+  activeSubTab?: string;
+  triggerToast?: (options: ToastOptions) => void;
+}
+
+export default function MahasiswaTab({
+  mahasiswa,
+  dosen,
+  loading,
+  onSaveMahasiswa,
+  onDeleteMahasiswa,
+  onBulkImportMahasiswa,
+  triggerToast
+}: MahasiswaTabProps) {
+
+  // Search & Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterAngkatan, setFilterAngkatan] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [page, setPage] = useState(1);
+  const ROWS_PER_PAGE = 25;
+
+  // Modals / Form toggles
+  const [showAddMhs, setShowAddMhs] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+
+  // Editing state
+  const [editingMhs, setEditingMhs] = useState<Mahasiswa | null>(null);
+
+  // Forms states
+  const [mhsForm, setMhsForm] = useState<Mahasiswa>({
+    npm: '',
+    nama: '',
+    angkatan: new Date().getFullYear(),
+    jenis_kelamin: 'L',
+    fakultas: 'FMIPA',
+    prodi: 'Geofisika',
+    status: 'Regulasi Akademik',
+    nip_dosen_wali: '',
+    tahun_lulus: undefined
+  });
+
+  // Filter students
+  const filteredMahasiswa = mahasiswa.filter(m => {
+    const matchesSearch = m.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          m.npm.includes(searchQuery);
+    
+    const matchesAngkatan = filterAngkatan === 'All' || m.angkatan.toString() === filterAngkatan;
+    const matchesStatus = filterStatus === 'All' || m.status === filterStatus;
+
+    return matchesSearch && matchesAngkatan && matchesStatus;
+  });
+
+  const totalPages = Math.ceil(filteredMahasiswa.length / ROWS_PER_PAGE);
+  const safePage = Math.min(page, Math.max(1, totalPages));
+  const paginatedMahasiswa = filteredMahasiswa.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+
+  // Handle forms submit
+  const handleAddMhsSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mhsForm.nama || !mhsForm.npm) return;
+
+    onSaveMahasiswa({
+      ...mhsForm,
+      nip_dosen_wali: mhsForm.nip_dosen_wali || null
+    });
+    
+    // Reset
+    setMhsForm({
+      npm: '',
+      nama: '',
+      angkatan: new Date().getFullYear(),
+      jenis_kelamin: 'L',
+      fakultas: 'FMIPA',
+      prodi: 'Geofisika',
+      status: 'Regulasi Akademik',
+      nip_dosen_wali: '',
+      tahun_lulus: undefined
+    });
+    setShowAddMhs(false);
+    setEditingMhs(null);
+  };
+
+  const handleEditMhsClick = (m: Mahasiswa) => {
+    setEditingMhs(m);
+    setMhsForm({
+      ...m,
+      nip_dosen_wali: m.nip_dosen_wali || '',
+      tahun_lulus: m.tahun_lulus || undefined
+    });
+    setShowAddMhs(true);
+  };
+
+  // Fast reassignment
+  const handleQuickAssignDosen = (npm: string, dosenNip: string) => {
+    const student = mahasiswa.find(m => m.npm === npm);
+    if (student) {
+      onSaveMahasiswa({
+        ...student,
+        nip_dosen_wali: dosenNip === 'unassigned' ? null : dosenNip
+      });
+    }
+  };
+
+  const handleExportMhs = () => {
+    const dataToExport = mahasiswa.map(m => ({
+      'NPM': m.npm,
+      'Nama': m.nama,
+      'Angkatan': m.angkatan,
+      'Jenis Kelamin': m.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan',
+      'Fakultas': m.fakultas,
+      'Prodi': m.prodi,
+      'Status': m.status,
+      'NIP Dosen Wali': m.nip_dosen_wali || ''
+    }));
+    exportToExcel(dataToExport, 'data_mahasiswa_geofisika', 'Mahasiswa');
+    if (triggerToast) {
+      triggerToast({
+        kind: 'success',
+        title: 'Ekspor Berhasil',
+        message: `Berhasil mengunduh ${dataToExport.length} data mahasiswa ke Excel.`
+      });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
+        <div>
+          <h2 className="font-display font-extrabold text-xl text-[var(--color-text-main)]">Data Mahasiswa</h2>
+          <p className="text-xs text-[var(--color-text-main)]/50">Direktori dan plotting dosen wali mahasiswa Geofisika</p>
+        </div>
+        <div className="flex flex-wrap gap-2.5 w-full sm:w-auto">
+          <DataActions
+            onImportCsv={() => setShowImport(true)}
+            onImportExcel={() => setShowImport(true)}
+            onExportExcel={handleExportMhs}
+          />
+          <button
+            onClick={() => {
+              setEditingMhs(null);
+              setMhsForm({
+                npm: '',
+                nama: '',
+                angkatan: new Date().getFullYear(),
+                jenis_kelamin: 'L',
+                fakultas: 'FMIPA',
+                prodi: 'Geofisika',
+                status: 'Regulasi Akademik',
+                nip_dosen_wali: ''
+              });
+              setShowAddMhs(true);
+            }}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-base)] hover:bg-[var(--color-primary-light)] font-semibold text-xs rounded-xl transition shadow-md shadow-[var(--color-primary)]/10"
+          >
+            <UserPlus className="w-4 h-4" /> Mahasiswa Baru
+          </button>
+        </div>
+      </div>
+
+
+
+      {/* Main Student Directory with Search, Filter & Assignment */}
+      <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden">
+        {/* Sub-header Filter Panel */}
+        <div className="p-4 border-b border-gray-100 bg-[var(--color-primary)]/5 flex flex-col gap-3">
+          <div className="flex flex-col md:flex-row gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40" />
+              <input
+                type="text"
+                placeholder="Cari mahasiswa berdasarkan Nama, NPM..."
+                value={searchQuery}
+                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition"
+              />
+            </div>
+            
+            {/* Quick stats label inside filter */}
+            <div className="flex items-center gap-2 text-xs text-[var(--color-text-main)]/60 font-medium px-2 shrink-0">
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              Hasil filter: <b>{filteredMahasiswa.length}</b> mahasiswa
+            </div>
+          </div>
+
+          {/* Sliders / Filter Selection Rows */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+            {/* Cohort (Angkatan) */}
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Angkatan</label>
+              <select
+                value={filterAngkatan}
+                onChange={(e) => { setFilterAngkatan(e.target.value); setPage(1); }}
+                className="w-full p-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)]"
+              >
+                <option value="All">Semua Angkatan</option>
+                {[...new Set(mahasiswa.map(m => m.angkatan))].sort((a, b) => b - a).map(y => (
+                  <option key={y} value={y.toString()}>{y}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Status Akademik</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                className="w-full p-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)]"
+              >
+                <option value="All">Semua Status</option>
+                <option value="Regulasi Akademik">Regulasi Akademik</option>
+                <option value="Lulus">Lulus</option>
+                <option value="Alih Prodi">Alih Prodi</option>
+                <option value="Undur Diri">Undur Diri</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+          <SkeletonTable rows={10} cols={6} />
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 text-xs font-bold font-display uppercase tracking-wider">
+                    <th className="p-4 pl-6">NPM / Nama</th>
+                    <th className="p-4">Angkatan</th>
+                    <th className="p-4">Fakultas/Prodi</th>
+                    <th className="p-4">Status</th>
+                    <th className="p-4">Plotting Dosen Wali</th>
+                    <th className="p-4 pr-6 text-center">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {paginatedMahasiswa.map((student) => {
+                    return (
+                      <tr key={student.npm} className="hover:bg-gray-50/30 transition">
+                        <td className="p-4 pl-6">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-[var(--color-text-main)]">{student.nama}</span>
+                            <span className="text-xs text-[var(--color-text-main)]/50 font-mono mt-0.5">{student.npm}</span>
+                          </div>
+                        </td>
+                        <td className="p-4 text-[var(--color-text-main)]/70 font-medium">
+                          {student.angkatan}
+                        </td>
+                        <td className="p-4">
+                          <span className="text-xs font-medium text-[var(--color-text-main)]/75">
+                            {student.fakultas} - {student.prodi}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <span className={`chip ${
+                            student.status === 'Regulasi Akademik' ? 'status-regulasi' :
+                            student.status === 'Lulus' ? 'status-lulus' :
+                            student.status === 'Alih Prodi' ? 'status-alih' :
+                            'status-undur'
+                          }`}>
+                            {student.status}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              value={student.nip_dosen_wali || 'unassigned'}
+                              onChange={(e) => handleQuickAssignDosen(student.npm, e.target.value)}
+                              className={`text-xs p-1.5 border rounded-lg focus:outline-none focus:border-[var(--color-primary)] max-w-[200px] truncate ${
+                                !student.nip_dosen_wali 
+                                  ? 'select-unassigned' 
+                                  : 'border-gray-200 bg-white text-[var(--color-text-main)]/80'
+                              }`}
+                            >
+                              <option value="unassigned">⚠️ Belum Diplot</option>
+                              {dosen.filter(d => d.is_dosen_wali !== false).map(d => (
+                                <option key={d.nip} value={d.nip}>
+                                  {d.nama}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </td>
+                        <td className="p-4 pr-6 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleEditMhsClick(student)}
+                              className="p-1.5 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-lg transition"
+                              title="Edit Mahasiswa"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteMahasiswa(student.npm)}
+                              className="p-1.5 hover:bg-rose-50 text-gray-400 hover:text-rose-600 rounded-lg transition"
+                              title="Hapus Mahasiswa"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredMahasiswa.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-12 text-sm text-gray-400">
+                        Tidak menemukan mahasiswa sesuai kriteria pencarian & filter.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {filteredMahasiswa.length > ROWS_PER_PAGE && (
+              <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 bg-gray-50/30">
+                <span className="text-xs text-gray-500">
+                  Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-{Math.min(safePage * ROWS_PER_PAGE, filteredMahasiswa.length)} dari {filteredMahasiswa.length} mahasiswa
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
+                  >
+                    Prev
+                  </button>
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* MODAL: ADD / EDIT STUDENT */}
+      {showAddMhs && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+              <h3 className="font-display font-extrabold text-[var(--color-text-main)] text-base">
+                {editingMhs ? 'Edit Profil Mahasiswa' : 'Registrasi Mahasiswa Baru'}
+              </h3>
+              <button 
+                onClick={() => {
+                  setShowAddMhs(false);
+                  setEditingMhs(null);
+                }}
+                className="p-1 hover:bg-gray-100 rounded-md text-gray-400"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddMhsSubmit} className="space-y-4.5">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Nama Lengkap</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Contoh: Andi Pratama"
+                  value={mhsForm.nama}
+                  onChange={(e) => setMhsForm({...mhsForm, nama: e.target.value})}
+                  className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">NPM</label>
+                  <input 
+                    type="text" 
+                    required
+                    disabled={!!editingMhs}
+                    placeholder="Contoh: 12324001"
+                    value={mhsForm.npm}
+                    onChange={(e) => setMhsForm({...mhsForm, npm: e.target.value})}
+                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Angkatan</label>
+                  <input 
+                    type="number" 
+                    required
+                    value={mhsForm.angkatan}
+                    onChange={(e) => setMhsForm({...mhsForm, angkatan: Number(e.target.value)})}
+                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Jenis Kelamin</label>
+                  <select
+                    value={mhsForm.jenis_kelamin}
+                    onChange={(e) => setMhsForm({...mhsForm, jenis_kelamin: e.target.value})}
+                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                  >
+                    <option value="L">Laki-laki (L)</option>
+                    <option value="P">Perempuan (P)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Fakultas</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={mhsForm.fakultas}
+                    onChange={(e) => setMhsForm({...mhsForm, fakultas: e.target.value})}
+                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Program Studi</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={mhsForm.prodi}
+                    onChange={(e) => setMhsForm({...mhsForm, prodi: e.target.value})}
+                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Status Akademik</label>
+                  <select
+                    value={mhsForm.status}
+                    onChange={(e) => setMhsForm({...mhsForm, status: e.target.value as Mahasiswa['status']})}
+                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                  >
+                    <option value="Regulasi Akademik">Regulasi Akademik</option>
+                    <option value="Lulus">Lulus</option>
+                    <option value="Alih Prodi">Alih Prodi</option>
+                    <option value="Undur Diri">Undur Diri</option>
+                  </select>
+                </div>
+                {mhsForm.status === 'Lulus' && (
+                  <div>
+                    <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Tahun Lulus</label>
+                    <input
+                      type="number"
+                      placeholder="2024"
+                      value={mhsForm.tahun_lulus || ''}
+                      onChange={(e) => setMhsForm({...mhsForm, tahun_lulus: e.target.value ? Number(e.target.value) : undefined})}
+                      className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    />
+                  </div>
+                )}
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Dosen Wali (Opsional)</label>
+                  <select
+                    value={mhsForm.nip_dosen_wali || ''}
+                    onChange={(e) => setMhsForm({...mhsForm, nip_dosen_wali: e.target.value})}
+                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                  >
+                    <option value="">Belum Diplot</option>
+                    {dosen.filter(d => d.is_dosen_wali !== false).map(d => (
+                      <option key={d.nip} value={d.nip}>{d.nama}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2.5 justify-end pt-3">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setShowAddMhs(false);
+                    setEditingMhs(null);
+                  }}
+                  className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-50 transition"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2 bg-[var(--color-primary)] text-[var(--color-base)] hover:bg-[var(--color-primary-light)] rounded-xl text-xs font-semibold transition"
+                >
+                  {editingMhs ? 'Simpan Perubahan' : 'Daftarkan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: IMPORT CSV */}
+      {showImport && (
+        <CsvImporter 
+          title="Data Mahasiswa"
+          expectedHeaders={['NPM', 'Nama', 'Angkatan', 'Jenis Kelamin', 'Fakultas', 'Prodi', 'Status', 'NIP Dosen Wali']}
+          optionalHeaders={['NIP Dosen Wali']}
+          templateCsv={`NPM,Nama,Angkatan,Jenis Kelamin,Fakultas,Prodi,Status,NIP Dosen Wali
+31242001,Budi Santoso,2024,L,FMIPA,Geofisika,Regulasi Akademik,198203152008012003
+31242002,Siti Aminah,2024,P,FMIPA,Geofisika,Regulasi Akademik,199105202015032002
+31242003,Rully Hermawan,2024,L,FMIPA,Geofisika,Regulasi Akademik,198901142013121001
+31242004,Dina Kusuma,2024,P,FMIPA,Geofisika,Alih Prodi,198506232010012008
+31242005,Ahmad Rizki,2024,L,FMIPA,Geofisika,Regulasi Akademik,199203142014011002`}
+          templateData={[
+            { NPM: '31242001', Nama: 'Budi Santoso', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '198203152008012003' },
+            { NPM: '31242002', Nama: 'Siti Aminah', Angkatan: 2024, 'Jenis Kelamin': 'P', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '199105202015032002' },
+            { NPM: '31242003', Nama: 'Rully Hermawan', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '198901142013121001' },
+            { NPM: '31242004', Nama: 'Dina Kusuma', Angkatan: 2024, 'Jenis Kelamin': 'P', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Alih Prodi', 'NIP Dosen Wali': '198506232010012008' },
+            { NPM: '31242005', Nama: 'Ahmad Rizki', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '199203142014011002' }
+          ]}
+          onImport={onBulkImportMahasiswa}
+          onClose={() => setShowImport(false)}
+        />
+      )}
+    </div>
+  );
+}

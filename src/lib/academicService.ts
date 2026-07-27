@@ -1,0 +1,261 @@
+import { supabase } from './supabase';
+import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM, AnggotaPrestasi } from '../types';
+
+export const SUPABASE_DDL = `-- SALIN SCRIPT INI KE SQL EDITOR SUPABASE UNTUK MEMBUAT TABEL
+
+CREATE TABLE IF NOT EXISTS public.dosen (
+  nip TEXT PRIMARY KEY,
+  nama TEXT NOT NULL,
+  kode_dosen TEXT,
+  golongan TEXT,
+  pangkat TEXT,
+  jabatan TEXT,
+  is_dosen_wali BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.mahasiswa (
+  npm TEXT PRIMARY KEY,
+  nama TEXT NOT NULL,
+  angkatan INTEGER NOT NULL,
+  jenis_kelamin TEXT,
+  fakultas TEXT,
+  prodi TEXT,
+  status TEXT NOT NULL,
+  nip_dosen_wali TEXT REFERENCES public.dosen(nip) ON DELETE SET NULL,
+  tahun_lulus INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.prestasi (
+  id_prestasi UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  npm_mahasiswa VARCHAR,
+  nama_mahasiswa VARCHAR,
+  nama_kompetisi VARCHAR NOT NULL,
+  tingkat VARCHAR,
+  juara_ke INTEGER,
+  jenis_peserta VARCHAR NOT NULL DEFAULT 'Individu',
+  tahun_kegiatan INTEGER,
+  tempat VARCHAR,
+  dosen_pembimbing VARCHAR,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.anggota_prestasi (
+  id_anggota UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  id_prestasi UUID NOT NULL REFERENCES public.prestasi(id_prestasi) ON DELETE CASCADE,
+  npm TEXT,
+  nama_lengkap TEXT NOT NULL,
+  prodi TEXT,
+  universitas TEXT,
+  peran TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.riwayat_mbkm (
+  id_mbkm UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  npm_mahasiswa TEXT NOT NULL REFERENCES public.mahasiswa(npm) ON DELETE CASCADE,
+  tempat_instansi TEXT NOT NULL,
+  semester TEXT NOT NULL,
+  judul_topik_magang TEXT,
+  dosen_pembimbing_lapangan TEXT,
+  nip_dosen_pembimbing_dalam TEXT REFERENCES public.dosen(nip) ON DELETE SET NULL,
+  periode_magang TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+CREATE TABLE IF NOT EXISTS public.tracer_study (
+  id_tracer UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  npm_mahasiswa TEXT NOT NULL REFERENCES public.mahasiswa(npm) ON DELETE CASCADE,
+  tahun_lulus INTEGER NOT NULL,
+  status_lulusan TEXT NOT NULL,
+  masa_tunggu_bulan INTEGER DEFAULT 0,
+  -- Bekerja
+  instansi_pekerjaan TEXT,
+  jabatan TEXT,
+  tingkat_perusahaan TEXT,
+  -- Studi Lanjut
+  universitas_tujuan TEXT,
+  program_studi TEXT,
+  -- Wiraswasta
+  bidang_usaha TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.dosen DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.mahasiswa DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.prestasi DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.anggota_prestasi DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.riwayat_mbkm DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tracer_study DISABLE ROW LEVEL SECURITY;
+
+-- Migration: add columns for existing database
+ALTER TABLE public.mahasiswa ADD COLUMN IF NOT EXISTS tahun_lulus INTEGER;
+ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS tingkat_perusahaan TEXT;
+ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS universitas_tujuan TEXT;
+ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS program_studi TEXT;
+ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS bidang_usaha TEXT;
+
+-- Natural-key unique constraints (for upsert conflict resolution)
+ALTER TABLE public.riwayat_mbkm ADD CONSTRAINT riwayat_mbkm_unique UNIQUE (npm_mahasiswa, tempat_instansi, semester);
+ALTER TABLE public.prestasi ADD CONSTRAINT prestasi_unique UNIQUE (npm_mahasiswa, nama_kompetisi, juara_ke);
+ALTER TABLE public.tracer_study ADD CONSTRAINT tracer_unique UNIQUE (npm_mahasiswa, tahun_lulus);
+`;
+
+export const academicService = {
+  // --- DOSEN ---
+  async getDosen(): Promise<Dosen[]> {
+    const { data, error } = await supabase.from('dosen').select('*').order('nama', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data as Dosen[];
+  },
+
+  async saveDosen(dosen: Dosen): Promise<void> {
+    const { error } = await supabase.from('dosen').upsert(dosen, { onConflict: 'nip' });
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteDosen(nip: string): Promise<void> {
+    try {
+      const { error: updateError } = await supabase.from('mahasiswa').update({ nip_dosen_wali: null }).eq('nip_dosen_wali', nip);
+      if (updateError) console.warn("Supabase error updating related students' nip_dosen_wali:", updateError);
+    } catch (err) {
+      console.warn("Could not update related students in Supabase, proceeding with deletion:", err);
+    }
+    const { error } = await supabase.from('dosen').delete().eq('nip', nip);
+    if (error) throw new Error(error.message);
+  },
+
+  async bulkInsertDosen(data: Dosen[]): Promise<void> {
+    const { error } = await supabase.from('dosen').upsert(data, { onConflict: 'nip' });
+    if (error) throw new Error(error.message);
+  },
+
+  // --- MAHASISWA ---
+  async getMahasiswa(): Promise<Mahasiswa[]> {
+    const { data, error } = await supabase.from('mahasiswa').select('*').order('npm', { ascending: true });
+    if (error) throw new Error(error.message);
+    return data as Mahasiswa[];
+  },
+
+  async saveMahasiswa(mhs: Mahasiswa): Promise<void> {
+    const { error } = await supabase.from('mahasiswa').upsert(mhs, { onConflict: 'npm' });
+    if (error) throw new Error(error.message);
+  },
+
+  async bulkInsertMahasiswa(data: Mahasiswa[]): Promise<void> {
+    const { error } = await supabase.from('mahasiswa').upsert(data, { onConflict: 'npm' });
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteMahasiswa(npm: string): Promise<void> {
+    try {
+      const { error: err1 } = await supabase.from('prestasi').delete().eq('npm_mahasiswa', npm);
+      if (err1) console.warn("Supabase error deleting related prestasi:", err1);
+      const { error: err2 } = await supabase.from('riwayat_mbkm').delete().eq('npm_mahasiswa', npm);
+      if (err2) console.warn("Supabase error deleting related MBKM:", err2);
+      const { error: err3 } = await supabase.from('tracer_study').delete().eq('npm_mahasiswa', npm);
+      if (err3) console.warn("Supabase error deleting related tracer study:", err3);
+    } catch (err) {
+      console.warn("Could not clean up dependent rows in Supabase, proceeding with deletion:", err);
+    }
+    const { error } = await supabase.from('mahasiswa').delete().eq('npm', npm);
+    if (error) throw new Error(error.message);
+  },
+
+  // --- PRESTASI ---
+  async getPrestasi(): Promise<Prestasi[]> {
+    const { data, error } = await supabase.from('prestasi').select('*');
+    if (error) throw new Error(error.message);
+    return data as Prestasi[];
+  },
+
+  async savePrestasi(pres: Prestasi): Promise<void> {
+    const { error } = await supabase
+      .from('prestasi')
+      .upsert(pres, { onConflict: 'npm_mahasiswa, nama_kompetisi, juara_ke' });
+    if (error) throw new Error(error.message);
+  },
+
+  async deletePrestasi(id_prestasi: string): Promise<void> {
+    const { error } = await supabase.from('prestasi').delete().eq('id_prestasi', id_prestasi);
+    if (error) throw new Error(error.message);
+  },
+
+  // --- ANGGOTA PRESTASI ---
+  async getAnggotaPrestasi(): Promise<AnggotaPrestasi[]> {
+    const { data, error } = await supabase.from('anggota_prestasi').select('*');
+    if (error) throw new Error(error.message);
+    return data as AnggotaPrestasi[];
+  },
+
+  async getAnggotaByPrestasi(id_prestasi: number): Promise<AnggotaPrestasi[]> {
+    try {
+      const { data, error } = await supabase.from('anggota_prestasi').select('*').eq('id_prestasi', id_prestasi);
+      if (error) throw error;
+      return (data || []) as AnggotaPrestasi[];
+    } catch (err: any) {
+      console.error("Error fetching anggota prestasi:", err);
+      return [];
+    }
+  },
+
+  async saveAnggotaPrestasi(anggota: AnggotaPrestasi): Promise<void> {
+    const { error } = await supabase.from('anggota_prestasi').upsert(anggota);
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteAnggotaPrestasi(id_anggota: string): Promise<void> {
+    const { error } = await supabase.from('anggota_prestasi').delete().eq('id_anggota', id_anggota);
+    if (error) throw new Error(error.message);
+  },
+
+  async bulkReplaceAnggotaPrestasi(id_prestasi: string, anggota: AnggotaPrestasi[]): Promise<void> {
+    const { error: delError } = await supabase.from('anggota_prestasi').delete().eq('id_prestasi', id_prestasi);
+    if (delError) throw new Error(delError.message);
+    if (anggota.length > 0) {
+      const { error: insError } = await supabase.from('anggota_prestasi').insert(
+        anggota.map(({ id_anggota, ...rest }) => rest)
+      );
+      if (insError) throw new Error(insError.message);
+    }
+  },
+
+  // --- MBKM ---
+  async getMBKM(): Promise<RiwayatMBKM[]> {
+    const { data, error } = await supabase.from('riwayat_mbkm').select('*');
+    if (error) throw new Error(error.message);
+    return data as RiwayatMBKM[];
+  },
+
+  async saveMBKM(mbkm: RiwayatMBKM): Promise<void> {
+    const { error } = await supabase
+      .from('riwayat_mbkm')
+      .upsert(mbkm, { onConflict: 'npm_mahasiswa, tempat_instansi, semester' });
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteMBKM(id_mbkm: string): Promise<void> {
+    const { error } = await supabase.from('riwayat_mbkm').delete().eq('id_mbkm', id_mbkm);
+    if (error) throw new Error(error.message);
+  },
+
+  // --- TRACER ALUMNI ---
+  async getTracerAlumni(): Promise<TracerStudy[]> {
+    const { data, error } = await supabase.from('tracer_study').select('*');
+    if (error) throw new Error(error.message);
+    return data as TracerStudy[];
+  },
+
+  async saveTracerAlumni(alumni: TracerStudy): Promise<void> {
+    const { error } = await supabase
+      .from('tracer_study')
+      .upsert(alumni, { onConflict: 'npm_mahasiswa, tahun_lulus' });
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteTracerAlumni(id_tracer: string): Promise<void> {
+    const { error } = await supabase.from('tracer_study').delete().eq('id_tracer', id_tracer);
+    if (error) throw new Error(error.message);
+  },
+};

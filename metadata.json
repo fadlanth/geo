@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Informasi Akademik Geofisika",
+  "description": "Dashboard Sistem Informasi Akademik Geofisika dengan Bento Grid, statistik mahasiswa, plotting dosen wali, tracking prestasi, dan tracer study alumni.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
