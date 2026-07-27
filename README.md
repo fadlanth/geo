@@ -1,20 +1,29 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# GEO INFO — Sistem Informasi Akademik Geofisika UNPAD
 
-# Run and deploy your AI Studio app
+Dashboard akademik berbasis web untuk Program Studi Geofisika UNPAD. Dibangun dengan React + TypeScript + Supabase.
 
-This contains everything you need to run your app locally.
+## Fitur
 
-View your app in AI Studio: https://ai.studio/apps/a97d20d8-e6e9-41e4-816e-315afb401705
+| Fitur | Deskripsi |
+|-------|-----------|
+| **Ringkasan** | Dashboard overview: statistik mahasiswa, dosen, prestasi, MBKM, tracer alumni |
+| **Mahasiswa** | CRUD, plotting dosen wali, filter angkatan/status, import/export Excel |
+| **Dosen** | CRUD, status wali/non-wali, distribusi jabatan & golongan, grafik interaktif |
+| **Prestasi** | CRUD prestasi + anggota kelompok, expandable detail, filter tingkat/juara |
+| **Magang & MBKM** | CRUD riwayat magang, pembimbing lapangan & dalam, filter semester |
+| **Tracer Study** | CRUD profil lulusan (Bekerja/Studi Lanjut/Wiraswasta), dashboard analitik, donut chart status, distribusi tingkat perusahaan |
 
-## Run Locally
+## Tech Stack
 
-**Prerequisites:**  Node.js
+- **Frontend:** React 19 + TypeScript + Vite
+- **UI:** Tailwind CSS + Recharts (grafik)
+- **Backend:** Supabase (PostgreSQL)
 
+## Cara Menjalankan
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+```bash
+npm install
+npm run dev
+```
+
+Buka `http://localhost:5173`.
