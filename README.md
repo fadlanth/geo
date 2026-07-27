@@ -1,6 +1,6 @@
-# GEO INFO — Sistem Informasi Akademik Geofisika UNPAD
+# GEO INFO — Sistem Informasi Akademik Geofisika
 
-Dashboard akademik berbasis web untuk Program Studi Geofisika UNPAD. Dibangun dengan React + TypeScript + Supabase.
+Dashboard akademik berbasis web untuk Program Studi Geofisika. Dibangun dengan React + TypeScript + Supabase.
 
 ## Fitur
 
