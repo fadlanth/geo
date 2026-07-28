@@ -133,6 +133,7 @@ export default function MahasiswaTab({
       'Fakultas': m.fakultas,
       'Prodi': m.prodi,
       'Status': m.status,
+      'Tahun Lulus': m.tahun_lulus || '',
       'NIP Dosen Wali': m.nip_dosen_wali || ''
     }));
     exportToExcel(dataToExport, 'data_mahasiswa_geofisika', 'Mahasiswa');
@@ -153,7 +154,7 @@ export default function MahasiswaTab({
           <h2 className="font-display font-extrabold text-xl text-[var(--color-text-main)]">Data Mahasiswa</h2>
           <p className="text-xs text-[var(--color-text-main)]/50">Direktori dan plotting dosen wali mahasiswa Geofisika</p>
         </div>
-        <div className="flex flex-wrap gap-2.5 w-full sm:w-auto">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <DataActions
             onImportCsv={() => setShowImport(true)}
             onImportExcel={() => setShowImport(true)}
@@ -184,6 +185,13 @@ export default function MahasiswaTab({
 
 
       {/* Main Student Directory with Search, Filter & Assignment */}
+      {!loading && mahasiswa.length === 0 ? (
+        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
+          <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
+          <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data mahasiswa</h3>
+          <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Mahasiswa Baru" atau import CSV/Excel untuk menambahkan data</p>
+        </div>
+      ) : (
       <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden">
         {/* Sub-header Filter Panel */}
         <div className="p-4 border-b border-gray-100 bg-[var(--color-primary)]/5 flex flex-col gap-3">
@@ -208,7 +216,7 @@ export default function MahasiswaTab({
           </div>
 
           {/* Sliders / Filter Selection Rows */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
             {/* Cohort (Angkatan) */}
             <div>
               <label className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Angkatan</label>
@@ -362,7 +370,7 @@ export default function MahasiswaTab({
             )}
           </>
         )}
-      </div>
+      </div>)}
 
       {/* MODAL: ADD / EDIT STUDENT */}
       {showAddMhs && (
@@ -383,7 +391,7 @@ export default function MahasiswaTab({
               </button>
             </div>
 
-            <form onSubmit={handleAddMhsSubmit} className="space-y-4.5">
+            <form onSubmit={handleAddMhsSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Nama Lengkap</label>
                 <input 
@@ -392,7 +400,7 @@ export default function MahasiswaTab({
                   placeholder="Contoh: Andi Pratama"
                   value={mhsForm.nama}
                   onChange={(e) => setMhsForm({...mhsForm, nama: e.target.value})}
-                  className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                  className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                 />
               </div>
 
@@ -406,7 +414,7 @@ export default function MahasiswaTab({
                     placeholder="Contoh: 12324001"
                     value={mhsForm.npm}
                     onChange={(e) => setMhsForm({...mhsForm, npm: e.target.value})}
-                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                   />
                 </div>
                 <div>
@@ -416,7 +424,7 @@ export default function MahasiswaTab({
                     required
                     value={mhsForm.angkatan}
                     onChange={(e) => setMhsForm({...mhsForm, angkatan: Number(e.target.value)})}
-                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   />
                 </div>
               </div>
@@ -427,7 +435,7 @@ export default function MahasiswaTab({
                   <select
                     value={mhsForm.jenis_kelamin}
                     onChange={(e) => setMhsForm({...mhsForm, jenis_kelamin: e.target.value})}
-                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   >
                     <option value="L">Laki-laki (L)</option>
                     <option value="P">Perempuan (P)</option>
@@ -440,7 +448,7 @@ export default function MahasiswaTab({
                     required
                     value={mhsForm.fakultas}
                     onChange={(e) => setMhsForm({...mhsForm, fakultas: e.target.value})}
-                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   />
                 </div>
               </div>
@@ -453,7 +461,7 @@ export default function MahasiswaTab({
                     required
                     value={mhsForm.prodi}
                     onChange={(e) => setMhsForm({...mhsForm, prodi: e.target.value})}
-                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   />
                 </div>
                 <div>
@@ -461,7 +469,7 @@ export default function MahasiswaTab({
                   <select
                     value={mhsForm.status}
                     onChange={(e) => setMhsForm({...mhsForm, status: e.target.value as Mahasiswa['status']})}
-                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   >
                     <option value="Regulasi Akademik">Regulasi Akademik</option>
                     <option value="Lulus">Lulus</option>
@@ -477,7 +485,7 @@ export default function MahasiswaTab({
                       placeholder="2024"
                       value={mhsForm.tahun_lulus || ''}
                       onChange={(e) => setMhsForm({...mhsForm, tahun_lulus: e.target.value ? Number(e.target.value) : undefined})}
-                      className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                      className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                     />
                   </div>
                 )}
@@ -486,7 +494,7 @@ export default function MahasiswaTab({
                   <select
                     value={mhsForm.nip_dosen_wali || ''}
                     onChange={(e) => setMhsForm({...mhsForm, nip_dosen_wali: e.target.value})}
-                    className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   >
                     <option value="">Belum Diplot</option>
                     {dosen.filter(d => d.is_dosen_wali !== false).map(d => (
@@ -496,7 +504,7 @@ export default function MahasiswaTab({
                 </div>
               </div>
 
-              <div className="flex gap-2.5 justify-end pt-3">
+              <div className="flex gap-2 justify-end pt-3">
                 <button 
                   type="button"
                   onClick={() => {
@@ -523,20 +531,20 @@ export default function MahasiswaTab({
       {showImport && (
         <CsvImporter 
           title="Data Mahasiswa"
-          expectedHeaders={['NPM', 'Nama', 'Angkatan', 'Jenis Kelamin', 'Fakultas', 'Prodi', 'Status', 'NIP Dosen Wali']}
-          optionalHeaders={['NIP Dosen Wali']}
-          templateCsv={`NPM,Nama,Angkatan,Jenis Kelamin,Fakultas,Prodi,Status,NIP Dosen Wali
-31242001,Budi Santoso,2024,L,FMIPA,Geofisika,Regulasi Akademik,198203152008012003
-31242002,Siti Aminah,2024,P,FMIPA,Geofisika,Regulasi Akademik,199105202015032002
-31242003,Rully Hermawan,2024,L,FMIPA,Geofisika,Regulasi Akademik,198901142013121001
-31242004,Dina Kusuma,2024,P,FMIPA,Geofisika,Alih Prodi,198506232010012008
-31242005,Ahmad Rizki,2024,L,FMIPA,Geofisika,Regulasi Akademik,199203142014011002`}
+          expectedHeaders={['NPM', 'Nama', 'Angkatan', 'Jenis Kelamin', 'Fakultas', 'Prodi', 'Status', 'NIP Dosen Wali', 'Tahun Lulus']}
+          optionalHeaders={['NIP Dosen Wali', 'Tahun Lulus']}
+          templateCsv={`NPM,Nama,Angkatan,Jenis Kelamin,Fakultas,Prodi,Status,NIP Dosen Wali,Tahun Lulus
+31242001,Budi Santoso,2024,L,FMIPA,Geofisika,Regulasi Akademik,198203152008012003,
+31242002,Siti Aminah,2024,P,FMIPA,Geofisika,Lulus,199105202015032002,2028
+31242003,Rully Hermawan,2024,L,FMIPA,Geofisika,Regulasi Akademik,198901142013121001,
+31242004,Dina Kusuma,2024,P,FMIPA,Geofisika,Alih Prodi,198506232010012008,
+31242005,Ahmad Rizki,2024,L,FMIPA,Geofisika,Regulasi Akademik,199203142014011002,`}
           templateData={[
-            { NPM: '31242001', Nama: 'Budi Santoso', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '198203152008012003' },
-            { NPM: '31242002', Nama: 'Siti Aminah', Angkatan: 2024, 'Jenis Kelamin': 'P', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '199105202015032002' },
-            { NPM: '31242003', Nama: 'Rully Hermawan', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '198901142013121001' },
-            { NPM: '31242004', Nama: 'Dina Kusuma', Angkatan: 2024, 'Jenis Kelamin': 'P', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Alih Prodi', 'NIP Dosen Wali': '198506232010012008' },
-            { NPM: '31242005', Nama: 'Ahmad Rizki', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '199203142014011002' }
+            { NPM: '31242001', Nama: 'Budi Santoso', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '198203152008012003', 'Tahun Lulus': '' },
+            { NPM: '31242002', Nama: 'Siti Aminah', Angkatan: 2024, 'Jenis Kelamin': 'P', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Lulus', 'NIP Dosen Wali': '199105202015032002', 'Tahun Lulus': 2028 },
+            { NPM: '31242003', Nama: 'Rully Hermawan', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '198901142013121001', 'Tahun Lulus': '' },
+            { NPM: '31242004', Nama: 'Dina Kusuma', Angkatan: 2024, 'Jenis Kelamin': 'P', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Alih Prodi', 'NIP Dosen Wali': '198506232010012008', 'Tahun Lulus': '' },
+            { NPM: '31242005', Nama: 'Ahmad Rizki', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '199203142014011002', 'Tahun Lulus': '' }
           ]}
           onImport={onBulkImportMahasiswa}
           onClose={() => setShowImport(false)}

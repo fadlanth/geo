@@ -7,29 +7,14 @@ import {
   SlidersHorizontal,
   Edit2,
   Users,
-  Award,
-  BookOpen,
-  PieChart as PieChartIcon
+  BookOpen
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell, 
-  Tooltip, 
-  Legend,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid
-} from 'recharts';
 import { Dosen, Mahasiswa } from '../types';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import CsvImporter from './CsvImporter';
 import DataActions from './DataActions';
-import { SkeletonTable } from './Skeleton';
+import { SkeletonTable, SkeletonCard } from './Skeleton';
 
 interface DosenTabProps {
   dosen: Dosen[];
@@ -109,24 +94,6 @@ export default function DosenTab({
 
     try {
       await onSaveDosen(form);
-      
-      if (editingDosen) {
-        if (triggerToast) {
-          triggerToast({
-            kind: 'success',
-            title: 'Data Dosen Diperbarui',
-            message: `Data dosen ${form.nama} berhasil diperbarui.`
-          });
-        }
-      } else {
-        if (triggerToast) {
-          triggerToast({
-            kind: 'success',
-            title: 'Dosen Baru Terdaftar',
-            message: `Berhasil mendaftarkan dosen baru: ${form.nama}.`
-          });
-        }
-      }
 
       setForm({
         nip: '',
@@ -139,14 +106,8 @@ export default function DosenTab({
       });
       setShowAddModal(false);
       setEditingDosen(null);
-    } catch (err: any) {
-      if (triggerToast) {
-        triggerToast({
-          kind: 'error',
-          title: 'Gagal Menyimpan',
-          message: err.message || 'Terjadi kesalahan saat menyimpan data.'
-        });
-      }
+    } catch {
+      // error toast already handled by App.tsx
     }
   };
 
@@ -185,26 +146,6 @@ export default function DosenTab({
   const totalWali = dosen.filter(d => d.is_dosen_wali).length;
   const totalBiasa = totalDosen - totalWali;
 
-  // Jabatan distribution for pie chart
-  const jabMap: Record<string, number> = {};
-  dosen.forEach(d => {
-    const jab = d.jabatan || 'Asisten Ahli';
-    jabMap[jab] = (jabMap[jab] || 0) + 1;
-  });
-  const jabatanChartData = Object.entries(jabMap).map(([name, value]) => ({ name, value }));
-
-  // Golongan distribution for bar chart
-  const golMap: Record<string, number> = {};
-  dosen.forEach(d => {
-    const gol = d.golongan || 'Lainnya';
-    golMap[gol] = (golMap[gol] || 0) + 1;
-  });
-  const golonganChartData = Object.entries(golMap)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  const COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'];
-
   return (
     <div className="space-y-6">
       {/* Header Actions */}
@@ -240,103 +181,57 @@ export default function DosenTab({
         </div>
       </div>
 
-      {/* Summary Widget Analytics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Left Card: Totals */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-            <BookOpen className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-semibold">Total Dosen Terdaftar</p>
-            <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">{totalDosen} Orang</h3>
-            <p className="text-[10px] text-gray-500 mt-1">Aktif mengajar di Geofisika UNPAD</p>
-          </div>
+      {/* Summary */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
+      ) : totalDosen === 0 ? (
+        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
+          <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
+          <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data dosen</h3>
+          <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Registrasi Dosen" untuk menambahkan data pertama</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 font-semibold">Total Dosen Terdaftar</p>
+              <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">{totalDosen} Orang</h3>
+              <p className="text-[10px] text-gray-500 mt-1">Aktif mengajar di Geofisika UNPAD</p>
+            </div>
+          </div>
 
-        {/* Middle Card: Advisor Status */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-green-50 text-green-600 rounded-xl">
-            <UserCheck className="w-6 h-6" />
+          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-green-50 text-green-600 rounded-xl">
+              <UserCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 font-semibold">Status Pembimbing</p>
+              <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">{totalWali} Dosen Wali</h3>
+              <p className="text-[10px] text-gray-500 mt-1">{totalBiasa} Dosen non-pembimbing akademik</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-gray-400 font-semibold">Status Pembimbing</p>
-            <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">{totalWali} Dosen Wali</h3>
-            <p className="text-[10px] text-gray-500 mt-1">{totalBiasa} Dosen non-pembimbing akademik</p>
-          </div>
-        </div>
 
-        {/* Right Card: Average Bimbingan */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-            <Users className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-400 font-semibold">Rasio Bimbingan Mahasiswa</p>
-            <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">
-              {totalWali > 0 ? (mahasiswa.length / totalWali).toFixed(1) : 0} Mhs/Wali
-            </h3>
-            <p className="text-[10px] text-gray-500 mt-1">Beban bimbingan per dosen wali</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Visual Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Chart 1: Jabatan Fungsional */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
-          <h3 className="font-display font-bold text-sm text-[var(--color-text-main)] mb-4 flex items-center gap-2">
-            <PieChartIcon className="w-4 h-4 text-blue-500" /> Distribusi Jabatan Fungsional
-          </h3>
-          <div className="h-60 flex-1 relative">
-            {jabatanChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={jabatanChartData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                    outerRadius={75}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {jabatanChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(val) => [`${val} Dosen`, 'Jumlah']} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-xs text-gray-400">Tidak ada data</div>
-            )}
+          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+              <Users className="w-6 h-6" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 font-semibold">Rasio Bimbingan Mahasiswa</p>
+              <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">
+                {totalWali > 0 ? (mahasiswa.length / totalWali).toFixed(1) : 0} Mhs/Wali
+              </h3>
+              <p className="text-[10px] text-gray-500 mt-1">Beban bimbingan per dosen wali</p>
+            </div>
           </div>
         </div>
-
-        {/* Chart 2: Golongan */}
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex flex-col">
-          <h3 className="font-display font-bold text-sm text-[var(--color-text-main)] mb-4 flex items-center gap-2">
-            <Award className="w-4 h-4 text-indigo-500" /> Distribusi Golongan Kepegawaian
-          </h3>
-          <div className="h-60 flex-1">
-            {golonganChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={golonganChartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                  <Tooltip formatter={(val) => [`${val} Dosen`, 'Jumlah']} />
-                  <Bar dataKey="value" fill="#4f46e5" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-xs text-gray-400">Tidak ada data</div>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Directory & Controls */}
       <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden shadow-sm">
@@ -615,7 +510,7 @@ export default function DosenTab({
                       type="checkbox" 
                       checked={form.is_dosen_wali}
                       onChange={(e) => setForm({...form, is_dosen_wali: e.target.checked})}
-                      className="w-4.5 h-4.5 text-[var(--color-primary)] border-gray-300 rounded focus:ring-[var(--color-primary)]"
+                      className="w-4 h-4 text-[var(--color-primary)] border-gray-300 rounded focus:ring-[var(--color-primary)]"
                     />
                     <span className="text-xs font-semibold text-gray-700">Dosen Wali (Pembimbing Akademik)</span>
                   </label>

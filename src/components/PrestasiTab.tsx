@@ -15,14 +15,12 @@ import {
   MapPin,
   UserCheck,
   Users,
-  UserPlus,
-  X
+  UserPlus
 } from 'lucide-react';
 import { Prestasi, Mahasiswa, AnggotaPrestasi, getPrestasiNamaMahasiswa } from '../types';
-import { academicService } from '../lib/academicService';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
-import { SkeletonTable } from './Skeleton';
+import { SkeletonTable, SkeletonCard } from './Skeleton';
 import ComboboxMahasiswa from './ComboboxMahasiswa';
 
 interface PrestasiTabProps {
@@ -35,6 +33,7 @@ interface PrestasiTabProps {
   onSaveAnggota: (anggota: AnggotaPrestasi) => void;
   onDeleteAnggota: (id: string) => void;
   onBulkReplaceAnggota: (id_prestasi: string, anggota: AnggotaPrestasi[]) => void;
+  onBulkImportPrestasi: (data: any[]) => Promise<void>;
   onRefresh: () => Promise<void>;
   activeSubTab?: string;
   triggerToast?: (options: ToastOptions) => void;
@@ -47,13 +46,6 @@ function formatDate(dateStr?: string): string {
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function parseJuaraKe(val: any): number {
-  const n = Number(val);
-  if (!isNaN(n)) return n;
-  const m = String(val).match(/(\d+)/);
-  return m ? parseInt(m[1], 10) : 0;
-}
-
 export default function PrestasiTab({
   prestasi,
   mahasiswa,
@@ -64,6 +56,7 @@ export default function PrestasiTab({
   onSaveAnggota,
   onDeleteAnggota,
   onBulkReplaceAnggota,
+  onBulkImportPrestasi,
   onRefresh,
   triggerToast
 }: PrestasiTabProps) {
@@ -78,6 +71,7 @@ export default function PrestasiTab({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingPrestasi, setEditingPrestasi] = useState<Prestasi | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState<Prestasi>({
     npm_mahasiswa: '',
     nama_mahasiswa: '',
@@ -113,9 +107,29 @@ export default function PrestasiTab({
     return matchesSearch && matchesTingkat && matchesJuara;
   });
 
-  const totalPages = Math.ceil(filteredPrestasi.length / ROWS_PER_PAGE);
+  // Auto-sort: best achievements first
+  const SORT_WEIGHT: Record<string, number> = {
+    Internasional: 4, Nasional: 3, Wilayah: 2, Universitas: 1
+  };
+  const sortedPrestasi = [...filteredPrestasi].sort((a, b) => {
+    const weightA = (SORT_WEIGHT[a.tingkat] || 0) + (4 - (a.juara_ke || 3));
+    const weightB = (SORT_WEIGHT[b.tingkat] || 0) + (4 - (b.juara_ke || 3));
+    return weightB - weightA || (b.tahun_kegiatan || 0) - (a.tahun_kegiatan || 0);
+  });
+
+  const totalPages = Math.ceil(sortedPrestasi.length / ROWS_PER_PAGE);
   const safePage = Math.min(page, Math.max(1, totalPages));
-  const paginatedPrestasi = filteredPrestasi.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+  const paginatedPrestasi = sortedPrestasi.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+
+  // Top achievements for highlight section
+  const topPrestasi = prestasi
+    .filter(p => p.juara_ke === 1 && ['Nasional', 'Internasional'].includes(p.tingkat))
+    .sort((a, b) => {
+      const wA = SORT_WEIGHT[a.tingkat] || 0;
+      const wB = SORT_WEIGHT[b.tingkat] || 0;
+      return wB - wA || (b.tahun_kegiatan || 0) - (a.tahun_kegiatan || 0);
+    })
+    .slice(0, 5);
 
   const handleEditClick = (p: Prestasi) => {
     setEditingPrestasi(p);
@@ -133,27 +147,33 @@ export default function PrestasiTab({
     setShowAddModal(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nama_kompetisi) return;
+    if (!form.nama_kompetisi) {
+      if (triggerToast) {
+        triggerToast({
+          kind: 'error',
+          title: 'Validasi Gagal',
+          message: 'Nama kompetisi harus diisi.'
+        });
+      }
+      return;
+    }
 
     const data: Prestasi = editingPrestasi
       ? { ...form, id_prestasi: editingPrestasi.id_prestasi }
       : form;
 
-    onSavePrestasi(data);
-    if (triggerToast) {
-      triggerToast({
-        kind: 'success',
-        title: editingPrestasi ? 'Prestasi Diperbarui' : 'Prestasi Dicatat',
-        message: editingPrestasi
-          ? 'Berhasil memperbarui data prestasi.'
-          : 'Berhasil mencatat prestasi mahasiswa baru.'
-      });
+    setIsSubmitting(true);
+    try {
+      await onSavePrestasi(data);
+      resetForm();
+      setShowAddModal(false);
+    } catch {
+      // error toast already handled by App.tsx
+    } finally {
+      setIsSubmitting(false);
     }
-
-    resetForm();
-    setShowAddModal(false);
   };
 
   const resetForm = () => {
@@ -279,31 +299,85 @@ export default function PrestasiTab({
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-          <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Total Prestasi</p>
-          <p className="text-2xl font-bold font-display">{prestasi.length}</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-          <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Nasional & Int'l</p>
-          <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{totalNasionalIntl}</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-          <p className="text-xs font-semibold mb-1 flex items-center gap-1"><span className="chip status-juara1">Juara 1</span> <Trophy className="w-3 h-3"/></p>
-          <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara1}</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10 flex gap-4">
-          <div className="flex-1">
-            <p className="text-xs font-semibold mb-1 flex items-center gap-1"><span className="chip status-juara2">Juara 2</span></p>
-            <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara2}</p>
+      {/* Summary & Unggulan */}
+      {loading ? (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
           </div>
-          <div className="flex-1 border-l border-gray-200 pl-4">
-            <p className="text-xs font-semibold mb-1 flex items-center gap-1"><span className="chip status-juara3">Juara 3</span></p>
-            <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara3}</p>
-          </div>
+        </>
+      ) : prestasi.length === 0 ? (
+        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
+          <Trophy className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
+          <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data prestasi</h3>
+          <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Catat Prestasi Baru" untuk menambahkan data pertama</p>
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
+              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Total Prestasi</p>
+              <p className="text-2xl font-bold font-display">{prestasi.length}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
+              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Nasional & Int'l</p>
+              <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{totalNasionalIntl}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
+              <p className="text-xs font-semibold mb-1 flex items-center gap-1"><span className="chip status-juara1">Juara 1</span> <Trophy className="w-3 h-3"/></p>
+              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara1}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10 flex gap-4">
+              <div className="flex-1">
+                <p className="text-xs font-semibold mb-1 flex items-center gap-1"><span className="chip status-juara2">Juara 2</span></p>
+                <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara2}</p>
+              </div>
+              <div className="flex-1 border-l border-gray-200 pl-4">
+                <p className="text-xs font-semibold mb-1 flex items-center gap-1"><span className="chip status-juara3">Juara 3</span></p>
+                <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara3}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Prestasi Unggulan */}
+          {topPrestasi.length > 0 && (
+            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200/60 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="w-5 h-5 text-yellow-600" />
+                <h3 className="font-bold text-sm text-yellow-800">Prestasi Unggulan</h3>
+                <span className="text-xs text-yellow-600/70 font-medium">Juara 1 tingkat Nasional & Internasional</span>
+              </div>
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
+                {topPrestasi.map(p => {
+                  const mhs = mahasiswa.find(m => m.npm === p.npm_mahasiswa);
+                  return (
+                    <div key={p.id_prestasi} className="bg-white rounded-xl border border-yellow-200 p-4 min-w-[240px] max-w-[260px] shadow-sm shrink-0 hover:shadow-md transition">
+                      <div className="flex items-start justify-between mb-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          p.tingkat === 'Internasional' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {p.tingkat}
+                        </span>
+                        <span className="text-yellow-500 font-bold text-sm">🏆 Juara 1</span>
+                      </div>
+                      <p className="font-bold text-sm text-[var(--color-text-main)] leading-tight mb-1">{p.nama_kompetisi}</p>
+                      <p className="text-xs text-[var(--color-text-main)]/60">{mhs ? mhs.nama : p.nama_mahasiswa || '-'}</p>
+                      {p.tahun_kegiatan && (
+                        <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {p.tahun_kegiatan}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {showImport && (
         <CsvImporter
@@ -317,51 +391,7 @@ export default function PrestasiTab({
             { npm_mahasiswa: '31242001', nama_mahasiswa: '', nama_kompetisi: 'Kompetisi Gempa', tingkat: 'Nasional', juara_ke: 1, jenis_peserta: 'Individu', tahun_kegiatan: 2025, tempat: 'Bandung', dosen_pembimbing: 'Dr. Subroto' },
             { npm_mahasiswa: '', nama_mahasiswa: 'Andi Pratama', nama_kompetisi: 'Kontes Seismik', tingkat: 'Wilayah', juara_ke: 2, jenis_peserta: 'Individu', tahun_kegiatan: 2024, tempat: 'Jakarta', dosen_pembimbing: '' }
           ]}
-          onImport={async (data) => {
-            let count = 0;
-            let errors = 0;
-            for (const row of data) {
-              const npm = String(row.npm_mahasiswa || row['NPM Mahasiswa'] || row['NPM'] || row['npm'] || '').trim();
-              const namaMhs = String(row.nama_mahasiswa || row['Nama Mahasiswa'] || row['Nama'] || '').trim();
-              if (!npm && !namaMhs) { errors++; continue; }
-              const p: Prestasi = {
-                npm_mahasiswa: npm || undefined,
-                nama_mahasiswa: namaMhs || undefined,
-                nama_kompetisi: String(row.nama_kompetisi || row['Nama Kompetisi'] || '').trim(),
-                tingkat: (row.tingkat || row['Tingkat'] || 'Nasional') as any,
-                juara_ke: parseJuaraKe(row.juara_ke || row['Juara Ke'] || 0),
-                jenis_peserta: (row.jenis_peserta || row['Jenis Peserta'] || 'Individu') as 'Individu' | 'Kelompok',
-                tahun_kegiatan: Number(row.tahun_kegiatan || row['Tahun'] || row['Tahun Kegiatan'] || 0) || undefined,
-                tempat: String(row.tempat || row['Tempat'] || '').trim() || undefined,
-                dosen_pembimbing: String(row.dosen_pembimbing || row['Dosen Pembimbing'] || row['Dospem'] || '').trim() || undefined
-              };
-              if (!p.nama_kompetisi) { errors++; continue; }
-              try {
-                await academicService.savePrestasi(p);
-                count++;
-              } catch {
-                errors++;
-              }
-            }
-            await onRefresh();
-            if (triggerToast) {
-              if (count > 0) {
-                triggerToast({
-                  kind: 'success',
-                  title: 'Import Prestasi Berhasil',
-                  message: errors > 0
-                    ? `${count} data berhasil diimport, ${errors} gagal.`
-                    : `Berhasil menambahkan/memperbarui ${count} data prestasi.`
-                });
-              } else {
-                triggerToast({
-                  kind: 'error',
-                  title: 'Import Gagal',
-                  message: 'Tidak ada data prestasi valid yang dapat diimport.'
-                });
-              }
-            }
-          }}
+          onImport={onBulkImportPrestasi}
           onClose={() => setShowImport(false)}
         />
       )}
@@ -828,9 +858,14 @@ export default function PrestasiTab({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary-light)]"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary-light)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {editingPrestasi ? 'Simpan Perubahan' : 'Simpan Prestasi'}
+                  {isSubmitting ? (
+                    <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Menyimpan...</>
+                  ) : (
+                    editingPrestasi ? 'Simpan Perubahan' : 'Simpan Prestasi'
+                  )}
                 </button>
               </div>
             </form>

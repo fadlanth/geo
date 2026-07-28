@@ -84,6 +84,7 @@ export default function TracerTab({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingAlumni, setEditingAlumni] = useState<TracerStudy | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState<TracerStudy>({
     npm_mahasiswa: '',
     tahun_lulus: new Date().getFullYear(),
@@ -167,27 +168,33 @@ export default function TracerTab({
     setShowAddModal(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.npm_mahasiswa) return;
+    if (!form.npm_mahasiswa) {
+      if (triggerToast) {
+        triggerToast({
+          kind: 'error',
+          title: 'Validasi Gagal',
+          message: 'Pilih mahasiswa lulusan terlebih dahulu.'
+        });
+      }
+      return;
+    }
 
     const data: TracerStudy = editingAlumni
       ? { ...form, id_tracer: editingAlumni.id_tracer }
       : form;
 
-    onSaveAlumni(data);
-    if (triggerToast) {
-      triggerToast({
-        kind: 'success',
-        title: editingAlumni ? 'Data Tracer Diperbarui' : 'Tracer Dicatat',
-        message: editingAlumni
-          ? 'Berhasil memperbarui data tracer study alumni.'
-          : 'Berhasil mencatat data tracer study alumni baru.'
-      });
+    setIsSubmitting(true);
+    try {
+      await onSaveAlumni(data);
+      resetForm();
+      setShowAddModal(false);
+    } catch {
+      // error toast already handled by App.tsx
+    } finally {
+      setIsSubmitting(false);
     }
-
-    resetForm();
-    setShowAddModal(false);
   };
 
   const resetForm = () => {
@@ -324,6 +331,12 @@ export default function TracerTab({
           </div>
           <SkeletonTable rows={4} cols={5} />
         </div>
+      ) : totalAlumni === 0 ? (
+        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
+          <GraduationCap className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
+          <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data tracer study</h3>
+          <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Tambah Data Tracer" untuk menambahkan data pertama</p>
+        </div>
       ) : (
         <>
           {/* Filter Row */}
@@ -425,7 +438,9 @@ export default function TracerTab({
 
           {/* Masa Tunggu Kategori Row */}
           {tungguKategoriData.length > 0 && (
-            <div className="flex flex-wrap gap-3">
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Kategori Masa Tunggu (Alumni Bekerja)</p>
+              <div className="flex flex-wrap gap-3">
               {tungguKategoriData.map(k => (
                 <div key={k.label} className="bg-white px-4 py-2 rounded-xl border border-gray-100 flex items-center gap-2 text-sm">
                   <span className={`w-2 h-2 rounded-full ${
@@ -436,6 +451,7 @@ export default function TracerTab({
                   <span className="text-gray-500">{k.label}</span>
                 </div>
               ))}
+            </div>
             </div>
           )}
 
@@ -653,7 +669,7 @@ export default function TracerTab({
               <div>
                 <label className="block text-xs font-semibold mb-1">Mahasiswa (Lulusan) *</label>
                 <ComboboxMahasiswa
-                  mahasiswa={mahasiswa.filter(m => m.status === 'Lulus')}
+                  mahasiswa={mahasiswa.filter(m => m.status === 'Lulus' || alumni.some(a => a.npm_mahasiswa === m.npm))}
                   value={form.npm_mahasiswa}
                   onChange={(npm) => {
                     const mhs = mahasiswa.find(m => m.npm === npm);
@@ -795,9 +811,14 @@ export default function TracerTab({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary-light)]"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary-light)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {editingAlumni ? 'Simpan Perubahan' : 'Simpan Data'}
+                  {isSubmitting ? (
+                    <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Menyimpan...</>
+                  ) : (
+                    editingAlumni ? 'Simpan Perubahan' : 'Simpan Data'
+                  )}
                 </button>
               </div>
             </form>

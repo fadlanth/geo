@@ -41,9 +41,11 @@ export default function App() {
 
   // Loading State
   const [initialLoading, setInitialLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Silent data fetch (no loading spinner) — used for CRUD refreshes
+  // Data fetch with loading indicator for CRUD refreshes
   const fetchAllData = async () => {
+    setIsRefreshing(true);
     try {
       setDosen(await academicService.getDosen());
     } catch (err: any) {
@@ -74,6 +76,7 @@ export default function App() {
     } catch (err: any) {
       console.error('Gagal memuat MBKM:', err);
     }
+    setIsRefreshing(false);
   };
 
   // Initial load with global spinner
@@ -124,7 +127,8 @@ export default function App() {
         fakultas: String(row.Fakultas || row.fakultas || '').trim() || 'FMIPA',
         prodi: String(row.Prodi || row.prodi || '').trim() || 'Geofisika',
         status: (String(row.Status || row.status || '').trim() as any) || 'Regulasi Akademik',
-        nip_dosen_wali: String(row['NIP Dosen Wali'] || row.nip_dosen_wali || '').trim() || null
+        nip_dosen_wali: String(row['NIP Dosen Wali'] || row.nip_dosen_wali || '').trim() || null,
+        tahun_lulus: row['Tahun Lulus'] || row.tahun_lulus ? Number(row['Tahun Lulus'] || row.tahun_lulus) : undefined
       })).filter(m => m.npm && m.nama);
 
       if (formattedData.length === 0) {
@@ -380,6 +384,106 @@ export default function App() {
     }
   };
 
+  const handleBulkImportPrestasi = async (data: any[]) => {
+    let count = 0;
+    let errors = 0;
+    for (const row of data) {
+      const npm = String(row.npm_mahasiswa || row['NPM Mahasiswa'] || row['NPM'] || row['npm'] || '').trim();
+      const namaMhs = String(row.nama_mahasiswa || row['Nama Mahasiswa'] || row['Nama'] || '').trim();
+      if (!npm && !namaMhs) { errors++; continue; }
+      const juaraVal = row.juara_ke || row['Juara Ke'] || 0;
+      const juaraNum = (() => { const n = Number(juaraVal); if (!isNaN(n)) return n; const m = String(juaraVal).match(/(\d+)/); return m ? parseInt(m[1], 10) : 0; })();
+      const p: Prestasi = {
+        npm_mahasiswa: npm || undefined,
+        nama_mahasiswa: namaMhs || undefined,
+        nama_kompetisi: String(row.nama_kompetisi || row['Nama Kompetisi'] || '').trim(),
+        tingkat: (row.tingkat || row['Tingkat'] || 'Nasional') as any,
+        juara_ke: juaraNum,
+        jenis_peserta: (row.jenis_peserta || row['Jenis Peserta'] || 'Individu') as 'Individu' | 'Kelompok',
+        tahun_kegiatan: Number(row.tahun_kegiatan || row['Tahun'] || row['Tahun Kegiatan'] || 0) || undefined,
+        tempat: String(row.tempat || row['Tempat'] || '').trim() || undefined,
+        dosen_pembimbing: String(row.dosen_pembimbing || row['Dosen Pembimbing'] || row['Dospem'] || '').trim() || undefined
+      };
+      if (!p.nama_kompetisi) { errors++; continue; }
+      try {
+        await academicService.savePrestasi(p);
+        count++;
+      } catch { errors++; }
+    }
+    await fetchAllData();
+    if (count > 0) {
+      triggerToast({
+        kind: 'success',
+        title: 'Import Prestasi Berhasil',
+        message: errors > 0
+          ? `${count} data berhasil diimport, ${errors} gagal.`
+          : `Berhasil menambahkan/memperbarui ${count} data prestasi.`
+      });
+    } else {
+      triggerToast({
+        kind: 'error',
+        title: 'Import Gagal',
+        message: 'Tidak ada data prestasi valid yang dapat diimport.'
+      });
+      throw new Error('Import gagal');
+    }
+  };
+
+  const handleBulkImportMagang = async (data: any[]) => {
+    let count = 0;
+    let errors = 0;
+    for (const row of data) {
+      const nr = Object.fromEntries(
+        Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), String(v ?? '')])
+      );
+      const npmVal = nr['npm'] || nr['npm_mahasiswa'] || '';
+      const instansiVal = nr['nama instansi tempat magang'] || nr['tempat_instansi'] || '';
+      const semesterVal = nr['semester'] || '';
+      if (!npmVal || !instansiVal || !semesterVal) { errors++; continue; }
+      const dospemDalamName = nr['dosen pembimbing dalam'] || nr['dosen_pembimbing_dalam'] || '';
+      const dospemDalamNip = (() => {
+        if (!dospemDalamName) return null;
+        const clean = dospemDalamName.trim().toLowerCase();
+        const found = dosen.find(d => d.nama.toLowerCase().includes(clean) || clean.includes(d.nama.toLowerCase()));
+        if (found) return found.nip;
+        const nipClean = clean.replace(/\s+/g, '');
+        const byNip = dosen.find(d => d.nip.replace(/\s+/g, '') === nipClean);
+        return byNip ? byNip.nip : null;
+      })();
+
+      const m: RiwayatMBKM = {
+        npm_mahasiswa: npmVal,
+        tempat_instansi: instansiVal,
+        semester: semesterVal,
+        judul_topik_magang: nr['judul topik magang'] || nr['judul_topik_magang'] || undefined,
+        dosen_pembimbing_lapangan: nr['dosen pembimbing lapangan'] || nr['dosen_pembimbing_lapangan'] || undefined,
+        nip_dosen_pembimbing_dalam: dospemDalamNip,
+        periode_magang: nr['periode magang'] || nr['periode_magang'] || undefined
+      };
+      try {
+        await academicService.saveMBKM(m);
+        count++;
+      } catch { errors++; }
+    }
+    await fetchAllData();
+    if (count > 0) {
+      triggerToast({
+        kind: 'success',
+        title: 'Import Magang Berhasil',
+        message: errors > 0
+          ? `${count} data berhasil diimport, ${errors} gagal.`
+          : `Berhasil menambahkan/memperbarui ${count} data magang.`
+      });
+    } else {
+      triggerToast({
+        kind: 'error',
+        title: 'Import Gagal',
+        message: 'Tidak ada data magang valid yang dapat diimport.'
+      });
+      throw new Error('Import gagal');
+    }
+  };
+
   const handleDeleteMbkm = async (id: string) => {
     if (confirm('Hapus data riwayat MBKM ini?')) {
       try {
@@ -511,7 +615,7 @@ export default function App() {
                 prestasi={prestasi} 
                 alumni={alumni} 
                 mbkm={mbkm}
-                loading={initialLoading}
+                loading={initialLoading || isRefreshing}
                 setActiveTab={setActiveTab}
               />
             )}
@@ -520,7 +624,7 @@ export default function App() {
               <MahasiswaTab
                 mahasiswa={mahasiswa}
                 dosen={dosen}
-                loading={initialLoading}
+                loading={initialLoading || isRefreshing}
                 onSaveMahasiswa={handleSaveMahasiswa}
                 onDeleteMahasiswa={handleDeleteMahasiswa}
                 onBulkImportMahasiswa={handleBulkImportMahasiswa}
@@ -532,7 +636,7 @@ export default function App() {
               <DosenTab
                 dosen={dosen}
                 mahasiswa={mahasiswa}
-                loading={initialLoading}
+                loading={initialLoading || isRefreshing}
                 onSaveDosen={handleSaveDosen}
                 onDeleteDosen={handleDeleteDosen}
                 onBulkImportDosen={handleBulkImportDosen}
@@ -545,12 +649,13 @@ export default function App() {
                 prestasi={prestasi}
                 mahasiswa={mahasiswa}
                 anggotaPrestasi={anggotaPrestasi}
-                loading={initialLoading}
+                loading={initialLoading || isRefreshing}
                 onSavePrestasi={handleSavePrestasi}
                 onDeletePrestasi={handleDeletePrestasi}
                 onSaveAnggota={handleSaveAnggota}
                 onDeleteAnggota={handleDeleteAnggota}
                 onBulkReplaceAnggota={handleBulkReplaceAnggota}
+                onBulkImportPrestasi={handleBulkImportPrestasi}
                 onRefresh={fetchAllData}
                 triggerToast={triggerToast}
               />
@@ -561,9 +666,10 @@ export default function App() {
                 mbkm={mbkm}
                 mahasiswa={mahasiswa}
                 dosen={dosen}
-                loading={initialLoading}
+                loading={initialLoading || isRefreshing}
                 onSaveMbkm={handleSaveMbkm}
                 onDeleteMbkm={handleDeleteMbkm}
+                onBulkImportMagang={handleBulkImportMagang}
                 onRefresh={fetchAllData}
                 triggerToast={triggerToast}
               />
@@ -573,7 +679,7 @@ export default function App() {
               <TracerTab
                 alumni={alumni}
                 mahasiswa={mahasiswa}
-                loading={initialLoading}
+                loading={initialLoading || isRefreshing}
                 onSaveAlumni={handleSaveAlumni}
                 onDeleteAlumni={handleDeleteAlumni}
                 onRefresh={fetchAllData}

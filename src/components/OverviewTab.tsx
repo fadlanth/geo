@@ -3,7 +3,6 @@ import {
   Users, 
   Award, 
   GraduationCap, 
-  TrendingUp,
   Sparkles,
   BookOpen,
   ArrowUpRight,

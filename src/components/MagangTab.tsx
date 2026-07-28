@@ -11,13 +11,22 @@ import {
   ChevronUp,
   BookOpen,
   UserCheck,
-  Calendar
+  Calendar,
+  BarChart3
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid
+} from 'recharts';
 import { RiwayatMBKM, Mahasiswa, Dosen } from '../types';
-import { academicService } from '../lib/academicService';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
-import { SkeletonTable } from './Skeleton';
+import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
 import ComboboxMahasiswa from './ComboboxMahasiswa';
 
 interface MagangTabProps {
@@ -27,18 +36,10 @@ interface MagangTabProps {
   loading?: boolean;
   onSaveMbkm: (m: RiwayatMBKM) => void;
   onDeleteMbkm: (id: string) => void;
+  onBulkImportMagang: (data: any[]) => Promise<void>;
   onRefresh: () => Promise<void>;
   activeSubTab?: string;
   triggerToast?: (options: ToastOptions) => void;
-}
-
-function findNipByDosenName(dosenList: Dosen[], name: string): string | null {
-  const clean = name.trim().toLowerCase();
-  const found = dosenList.find(d => d.nama.toLowerCase().includes(clean) || clean.includes(d.nama.toLowerCase()));
-  if (found) return found.nip;
-  const nipClean = clean.replace(/\s+/g, '');
-  const byNip = dosenList.find(d => d.nip.replace(/\s+/g, '') === nipClean);
-  return byNip ? byNip.nip : null;
 }
 
 export default function MagangTab({
@@ -48,6 +49,7 @@ export default function MagangTab({
   loading,
   onSaveMbkm,
   onDeleteMbkm,
+  onBulkImportMagang,
   onRefresh,
   triggerToast
 }: MagangTabProps) {
@@ -61,6 +63,7 @@ export default function MagangTab({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingMbkm, setEditingMbkm] = useState<RiwayatMBKM | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState<RiwayatMBKM>({
     npm_mahasiswa: '',
     tempat_instansi: '',
@@ -79,7 +82,7 @@ export default function MagangTab({
     const instansi = m.tempat_instansi.toLowerCase();
     const matchesSearch = mhsName.includes(searchQuery.toLowerCase()) ||
                           instansi.includes(searchQuery.toLowerCase()) ||
-                          m.npm_mahasiswa.includes(searchQuery);
+                          m.npm_mahasiswa.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSemester = filterSemester === 'All' || m.semester === filterSemester;
     return matchesSearch && matchesSemester;
   });
@@ -102,29 +105,32 @@ export default function MagangTab({
     setShowAddModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.npm_mahasiswa || !form.tempat_instansi || !form.semester) return;
+    if (!form.npm_mahasiswa || !form.tempat_instansi || !form.semester) {
+      if (triggerToast) {
+        triggerToast({
+          kind: 'error',
+          title: 'Validasi Gagal',
+          message: 'Mahasiswa, tempat instansi, dan semester harus diisi.'
+        });
+      }
+      return;
+    }
 
     const data: RiwayatMBKM = editingMbkm
       ? { ...form, id_mbkm: editingMbkm.id_mbkm }
       : form;
 
+    setIsSubmitting(true);
     try {
       await onSaveMbkm(data);
-      if (triggerToast) {
-        triggerToast({
-          kind: 'success',
-          title: editingMbkm ? 'Magang Diperbarui' : 'Magang Tercatat',
-          message: editingMbkm
-            ? 'Berhasil memperbarui data magang.'
-            : 'Berhasil mencatatkan riwayat magang mahasiswa baru.'
-        });
-      }
       resetForm();
       setShowAddModal(false);
     } catch {
-      // error toast already shown by handleSaveMbkm in App
+      // error toast already handled by App.tsx
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -142,6 +148,19 @@ export default function MagangTab({
   };
 
   const semesterOptions = Array.from(new Set(mbkm.map(m => m.semester))).sort();
+  const reversedSemesters = [...semesterOptions].reverse();
+
+  // Rekap per semester
+const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, number>>, m) => {
+    if (!acc[m.semester]) acc[m.semester] = {};
+    acc[m.semester][m.tempat_instansi] = (acc[m.semester][m.tempat_instansi] || 0) + 1;
+    return acc;
+  }, {});
+  const semesterChartData = reversedSemesters.map(sem => ({
+    semester: sem,
+    jumlah: Object.values(semesterInstansiMap[sem] || {}).reduce((sum, c) => sum + c, 0),
+    instansi: Object.keys(semesterInstansiMap[sem] || {}).length
+  }));
 
   const handleExportMbkm = () => {
     const dataToExport = mbkm.map(m => {
@@ -245,21 +264,73 @@ export default function MagangTab({
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-          <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Total Magang</p>
-          <p className="text-2xl font-bold font-display">{totalMbkm}</p>
+      {/* Summary & Rekap */}
+      {loading ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          <SkeletonChart />
+        </>
+      ) : totalMbkm === 0 ? (
+        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
+          <Building2 className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
+          <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data magang</h3>
+          <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Catat Magang" untuk menambahkan data pertama</p>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-          <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Mahasiswa Magang</p>
-          <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{new Set(mbkm.filter(m => m.npm_mahasiswa).map(m => m.npm_mahasiswa)).size}</p>
-        </div>
-        <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-          <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Instansi Mitra</p>
-          <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{new Set(mbkm.map(m => m.tempat_instansi)).size}</p>
-        </div>
-      </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
+              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Total Magang</p>
+              <p className="text-2xl font-bold font-display">{totalMbkm}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
+              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Mahasiswa Magang</p>
+              <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{new Set(mbkm.filter(m => m.npm_mahasiswa).map(m => m.npm_mahasiswa)).size}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
+              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Instansi Mitra</p>
+              <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{new Set(mbkm.map(m => m.tempat_instansi)).size}</p>
+            </div>
+          </div>
+
+          {semesterChartData.length > 0 && (
+            <div className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="w-5 h-5 text-[var(--color-primary)]" />
+                <h3 className="font-bold text-sm text-[var(--color-text-main)]">Rekap Magang per Semester</h3>
+              </div>
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={semesterChartData} barSize={32} margin={{ top: 5, right: 20, left: -15, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-primary)" strokeOpacity={0.08} />
+                    <XAxis dataKey="semester" tick={{ fontSize: 10 }} angle={0} height={60} tickMargin={8} />
+                    <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                    <Tooltip
+                      cursor={{ fill: 'var(--color-primary)', opacity: 0.05 }}
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null;
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white rounded-lg border border-[var(--color-primary)]/20 px-3 py-2 text-xs shadow-sm">
+                            <p className="font-semibold text-[var(--color-text-main)] mb-1">{label}</p>
+                            <p className="text-[var(--color-text-main)]/70">Mahasiswa: <span className="font-semibold text-[var(--color-primary)]">{data.jumlah}</span></p>
+                            <p className="text-[var(--color-text-main)]/70">Instansi: <span className="font-semibold text-[var(--color-primary)]">{data.instansi}</span></p>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar dataKey="jumlah" name="Mahasiswa" radius={[4, 4, 0, 0]} fill="var(--color-primary)" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       {showImport && (
         <CsvImporter
@@ -271,55 +342,7 @@ export default function MagangTab({
           templateData={[
             { 'NPM': '31242001', 'NAMA INSTANSI TEMPAT MAGANG': 'PT Geo Teknologi', 'SEMESTER': 'Genap 2025/2026', 'JUDUL TOPIK MAGANG': 'Analisis Data', 'DOSEN PEMBIMBING LAPANGAN': 'Bapak Andi', 'DOSEN PEMBIMBING DALAM': 'Dr. Maria Ulfah, S.Si., M.Si.', 'PERIODE MAGANG': 'Jan-Jun 2025' }
           ]}
-          onImport={async (data) => {
-            let count = 0;
-            let errors = 0;
-            for (const row of data) {
-              const nr = Object.fromEntries(
-                Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), String(v ?? '')])
-              );
-              const npmVal = nr['npm'] || nr['npm_mahasiswa'] || '';
-              const instansiVal = nr['nama instansi tempat magang'] || nr['tempat_instansi'] || '';
-              const semesterVal = nr['semester'] || '';
-              if (!npmVal || !instansiVal || !semesterVal) { errors++; continue; }
-              const dospemDalamName = nr['dosen pembimbing dalam'] || nr['dosen_pembimbing_dalam'] || '';
-              const dospemDalamNip = dospemDalamName ? findNipByDosenName(dosen, dospemDalamName) : null;
-
-              const m: RiwayatMBKM = {
-                npm_mahasiswa: npmVal,
-                tempat_instansi: instansiVal,
-                semester: semesterVal,
-                judul_topik_magang: nr['judul topik magang'] || nr['judul_topik_magang'] || undefined,
-                dosen_pembimbing_lapangan: nr['dosen pembimbing lapangan'] || nr['dosen_pembimbing_lapangan'] || undefined,
-                nip_dosen_pembimbing_dalam: dospemDalamNip,
-                periode_magang: nr['periode magang'] || nr['periode magang'] || undefined
-              };
-              try {
-                await academicService.saveMBKM(m);
-                count++;
-              } catch {
-                errors++;
-              }
-            }
-            await onRefresh();
-            if (triggerToast) {
-              if (count > 0) {
-                triggerToast({
-                  kind: 'success',
-                  title: 'Import Magang Berhasil',
-                  message: errors > 0
-                    ? `${count} data berhasil diimport, ${errors} gagal.`
-                    : `Berhasil menambahkan/memperbarui ${count} data magang.`
-                });
-              } else {
-                triggerToast({
-                  kind: 'error',
-                  title: 'Import Gagal',
-                  message: 'Tidak ada data magang valid yang dapat diimport.'
-                });
-              }
-            }
-          }}
+          onImport={onBulkImportMagang}
           onClose={() => setShowImport(false)}
         />
       )}
@@ -591,9 +614,14 @@ export default function MagangTab({
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary-light)]"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary-light)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  {editingMbkm ? 'Simpan Perubahan' : 'Simpan Data Magang'}
+                  {isSubmitting ? (
+                    <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Menyimpan...</>
+                  ) : (
+                    editingMbkm ? 'Simpan Perubahan' : 'Simpan Data Magang'
+                  )}
                 </button>
               </div>
             </form>

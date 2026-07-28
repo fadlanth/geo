@@ -189,17 +189,6 @@ export const academicService = {
     return data as AnggotaPrestasi[];
   },
 
-  async getAnggotaByPrestasi(id_prestasi: number): Promise<AnggotaPrestasi[]> {
-    try {
-      const { data, error } = await supabase.from('anggota_prestasi').select('*').eq('id_prestasi', id_prestasi);
-      if (error) throw error;
-      return (data || []) as AnggotaPrestasi[];
-    } catch (err: any) {
-      console.error("Error fetching anggota prestasi:", err);
-      return [];
-    }
-  },
-
   async saveAnggotaPrestasi(anggota: AnggotaPrestasi): Promise<void> {
     const { error } = await supabase.from('anggota_prestasi').upsert(anggota);
     if (error) throw new Error(error.message);
