@@ -68,6 +68,8 @@ export default function OverviewTab({
     : '0';
 
   const pctMbkm = mhsRegulasi > 0 ? Math.round((mbkm.length / mhsRegulasi) * 100) : 0;
+  // Instansi unik penempatan magang (untuk label "Total Instansi")
+  const totalInstansi = new Set(mbkm.map(m => m.tempat_instansi).filter(Boolean)).size;
 
   // Modal state for per-angkatan detail
   const [showAngkatanDetail, setShowAngkatanDetail] = useState(false);
@@ -131,11 +133,6 @@ export default function OverviewTab({
   }));
 
   const totalMbkm = mbkm.length;
-  const mbkmMap = mbkm.reduce((acc: any, m) => {
-    const sem = m.semester.split(' ')[0] || m.semester;
-    acc[sem] = (acc[sem] || 0) + 1;
-    return acc;
-  }, {});
 
   return (
     <div className="space-y-6">
@@ -175,19 +172,17 @@ export default function OverviewTab({
           {/* Stat 1: Students */}
           <div 
             onClick={() => setShowAngkatanDetail(true)}
-            className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 shadow-xs hover:shadow-md transition duration-200 cursor-pointer hover:border-[var(--color-primary)]/30"
+            className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 shadow-xs hover:shadow-md transition duration-200 cursor-pointer hover:border-[var(--color-primary)]/30 relative"
           >
             <div className="flex justify-between items-start mb-3">
               <div className="p-3 bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)] rounded-xl">
                 <Users className="w-5 h-5" />
               </div>
+              <span className="chip status-regulasi">{pctRegulasi}%</span>
             </div>
-            <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">Mahasiswa Terdaftar</p>
-            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{totalMhs}</p>
-            <div className="mt-1 flex items-center gap-2 text-xs">
-              <span className="chip status-regulasi">{mhsRegulasi} Regulasi</span>
-              <span className="text-[var(--color-text-main)]/50">({pctRegulasi}%)</span>
-            </div>
+             <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">Mahasiswa Aktif</p>
+            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{mhsRegulasi}</p>
+            <p className="text-xs text-[var(--color-text-main)]/50 mt-1">Total {totalMhs} mahasiswa</p>
             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--color-text-main)]/50 border-t border-gray-100 pt-3">
               {regulasiAngkatanList.map(angk => (
                 <span key={angk}>{angk}: <b>{regulasiPerAngkatan[angk]}</b></span>
@@ -202,7 +197,7 @@ export default function OverviewTab({
                 <Briefcase className="w-5 h-5" />
               </div>
               <span className="chip status-regulasi">
-                {mbkmMap['Ganjil'] || 0} Ganjil
+                {totalInstansi} Total Instansi
               </span>
             </div>
             <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">MBKM / Magang</p>
@@ -271,7 +266,7 @@ export default function OverviewTab({
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="font-display font-bold text-base text-[var(--color-text-main)]">Rekapitulasi Mahasiswa per Angkatan</h3>
-                <p className="text-xs text-[var(--color-text-main)]/50">{totalMhs} total · {mhsRegulasi} regulasi akademik ({pctRegulasi}%) · {mhsLulus} lulus</p>
+                <p className="text-xs text-[var(--color-text-main)]/50">{totalMhs} total · {mhsRegulasi} aktif ({pctRegulasi}%) · {mhsLulus} lulus</p>
               </div>
               <button onClick={() => setActiveTab('mahasiswa')} className="p-2 bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 rounded-lg text-[var(--color-primary)] transition">
                 <ArrowUpRight className="w-4 h-4" />
