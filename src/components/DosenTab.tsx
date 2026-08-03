@@ -10,6 +10,8 @@ import {
   BookOpen
 } from 'lucide-react';
 import { Dosen, Mahasiswa } from '../types';
+import { validators, val } from '../lib/validators';
+import { useDebounce } from '../lib/hooks';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import CsvImporter from './CsvImporter';
@@ -35,11 +37,13 @@ export default function DosenTab({
   onBulkImportDosen,
   triggerToast
 }: DosenTabProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [query, setQuery] = useState('');
   const [filterWali, setFilterWali] = useState('All');
   const [filterJabatan, setFilterJabatan] = useState('All');
   const [page, setPage] = useState(1);
   const ROWS_PER_PAGE = 25;
+
+  const searchQuery = useDebounce(query, 350); // debounced; pakai untuk filter
 
   // Modals & form states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -56,16 +60,19 @@ export default function DosenTab({
     is_dosen_wali: false
   });
 
+  // Error validasi per-field
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   // Unique list of Jabatan for filtering
   const jabatanOptions = Array.from(new Set(dosen.map(d => d.jabatan || 'Asisten Ahli'))).filter(Boolean);
 
   const filteredDosen = dosen.filter(d => {
-    const matchesSearch = 
+    const matchesSearch =
       (d.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (d.nip || '').includes(searchQuery) ||
       (d.kode_dosen || '').toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesWali = 
+    const matchesWali =
       filterWali === 'All' ||
       (filterWali === 'Wali' && d.is_dosen_wali) ||
       (filterWali === 'Biasa' && !d.is_dosen_wali);
@@ -81,12 +88,20 @@ export default function DosenTab({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nama || !form.nip) {
+
+    // --- Validasi client ---
+    const errs: Record<string, string> = {};
+    if (!editingDosen) errs.npm = val(validators.nip(form.nip));
+    errs.nama = val(validators.nama(form.nama));
+    errs.jabatan = val(validators.requiredSelect(form.jabatan));
+    for (const k in errs) if (errs[k] === undefined) delete errs[k];
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
       if (triggerToast) {
         triggerToast({
           kind: 'error',
-          title: 'Gagal Menyimpan',
-          message: 'Nama dan NIP wajib diisi.'
+          title: 'Validasi Gagal',
+          message: 'Perbaiki isian yang ditandai.'
         });
       }
       return;
@@ -95,6 +110,7 @@ export default function DosenTab({
     try {
       await onSaveDosen(form);
 
+      setErrors({});
       setForm({
         nip: '',
         nama: '',
@@ -112,6 +128,7 @@ export default function DosenTab({
   };
 
   const handleEditClick = (d: Dosen) => {
+    setErrors({});
     setEditingDosen(d);
     setForm(d);
     setShowAddModal(true);
@@ -201,7 +218,7 @@ export default function DosenTab({
               <BookOpen className="w-6 h-6" />
             </div>
             <div>
-              <p className="text-xs text-gray-400 font-semibold">Total Dosen Terdaftar</p>
+              <p className="text-xs text-gray-400 font-semibold">Total Dosen Aktif</p>
               <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">{totalDosen} Orang</h3>
               <p className="text-[10px] text-gray-500 mt-1">Aktif mengajar di Geofisika UNPAD</p>
             </div>
@@ -243,8 +260,8 @@ export default function DosenTab({
               <input
                 type="text"
                 placeholder="Cari dosen berdasarkan Nama, NIP, atau Kode Dosen..."
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                 className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition"
               />
             </div>
@@ -427,9 +444,10 @@ export default function DosenTab({
                   required
                   placeholder="Contoh: Dr. Maria Ulfah, S.Si., M.Si."
                   value={form.nama}
-                  onChange={(e) => setForm({...form, nama: e.target.value})}
-                  className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition"
+                  onChange={(e) => { setForm({...form, nama: e.target.value}); if (errors.nama) setErrors({...errors, nama: undefined}); }}
+                  className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition ${errors.nama ? 'border-red-400' : ''}`}
                 />
+                {errors.nama && <p className="mt-1 text-[10px] text-red-600">{errors.nama}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-3.5">
@@ -441,9 +459,10 @@ export default function DosenTab({
                     disabled={!!editingDosen}
                     placeholder="Contoh: 1982031520..."
                     value={form.nip}
-                    onChange={(e) => setForm({...form, nip: e.target.value})}
-                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition disabled:bg-gray-50 disabled:text-gray-400"
+                    onChange={(e) => { setForm({...form, nip: e.target.value}); if (errors.nip) setErrors({...errors, nip: undefined}); }}
+                    className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition disabled:bg-gray-50 disabled:text-gray-400 ${errors.nip ? 'border-red-400' : ''}`}
                   />
+                  {errors.nip && <p className="mt-1 text-[10px] text-red-600">{errors.nip}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Kode Dosen</label>
@@ -493,8 +512,8 @@ export default function DosenTab({
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">Jabatan Akademik</label>
                   <select
                     value={form.jabatan}
-                    onChange={(e) => setForm({...form, jabatan: e.target.value})}
-                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] bg-white"
+                    onChange={(e) => { setForm({...form, jabatan: e.target.value}); if (errors.jabatan) setErrors({...errors, jabatan: undefined}); }}
+                    className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] bg-white ${errors.jabatan ? 'border-red-400' : ''}`}
                   >
                     <option value="Asisten Ahli">Asisten Ahli</option>
                     <option value="Lektor">Lektor</option>
@@ -502,6 +521,7 @@ export default function DosenTab({
                     <option value="Guru Besar">Guru Besar</option>
                     <option value="Tenaga Pengajar">Tenaga Pengajar</option>
                   </select>
+                  {errors.jabatan && <p className="mt-1 text-[10px] text-red-600">{errors.jabatan}</p>}
                 </div>
 
                 <div className="flex items-center pt-5">

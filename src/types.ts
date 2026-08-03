@@ -3,6 +3,18 @@
 // Types sesuai skema Supabase
 // =====================================================
 
+export type UserRole = 'admin' | 'operator' | 'dosen' | 'guest';
+
+export interface Profile {
+  id: string;          // sama dengan auth.users.id
+  email: string;
+  nama: string;
+  role: UserRole;
+  nip?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Mahasiswa {
   npm: string;                // Primary key
   nama: string;

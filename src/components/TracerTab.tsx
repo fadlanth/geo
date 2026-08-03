@@ -32,6 +32,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { TracerStudy, Mahasiswa, getMasaTungguKategori } from '../types';
+import { useDebounce } from '../lib/hooks';
 import { academicService } from '../lib/academicService';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
@@ -75,7 +76,8 @@ export default function TracerTab({
   triggerToast
 }: TracerTabProps) {
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [query, setQuery] = useState('');
+  const searchQuery = useDebounce(query, 350);
   const [filterTahun, setFilterTahun] = useState('All');
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -346,8 +348,8 @@ export default function TracerTab({
               <input
                 type="text"
                 placeholder="Cari alumni, instansi, atau universitas..."
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); setExpandedId(null); }}
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
                 className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
               />
             </div>

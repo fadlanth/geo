@@ -18,6 +18,7 @@ import {
   UserPlus
 } from 'lucide-react';
 import { Prestasi, Mahasiswa, AnggotaPrestasi, getPrestasiNamaMahasiswa } from '../types';
+import { useDebounce } from '../lib/hooks';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard } from './Skeleton';
@@ -61,7 +62,8 @@ export default function PrestasiTab({
   triggerToast
 }: PrestasiTabProps) {
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [query, setQuery] = useState('');
+  const searchQuery = useDebounce(query, 350);
   const [filterTingkat, setFilterTingkat] = useState('All');
   const [filterJuara, setFilterJuara] = useState('All');
   const [page, setPage] = useState(1);
@@ -149,12 +151,14 @@ export default function PrestasiTab({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nama_kompetisi) {
+
+    // Validasi client sederhana: nama kompetisi wajib & juara_ke ≥ 1
+    if (!form.nama_kompetisi || form.juara_ke < 1) {
       if (triggerToast) {
         triggerToast({
           kind: 'error',
           title: 'Validasi Gagal',
-          message: 'Nama kompetisi harus diisi.'
+          message: 'Nama kompetisi harus diisi dan juara ke minimal 1.'
         });
       }
       return;
@@ -405,8 +409,8 @@ export default function PrestasiTab({
             <input
               type="text"
               placeholder="Cari nama mahasiswa atau nama kompetisi..."
-              value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); setExpandedId(null); }}
+                value={query}
+                onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
                 className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
               />
             </div>

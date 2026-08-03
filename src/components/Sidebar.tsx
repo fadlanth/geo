@@ -9,22 +9,25 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  BookOpen
+  BookOpen,
+  Activity,
 } from 'lucide-react';
-import { useAuth } from '../lib/AuthContext';
+import { useAuth, UserRole } from '../lib/AuthContext';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isMobileOpen: boolean;
   setIsMobileOpen: (open: boolean) => void;
+  role: UserRole;
 }
 
 export default function Sidebar({ 
   activeTab, 
   setActiveTab, 
   isMobileOpen,
-  setIsMobileOpen
+  setIsMobileOpen,
+  role
 }: SidebarProps) {
   const { logout } = useAuth();
   const [collapsed, setCollapsed] = useState<boolean>(false);
@@ -44,34 +47,48 @@ export default function Sidebar({
     {
       id: 'ringkasan',
       label: 'Dashboard',
-      icon: LayoutDashboard
+      icon: LayoutDashboard,
+      roles: ['admin', 'operator', 'dosen', 'guest'] as UserRole[]
     },
     {
       id: 'mahasiswa',
       label: 'Data Mahasiswa',
-      icon: Users
+      icon: Users,
+      roles: ['admin', 'operator'] as UserRole[]
     },
     {
       id: 'dosen',
       label: 'Data Dosen',
-      icon: BookOpen
+      icon: BookOpen,
+      roles: ['admin', 'operator'] as UserRole[]
     },
     {
       id: 'prestasi',
       label: 'Prestasi Mahasiswa',
-      icon: Award
+      icon: Award,
+      roles: ['admin', 'operator'] as UserRole[]
     },
     {
       id: 'mbkm',
       label: 'Program Magang / MBKM',
-      icon: Briefcase
+      icon: Briefcase,
+      roles: ['admin', 'operator'] as UserRole[]
     },
     {
       id: 'tracer',
       label: 'Tracer Study Alumni',
-      icon: GraduationCap
+      icon: GraduationCap,
+      roles: ['admin', 'operator'] as UserRole[]
+    },
+    {
+      id: 'audit',
+      label: 'Log Aktivitas',
+      icon: Activity,
+      roles: ['admin'] as UserRole[]
     }
   ];
+
+  const visibleSections = menuSections.filter(s => s.roles.includes(role));
 
   return (
     <>
@@ -93,12 +110,11 @@ export default function Sidebar({
           <div className={`flex items-center ${collapsed ? 'flex-col px-2 py-3 gap-2' : 'p-4 justify-between'}`} style={{ borderBottom: '1px solid color-mix(in srgb, var(--color-accent) 8%, var(--color-base))' }}>
             <div className={`flex items-center ${collapsed ? '' : 'gap-3'}`}>
               <div className="p-1.5 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                <img 
-                  src="https://upload.wikimedia.org/wikipedia/commons/1/10/Universitas_Padjadjaran_Logo.png" 
-                  alt="Logo UNPAD" 
-                  className="w-7 h-7 object-contain animate-fade-in"
-                  referrerPolicy="no-referrer"
-                />
+                <div className="w-7 h-7 rounded-md bg-[var(--color-primary)] flex items-center justify-center">
+                  <span className="text-white font-display font-extrabold text-[9px] leading-none tracking-tight">
+                    U
+                  </span>
+                </div>
               </div>
               {!collapsed && (
                 <div>
@@ -137,7 +153,7 @@ export default function Sidebar({
 
           {/* Nav Items */}
           <nav className={`mt-4 ${collapsed ? 'p-2' : 'p-4'} space-y-1.5`}>
-            {menuSections.map((item) => {
+            {visibleSections.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
 

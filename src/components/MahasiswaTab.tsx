@@ -8,6 +8,8 @@ import {
   Edit2
 } from 'lucide-react';
 import { Mahasiswa, Dosen } from '../types';
+import { validators, val, JENIS_STATUS_MAHASISWA } from '../lib/validators';
+import { useDebounce } from '../lib/hooks';
 import CsvImporter from './CsvImporter';
 import DataActions from './DataActions';
 import { exportToExcel } from '../lib/exportUtils';
@@ -35,12 +37,13 @@ export default function MahasiswaTab({
   triggerToast
 }: MahasiswaTabProps) {
 
-  // Search & Filter state
-  const [searchQuery, setSearchQuery] = useState('');
+   // Search & Filter state (searchQuery pakai debounce agar tak rerender tiap ketik)
+  const [rawSearch, setRawSearch] = useState('');
   const [filterAngkatan, setFilterAngkatan] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [page, setPage] = useState(1);
   const ROWS_PER_PAGE = 25;
+  const searchQuery = useDebounce(rawSearch, 350);
 
   // Modals / Form toggles
   const [showAddMhs, setShowAddMhs] = useState(false);
@@ -62,6 +65,9 @@ export default function MahasiswaTab({
     tahun_lulus: undefined
   });
 
+  // Error validasi per-field (ditampilkan inline di form)
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
   // Filter students
   const filteredMahasiswa = mahasiswa.filter(m => {
     const matchesSearch = m.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -80,14 +86,32 @@ export default function MahasiswaTab({
   // Handle forms submit
   const handleAddMhsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!mhsForm.nama || !mhsForm.npm) return;
+
+    // --- Validasi client sebelum simpan ---
+    const errs: Record<string, string> = {};
+    errs.nama = val(validators.nama(mhsForm.nama));
+    if (!editingMhs) errs.npm = val(validators.npm(mhsForm.npm));
+    errs.angkatan = val(validators.angkatan(mhsForm.angkatan));
+    errs.status = val(validators.enum(mhsForm.status, JENIS_STATUS_MAHASISWA, 'Status'));
+    if (mhsForm.status === 'Lulus') {
+      errs.tahun_lulus = val(validators.tahunLulus(mhsForm.tahun_lulus, mhsForm.angkatan));
+    }
+    // Bersihkan nilai undefined
+    for (const k in errs) if (errs[k] === undefined) delete errs[k];
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) {
+      triggerToast?.({ kind: 'error', title: 'Validasi Gagal', message: 'Perbaiki isian yang ditandai.' });
+      return;
+    }
 
     onSaveMahasiswa({
       ...mhsForm,
       nip_dosen_wali: mhsForm.nip_dosen_wali || null
     });
-    
+    triggerToast?.({ kind: 'success', title: 'Berhasil', message: `Mahasiswa ${mhsForm.nama} tersimpan.` });
+
     // Reset
+    setErrors({});
     setMhsForm({
       npm: '',
       nama: '',
@@ -104,6 +128,7 @@ export default function MahasiswaTab({
   };
 
   const handleEditMhsClick = (m: Mahasiswa) => {
+    setErrors({});
     setEditingMhs(m);
     setMhsForm({
       ...m,
@@ -202,8 +227,8 @@ export default function MahasiswaTab({
               <input
                 type="text"
                 placeholder="Cari mahasiswa berdasarkan Nama, NPM..."
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
+                value={rawSearch}
+                onChange={(e) => { setRawSearch(e.target.value); setPage(1); }}
                 className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition"
               />
             </div>
@@ -399,9 +424,10 @@ export default function MahasiswaTab({
                   required
                   placeholder="Contoh: Andi Pratama"
                   value={mhsForm.nama}
-                  onChange={(e) => setMhsForm({...mhsForm, nama: e.target.value})}
-                  className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                  onChange={(e) => { setMhsForm({...mhsForm, nama: e.target.value}); if (errors.nama) setErrors({...errors, nama: undefined}); }}
+                  className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.nama ? 'border-red-400' : ''}`}
                 />
+                {errors.nama && <p className="mt-1 text-[10px] text-red-600">{errors.nama}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -413,9 +439,10 @@ export default function MahasiswaTab({
                     disabled={!!editingMhs}
                     placeholder="Contoh: 12324001"
                     value={mhsForm.npm}
-                    onChange={(e) => setMhsForm({...mhsForm, npm: e.target.value})}
-                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                    onChange={(e) => { setMhsForm({...mhsForm, npm: e.target.value}); if (errors.npm) setErrors({...errors, npm: undefined}); }}
+                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${errors.npm ? 'border-red-400' : ''}`}
                   />
+                  {errors.npm && <p className="mt-1 text-[10px] text-red-600">{errors.npm}</p>}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Angkatan</label>
@@ -424,8 +451,9 @@ export default function MahasiswaTab({
                     required
                     value={mhsForm.angkatan}
                     onChange={(e) => setMhsForm({...mhsForm, angkatan: Number(e.target.value)})}
-                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.angkatan ? 'border-red-400' : ''}`}
                   />
+                  {errors.angkatan && <p className="mt-1 text-[10px] text-red-600">{errors.angkatan}</p>}
                 </div>
               </div>
 
@@ -469,24 +497,25 @@ export default function MahasiswaTab({
                   <select
                     value={mhsForm.status}
                     onChange={(e) => setMhsForm({...mhsForm, status: e.target.value as Mahasiswa['status']})}
-                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.status ? 'border-red-400' : ''}`}
                   >
-                    <option value="Regulasi Akademik">Regulasi Akademik</option>
-                    <option value="Lulus">Lulus</option>
-                    <option value="Alih Prodi">Alih Prodi</option>
-                    <option value="Undur Diri">Undur Diri</option>
+                    {JENIS_STATUS_MAHASISWA.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
                   </select>
+                  {errors.status && <p className="mt-1 text-[10px] text-red-600">{errors.status}</p>}
                 </div>
                 {mhsForm.status === 'Lulus' && (
-                  <div>
+                  <div className="mt-3">
                     <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Tahun Lulus</label>
                     <input
                       type="number"
                       placeholder="2024"
                       value={mhsForm.tahun_lulus || ''}
                       onChange={(e) => setMhsForm({...mhsForm, tahun_lulus: e.target.value ? Number(e.target.value) : undefined})}
-                      className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                      className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.tahun_lulus ? 'border-red-400' : ''}`}
                     />
+                    {errors.tahun_lulus && <p className="mt-1 text-[10px] text-red-600">{errors.tahun_lulus}</p>}
                   </div>
                 )}
                 <div>

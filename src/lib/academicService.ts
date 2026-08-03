@@ -1,7 +1,9 @@
 import { supabase } from './supabase';
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM, AnggotaPrestasi } from '../types';
 
-export const SUPABASE_DDL = `-- SALIN SCRIPT INI KE SQL EDITOR SUPABASE UNTUK MEMBUAT TABEL
+export const SUPABASE_DDL = `-- SALIN SCRIPT INI KE SQL EDITOR UNTUK MEMBUAT TABEL DATA
+-- Setelah ini jalankan juga: supabase/migrations/001_security.sql
+-- (untuk RLS, profile, dan view publik).
 
 CREATE TABLE IF NOT EXISTS public.dosen (
   nip TEXT PRIMARY KEY,
@@ -82,12 +84,8 @@ CREATE TABLE IF NOT EXISTS public.tracer_study (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
-ALTER TABLE public.dosen DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.mahasiswa DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.prestasi DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.anggota_prestasi DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.riwayat_mbkm DISABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tracer_study DISABLE ROW LEVEL SECURITY;
+-- PENTING: ROW LEVEL SECURITY diaktifkan di 001_security.sql.
+-- JANGAN jalankan "DISABLE ROW LEVEL SECURITY" pada lingkungan produksi.
 
 -- Migration: add columns for existing database
 ALTER TABLE public.mahasiswa ADD COLUMN IF NOT EXISTS tahun_lulus INTEGER;
@@ -103,6 +101,27 @@ ALTER TABLE public.tracer_study ADD CONSTRAINT tracer_unique UNIQUE (npm_mahasis
 `;
 
 export const academicService = {
+  // --- AUDIT LOG (best-effort) ---
+  async logAuditChange(
+    entitas: string,
+    aksi: 'insert' | 'update' | 'delete',
+    entitasId: string,
+    payload?: unknown
+  ): Promise<void> {
+    try {
+      const { error } = await supabase.rpc('audit_log_insert', {
+        p_entitas: entitas,
+        p_aksi: aksi,
+        p_entitas_id: entitasId,
+        p_payload: payload ? JSON.parse(JSON.stringify(payload)) : null,
+      });
+      if (error) console.warn(`Audit log gagal (${entitas}/${aksi}):`, error.message);
+    } catch (err) {
+      // Tidak boleh menggagalkan operasi utama
+      console.warn(`Audit log gagal (${entitas}/${aksi}):`, err);
+    }
+  },
+
   // --- DOSEN ---
   async getDosen(): Promise<Dosen[]> {
     const { data, error } = await supabase.from('dosen').select('*').order('nama', { ascending: true });
@@ -111,8 +130,20 @@ export const academicService = {
   },
 
   async saveDosen(dosen: Dosen): Promise<void> {
+    const isNew = await this._isNewRow('dosen', 'nip', dosen.nip);
     const { error } = await supabase.from('dosen').upsert(dosen, { onConflict: 'nip' });
     if (error) throw new Error(error.message);
+    await this.logAuditChange('dosen', isNew ? 'insert' : 'update', dosen.nip, dosen);
+  },
+
+  // Cek apakah baris dengan primary key ada (untuk label aksi insert/update)
+  async _isNewRow(table: string, col: string, value: string): Promise<boolean> {
+    const { count, error } = await supabase
+      .from(table)
+      .select('!', { count: 'exact', head: true })
+      .eq(col, value);
+    if (error) return false;
+    return count === 0;
   },
 
   async deleteDosen(nip: string): Promise<void> {
@@ -124,11 +155,13 @@ export const academicService = {
     }
     const { error } = await supabase.from('dosen').delete().eq('nip', nip);
     if (error) throw new Error(error.message);
+    await this.logAuditChange('dosen', 'delete', nip, { nip });
   },
 
   async bulkInsertDosen(data: Dosen[]): Promise<void> {
     const { error } = await supabase.from('dosen').upsert(data, { onConflict: 'nip' });
     if (error) throw new Error(error.message);
+    await this.logAuditChange('dosen', 'insert', `bulk_${data.length}`, { count: data.length });
   },
 
   // --- MAHASISWA ---
@@ -139,13 +172,16 @@ export const academicService = {
   },
 
   async saveMahasiswa(mhs: Mahasiswa): Promise<void> {
+    const isNew = await this._isNewRow('mahasiswa', 'npm', mhs.npm);
     const { error } = await supabase.from('mahasiswa').upsert(mhs, { onConflict: 'npm' });
     if (error) throw new Error(error.message);
+    await this.logAuditChange('mahasiswa', isNew ? 'insert' : 'update', mhs.npm, mhs);
   },
 
   async bulkInsertMahasiswa(data: Mahasiswa[]): Promise<void> {
     const { error } = await supabase.from('mahasiswa').upsert(data, { onConflict: 'npm' });
     if (error) throw new Error(error.message);
+    await this.logAuditChange('mahasiswa', 'insert', `bulk_${data.length}`, { count: data.length });
   },
 
   async deleteMahasiswa(npm: string): Promise<void> {
@@ -161,6 +197,7 @@ export const academicService = {
     }
     const { error } = await supabase.from('mahasiswa').delete().eq('npm', npm);
     if (error) throw new Error(error.message);
+    await this.logAuditChange('mahasiswa', 'delete', npm, { npm });
   },
 
   // --- PRESTASI ---
@@ -175,11 +212,13 @@ export const academicService = {
       .from('prestasi')
       .upsert(pres, { onConflict: 'npm_mahasiswa, nama_kompetisi, juara_ke' });
     if (error) throw new Error(error.message);
+    await this.logAuditChange('prestasi', pres.id_prestasi ? 'update' : 'insert', pres.id_prestasi || `${pres.npm_mahasiswa || ''}|${pres.nama_kompetisi}`, pres);
   },
 
   async deletePrestasi(id_prestasi: string): Promise<void> {
     const { error } = await supabase.from('prestasi').delete().eq('id_prestasi', id_prestasi);
     if (error) throw new Error(error.message);
+    await this.logAuditChange('prestasi', 'delete', id_prestasi, { id_prestasi });
   },
 
   // --- ANGGOTA PRESTASI ---
@@ -192,11 +231,13 @@ export const academicService = {
   async saveAnggotaPrestasi(anggota: AnggotaPrestasi): Promise<void> {
     const { error } = await supabase.from('anggota_prestasi').upsert(anggota);
     if (error) throw new Error(error.message);
+    await this.logAuditChange('anggota_prestasi', anggota.id_anggota ? 'update' : 'insert', anggota.id_anggota || `${anggota.nama_lengkap}|${anggota.id_prestasi}`, anggota);
   },
 
   async deleteAnggotaPrestasi(id_anggota: string): Promise<void> {
     const { error } = await supabase.from('anggota_prestasi').delete().eq('id_anggota', id_anggota);
     if (error) throw new Error(error.message);
+    await this.logAuditChange('anggota_prestasi', 'delete', id_anggota, { id_anggota });
   },
 
   async bulkReplaceAnggotaPrestasi(id_prestasi: string, anggota: AnggotaPrestasi[]): Promise<void> {
@@ -208,6 +249,7 @@ export const academicService = {
       );
       if (insError) throw new Error(insError.message);
     }
+    await this.logAuditChange('anggota_prestasi', 'replace', id_prestasi, { count: anggota.length, id_prestasi });
   },
 
   // --- MBKM ---
@@ -222,11 +264,13 @@ export const academicService = {
       .from('riwayat_mbkm')
       .upsert(mbkm, { onConflict: 'npm_mahasiswa, tempat_instansi, semester' });
     if (error) throw new Error(error.message);
+    await this.logAuditChange('riwayat_mbkm', mbkm.id_mbkm ? 'update' : 'insert', mbkm.id_mbkm || `${mbkm.npm_mahasiswa}|${mbkm.tempat_instansi}|${mbkm.semester}`, mbkm);
   },
 
   async deleteMBKM(id_mbkm: string): Promise<void> {
     const { error } = await supabase.from('riwayat_mbkm').delete().eq('id_mbkm', id_mbkm);
     if (error) throw new Error(error.message);
+    await this.logAuditChange('riwayat_mbkm', 'delete', id_mbkm, { id_mbkm });
   },
 
   // --- TRACER ALUMNI ---
@@ -241,10 +285,12 @@ export const academicService = {
       .from('tracer_study')
       .upsert(alumni, { onConflict: 'npm_mahasiswa, tahun_lulus' });
     if (error) throw new Error(error.message);
+    await this.logAuditChange('tracer_study', alumni.id_tracer ? 'update' : 'insert', alumni.id_tracer || `${alumni.npm_mahasiswa}|${alumni.tahun_lulus}`, alumni);
   },
 
   async deleteTracerAlumni(id_tracer: string): Promise<void> {
     const { error } = await supabase.from('tracer_study').delete().eq('id_tracer', id_tracer);
     if (error) throw new Error(error.message);
+    await this.logAuditChange('tracer_study', 'delete', id_tracer, { id_tracer });
   },
 };

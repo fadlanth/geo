@@ -11,17 +11,20 @@ import DosenTab from './components/DosenTab';
 import PrestasiTab from './components/PrestasiTab';
 import TracerTab from './components/TracerTab';
 import MagangTab from './components/MagangTab';
+import AuditTab from './components/AuditTab';
 import LoginPage from './components/LoginPage';
+import PublicLanding from './components/PublicLanding';
 import Toast, { ToastOptions } from './components/Toast';
 import { academicService } from './lib/academicService';
 import { useAuth } from './lib/AuthContext';
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM, AnggotaPrestasi } from './types';
 
 export default function App() {
-  const { isAuthenticated, logout, username, role } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, logout, username, role } = useAuth();
   
   const [activeTab, setActiveTab] = useState('ringkasan');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
 
   // Toast notifications state
   const [toast, setToast] = useState<(ToastOptions & { id: string }) | null>(null);
@@ -86,9 +89,12 @@ export default function App() {
     setInitialLoading(false);
   };
 
+  // Muat data HANYA saat sesi sudah aktif (tamu tidak melakukan query data)
   useEffect(() => {
-    loadAllData();
-  }, []);
+    if (!authLoading && isAuthenticated) {
+      loadAllData();
+    }
+  }, [authLoading, isAuthenticated]);
 
   // --- STUDENT ACTION HANDLERS ---
   const handleSaveMahasiswa = async (mhs: Mahasiswa) => {
@@ -543,8 +549,16 @@ export default function App() {
     }
   };
 
+  if (authLoading) {
+    return <SplashScreen />;
+  }
+
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return showLogin ? (
+      <LoginPage onBack={() => setShowLogin(false)} />
+    ) : (
+      <PublicLanding onLogin={() => setShowLogin(true)} />
+    );
   }
 
   return (
@@ -555,6 +569,7 @@ export default function App() {
         setActiveTab={setActiveTab} 
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={setIsMobileOpen}
+        role={role}
       />
 
       {/* MAIN CONTAINER */}
@@ -686,6 +701,13 @@ export default function App() {
                 triggerToast={triggerToast}
               />
             )}
+
+            {activeTab === 'audit' && (
+              <AuditTab
+                loading={initialLoading || isRefreshing}
+                triggerToast={triggerToast}
+              />
+            )}
           </>
         </main>
       </div>
@@ -694,6 +716,22 @@ export default function App() {
       {toast && (
         <Toast key={toast.id} toast={toast} onClose={(id) => setToast(null)} />
       )}
+    </div>
+  );
+}
+
+function SplashScreen() {
+  return (
+    <div className="min-h-screen bg-[var(--color-base)] flex flex-col items-center justify-center gap-4 p-4">
+      <div className="w-16 h-16 rounded-2xl bg-[var(--color-primary)] flex items-center justify-center">
+        <span className="text-white font-display font-extrabold text-sm tracking-tight">
+          UNPAD
+        </span>
+      </div>
+      <div className="w-8 h-8 border-4 border-[var(--color-primary)]/20 border-t-[var(--color-primary)] rounded-full animate-spin" />
+      <p className="text-xs text-[var(--color-text-main)]/50 font-medium">
+        Memeriksa sesi... mohon tunggu
+      </p>
     </div>
   );
 }

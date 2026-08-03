@@ -24,6 +24,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { RiwayatMBKM, Mahasiswa, Dosen } from '../types';
+import { useDebounce } from '../lib/hooks';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
@@ -54,7 +55,8 @@ export default function MagangTab({
   triggerToast
 }: MagangTabProps) {
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [query, setQuery] = useState('');
+  const searchQuery = useDebounce(query, 350);
   const [filterSemester, setFilterSemester] = useState('All');
   const [page, setPage] = useState(1);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -356,8 +358,8 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
             <input
               type="text"
               placeholder="Cari mahasiswa atau instansi magang..."
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setPage(1); setExpandedId(null); }}
+               value={query}
+               onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
               className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
             />
           </div>
