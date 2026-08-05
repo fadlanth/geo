@@ -14,12 +14,12 @@ export const validators = {
     return { ok: true };
   },
 
-  nip: (value: string): Validation => {
-    const v = (value || '').trim();
-    if (!v) return { ok: false, message: 'NIP tidak boleh kosong.' };
-    if (!/^\d{9,20}$/.test(v)) return { ok: false, message: 'NIP harus 9–20 angka.' };
-    return { ok: true };
-  },
+   nip: (value: string): Validation => {
+     const v = (value || '').replace(/\s+/g, '');
+     if (!v) return { ok: false, message: 'NIP tidak boleh kosong.' };
+     if (!/^\d{9,20}$/.test(v)) return { ok: false, message: 'NIP harus 9–20 angka (tanpa spasi).' };
+     return { ok: true };
+   },
 
   nama: (value: string): Validation => {
     const v = (value || '').trim();

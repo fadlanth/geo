@@ -133,7 +133,7 @@ export default function App() {
         fakultas: String(row.Fakultas || row.fakultas || '').trim() || 'FMIPA',
         prodi: String(row.Prodi || row.prodi || '').trim() || 'Geofisika',
         status: (String(row.Status || row.status || '').trim() as any) || 'Regulasi Akademik',
-        nip_dosen_wali: String(row['NIP Dosen Wali'] || row.nip_dosen_wali || '').trim() || null,
+        nip_dosen_wali: String(row['NIP Dosen Wali'] || row.nip_dosen_wali || '').replace(/\s+/g, '') || null,
         tahun_lulus: row['Tahun Lulus'] || row.tahun_lulus ? Number(row['Tahun Lulus'] || row.tahun_lulus) : undefined
       })).filter(m => m.npm && m.nama);
 
@@ -228,7 +228,7 @@ export default function App() {
     try {
       const formattedData: Dosen[] = data.map(row => {
         const nama = String(row.NAMA || row.Nama || row.nama || '').trim();
-        const nip = String(row.NIP || row.nip || '').trim();
+        const nip = String(row.NIP || row.nip || '').replace(/\s+/g, '');
         const golongan = String(row.GOL || row.Golongan || row.golongan || '').trim() || 'III/b';
         const pangkat = String(row.PANGKAT || row.Pangkat || row.pangkat || '').trim() || 'Penata Muda Tk. I';
         const jabatan = String(row.JABATAN || row.Jabatan || row.jabatan || '').trim() || 'Asisten Ahli';

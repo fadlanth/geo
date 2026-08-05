@@ -7,6 +7,7 @@ import {
   BookOpen,
   ArrowUpRight,
   Briefcase,
+  ChevronLeft,
   X
 } from 'lucide-react';
 import { 
@@ -73,6 +74,38 @@ export default function OverviewTab({
 
   // Modal state for per-angkatan detail
   const [showAngkatanDetail, setShowAngkatanDetail] = useState(false);
+  // Drill-down: klik sel angka -> tampilkan daftar mahasiswa per angkatan / status
+  const [drillFilter, setDrillFilter] = useState<{ angkatan?: number; status?: string } | null>(null);
+
+  // Map NIP -> nama dosen (resolve dosen wali pada drill-down)
+  const dosenMap = new Map(dosen.map(d => [d.nip, d.nama]));
+
+  // Mahasiswa yang ditampilkan pada drill-down
+  const drillList = drillFilter
+    ? mahasiswa
+        .filter(m =>
+          (!drillFilter.angkatan || m.angkatan === drillFilter.angkatan) &&
+          (!drillFilter.status || m.status === drillFilter.status)
+        )
+        .sort((a, b) => a.nama.localeCompare(b.nama))
+    : [];
+
+  // Tombol sel angka (status / total-baris / total-kolom) pada tabel ringkasan:
+  // klik angka untuk filter daftar mahasiswa per individu.
+  const CountCell = ({ angkatan, status, count, chipClass, title }: {
+    angkatan?: number; status?: string; count: number; chipClass: string; title: string;
+  }) => {
+    if (!count) return <span className={`chip ${chipClass}`}>{count}</span>;
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); setDrillFilter({ angkatan, status }); setShowAngkatanDetail(true); }}
+        className={`chip ${chipClass} cursor-pointer hover:opacity-80`}
+        title={title}
+      >
+        {count}
+      </button>
+    );
+  };
 
   // Per-angkatan detail data
   const angkatanDetail = mahasiswa.reduce((acc: any, m) => {
@@ -171,7 +204,7 @@ export default function OverviewTab({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Stat 1: Students */}
           <div 
-            onClick={() => setShowAngkatanDetail(true)}
+            onClick={() => { setShowAngkatanDetail(true); setDrillFilter(null); }}
             className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 shadow-xs hover:shadow-md transition duration-200 cursor-pointer hover:border-[var(--color-primary)]/30 relative"
           >
             <div className="flex justify-between items-start mb-3">
@@ -357,51 +390,126 @@ export default function OverviewTab({
           >
             <div className="flex justify-between items-center pb-4 border-b border-gray-100">
               <div>
-                <h3 className="font-display font-extrabold text-[var(--color-text-main)] text-lg">Detail Mahasiswa per Angkatan</h3>
-                <p className="text-xs text-[var(--color-text-main)]/50 mt-0.5">Rekapitulasi status akademik berdasarkan angkatan masuk</p>
+                <h3 className="font-display font-extrabold text-[var(--color-text-main)] text-lg">
+                  {drillFilter?.angkatan
+                    ? `Mahasiswa Angkatan ${drillFilter.angkatan}`
+                    : (drillFilter
+                        ? 'Mahasiswa — Semua Angkatan'
+                        : 'Detail Mahasiswa per Angkatan')}
+                </h3>
+                <p className="text-xs text-[var(--color-text-main)]/50 mt-0.5">
+                  {drillFilter?.status
+                    ? `Status: ${drillFilter.status} (${drillList.length} orang)`
+                    : (drillFilter
+                        ? `${drillList.length} mahasiswa`
+                        : 'Rekapitulasi status akademik berdasarkan angkatan masuk')}
+                </p>
               </div>
-              <button 
-                onClick={() => setShowAngkatanDetail(false)}
-                className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              {drillFilter ? (
+                <button 
+                  onClick={() => setDrillFilter(null)}
+                  className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition"
+                  title="Kembali ke ringkasan"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setShowAngkatanDetail(false)}
+                  className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
             </div>
             <div className="overflow-y-auto flex-1 mt-4">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="text-xs font-bold font-display uppercase tracking-wider text-[var(--color-text-main)]/60 border-b border-gray-100">
-                    <th className="p-3 pl-0">Angkatan</th>
-                    <th className="p-3">Total</th>
-                    <th className="p-3">Regulasi Akademik</th>
-                    <th className="p-3">Lulus</th>
-                    <th className="p-3">Alih Prodi</th>
-                    <th className="p-3 pr-0">Undur Diri</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 text-sm">
-                  {angkatanDetailData.map((row: any) => (
-                    <tr key={row.angkatan} className="hover:bg-gray-50/50 transition">
-                      <td className="p-3 pl-0 font-bold text-[var(--color-text-main)]">{row.angkatan}</td>
-                      <td className="p-3 font-bold">{row.total}</td>
-                      <td className="p-3"><span className="chip status-regulasi">{row['Regulasi Akademik']}</span></td>
-                      <td className="p-3"><span className="chip status-lulus">{row.Lulus}</span></td>
-                      <td className="p-3"><span className="chip status-alih">{row['Alih Prodi']}</span></td>
-                      <td className="p-3 pr-0"><span className="chip status-undur">{row['Undur Diri']}</span></td>
+              {drillFilter ? (
+                <>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="text-xs font-bold font-display uppercase tracking-wider text-[var(--color-text-main)]/60 border-b border-gray-100">
+                          <th className="p-3 pl-0">NPM</th>
+                          <th className="p-3">Nama</th>
+                          <th className="p-3">Status</th>
+                          <th className="p-3">Fakultas/Prodi</th>
+                          <th className="p-3 pr-0">Dosen Wali</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {drillList.map((m: Mahasiswa) => (
+                          <tr key={m.npm} className="hover:bg-gray-50/50 transition">
+                            <td className="p-3 pl-0 font-mono text-[var(--color-text-main)]">{m.npm}</td>
+                            <td className="p-3 font-bold text-[var(--color-text-main)]">{m.nama}</td>
+                            <td className="p-3">
+                              <span className={`chip ${
+                                m.status === 'Regulasi Akademik' ? 'status-regulasi' :
+                                m.status === 'Lulus' ? 'status-lulus' :
+                                m.status === 'Alih Prodi' ? 'status-alih' :
+                                'status-undur'
+                              }`}>{m.status}</span>
+                            </td>
+                            <td className="p-3 text-[var(--color-text-main)]/70">{m.fakultas} / {m.prodi}</td>
+                            <td className="p-3 pr-0 text-[var(--color-text-main)]/70">
+                              {m.nip_dosen_wali ? (dosenMap.get(m.nip_dosen_wali) || m.nip_dosen_wali) : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {drillList.length === 0 && (
+                    <div className="text-center text-xs text-gray-400 mt-4">
+                      Tidak ada data mahasiswa pada filter ini.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="text-xs font-bold font-display uppercase tracking-wider text-[var(--color-text-main)]/60 border-b border-gray-100">
+                      <th className="p-3 pl-0">Angkatan</th>
+                      <th className="p-3">Total</th>
+                      <th className="p-3">Regulasi Akademik</th>
+                      <th className="p-3">Lulus</th>
+                      <th className="p-3">Alih Prodi</th>
+                      <th className="p-3 pr-0">Undur Diri</th>
                     </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-gray-200 text-sm font-bold text-[var(--color-text-main)]">
-                    <td className="p-3 pl-0">Total</td>
-                    <td className="p-3">{angkatanDetailData.reduce((s: number, r: any) => s + r.total, 0)}</td>
-                    <td className="p-3">{angkatanDetailData.reduce((s: number, r: any) => s + r['Regulasi Akademik'], 0)}</td>
-                    <td className="p-3">{angkatanDetailData.reduce((s: number, r: any) => s + r.Lulus, 0)}</td>
-                    <td className="p-3">{angkatanDetailData.reduce((s: number, r: any) => s + r['Alih Prodi'], 0)}</td>
-                    <td className="p-3 pr-0">{angkatanDetailData.reduce((s: number, r: any) => s + r['Undur Diri'], 0)}</td>
-                  </tr>
-                </tfoot>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50 text-sm">
+                    {angkatanDetailData.map((row: any) => (
+                      <tr key={row.angkatan} className="hover:bg-gray-50/50 transition">
+                        <td className="p-3 pl-0 font-bold text-[var(--color-text-main)]">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDrillFilter({ angkatan: row.angkatan }); }}
+                            className="text-[var(--color-text-main)] hover:text-[var(--color-primary)] hover:underline text-left"
+                            title={`Lihat seluruh mahasiswa angkatan ${row.angkatan}`}
+                          >
+                            {row.angkatan}
+                          </button>
+                        </td>
+                        <td className="p-3 font-bold">
+                          <CountCell angkatan={row.angkatan} count={row.total} chipClass="status-undur" title={`Lihat seluruh mahasiswa angkatan ${row.angkatan}`} />
+                        </td>
+                        <td className="p-3"><CountCell angkatan={row.angkatan} status="Regulasi Akademik" count={row['Regulasi Akademik']} chipClass="status-regulasi" title={`Mahasiswa Regulasi Akademik angkatan ${row.angkatan}`} /></td>
+                        <td className="p-3"><CountCell angkatan={row.angkatan} status="Lulus" count={row.Lulus} chipClass="status-lulus" title={`Mahasiswa Lulus angkatan ${row.angkatan}`} /></td>
+                        <td className="p-3"><CountCell angkatan={row.angkatan} status="Alih Prodi" count={row['Alih Prodi']} chipClass="status-alih" title={`Mahasiswa Alih Prodi angkatan ${row.angkatan}`} /></td>
+                        <td className="p-3 pr-0"><CountCell angkatan={row.angkatan} status="Undur Diri" count={row['Undur Diri']} chipClass="status-undur" title={`Mahasiswa Undur Diri angkatan ${row.angkatan}`} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200 text-sm font-bold text-[var(--color-text-main)]">
+                      <td className="p-3 pl-0">Total</td>
+                      <td className="p-3"><CountCell count={angkatanDetailData.reduce((s: number, r: any) => s + r.total, 0)} chipClass="status-undur" title="Lihat seluruh mahasiswa semua angkatan" /></td>
+                      <td className="p-3"><CountCell status="Regulasi Akademik" count={angkatanDetailData.reduce((s: number, r: any) => s + r['Regulasi Akademik'], 0)} chipClass="status-regulasi" title="Mahasiswa Regulasi Akademik semua angkatan" /></td>
+                      <td className="p-3"><CountCell status="Lulus" count={angkatanDetailData.reduce((s: number, r: any) => s + r.Lulus, 0)} chipClass="status-lulus" title="Mahasiswa Lulus semua angkatan" /></td>
+                      <td className="p-3"><CountCell status="Alih Prodi" count={angkatanDetailData.reduce((s: number, r: any) => s + r['Alih Prodi'], 0)} chipClass="status-alih" title="Mahasiswa Alih Prodi semua angkatan" /></td>
+                      <td className="p-3 pr-0"><CountCell status="Undur Diri" count={angkatanDetailData.reduce((s: number, r: any) => s + r['Undur Diri'], 0)} chipClass="status-undur" title="Mahasiswa Undur Diri semua angkatan" /></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              )}
             </div>
           </div>
         </div>

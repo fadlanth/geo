@@ -123,16 +123,6 @@ export default function PrestasiTab({
   const safePage = Math.min(page, Math.max(1, totalPages));
   const paginatedPrestasi = sortedPrestasi.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
 
-  // Top achievements for highlight section
-  const topPrestasi = prestasi
-    .filter(p => p.juara_ke === 1 && ['Nasional', 'Internasional'].includes(p.tingkat))
-    .sort((a, b) => {
-      const wA = SORT_WEIGHT[a.tingkat] || 0;
-      const wB = SORT_WEIGHT[b.tingkat] || 0;
-      return wB - wA || (b.tahun_kegiatan || 0) - (a.tahun_kegiatan || 0);
-    })
-    .slice(0, 5);
-
   const handleEditClick = (p: Prestasi) => {
     setEditingPrestasi(p);
     setForm({
@@ -323,7 +313,7 @@ export default function PrestasiTab({
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Total Prestasi</p>
+              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Jumlah Prestasi Mahasiswa</p>
               <p className="text-2xl font-bold font-display">{prestasi.length}</p>
             </div>
             <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
@@ -346,42 +336,8 @@ export default function PrestasiTab({
             </div>
           </div>
 
-          {/* Prestasi Unggulan */}
-          {topPrestasi.length > 0 && (
-            <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl border border-yellow-200/60 p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Trophy className="w-5 h-5 text-yellow-600" />
-                <h3 className="font-bold text-sm text-yellow-800">Prestasi Unggulan</h3>
-                <span className="text-xs text-yellow-600/70 font-medium">Juara 1 tingkat Nasional & Internasional</span>
-              </div>
-              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
-                {topPrestasi.map(p => {
-                  const mhs = mahasiswa.find(m => m.npm === p.npm_mahasiswa);
-                  return (
-                    <div key={p.id_prestasi} className="bg-white rounded-xl border border-yellow-200 p-4 min-w-[240px] max-w-[260px] shadow-sm shrink-0 hover:shadow-md transition">
-                      <div className="flex items-start justify-between mb-2">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          p.tingkat === 'Internasional' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          {p.tingkat}
-                        </span>
-                        <span className="text-yellow-500 font-bold text-sm">🏆 Juara 1</span>
-                      </div>
-                      <p className="font-bold text-sm text-[var(--color-text-main)] leading-tight mb-1">{p.nama_kompetisi}</p>
-                      <p className="text-xs text-[var(--color-text-main)]/60">{mhs ? mhs.nama : p.nama_mahasiswa || '-'}</p>
-                      {p.tahun_kegiatan && (
-                        <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
-                          <Calendar className="w-3 h-3" /> {p.tahun_kegiatan}
-                        </p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </>
-      )}
+          </>
+        )}
 
       {showImport && (
         <CsvImporter

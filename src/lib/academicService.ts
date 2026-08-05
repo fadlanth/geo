@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS public.dosen (
   pangkat TEXT,
   jabatan TEXT,
   is_dosen_wali BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT dosen_nip_no_space CHECK (nip = regexp_replace(nip, '\s+', '', 'g'))
 );
 
 CREATE TABLE IF NOT EXISTS public.mahasiswa (
@@ -26,7 +27,8 @@ CREATE TABLE IF NOT EXISTS public.mahasiswa (
   status TEXT NOT NULL,
   nip_dosen_wali TEXT REFERENCES public.dosen(nip) ON DELETE SET NULL,
   tahun_lulus INTEGER,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT mahasiswa_nip_wali_no_space CHECK (nip_dosen_wali IS NULL OR nip_dosen_wali = regexp_replace(nip_dosen_wali, '\s+', '', 'g'))
 );
 
 CREATE TABLE IF NOT EXISTS public.prestasi (

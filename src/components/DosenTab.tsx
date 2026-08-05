@@ -459,7 +459,7 @@ export default function DosenTab({
                     disabled={!!editingDosen}
                     placeholder="Contoh: 1982031520..."
                     value={form.nip}
-                    onChange={(e) => { setForm({...form, nip: e.target.value}); if (errors.nip) setErrors({...errors, nip: undefined}); }}
+                     onChange={(e) => { setForm({...form, nip: e.target.value.replace(/\s+/g, '')}); if (errors.nip) setErrors({...errors, nip: undefined}); }}
                     className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition disabled:bg-gray-50 disabled:text-gray-400 ${errors.nip ? 'border-red-400' : ''}`}
                   />
                   {errors.nip && <p className="mt-1 text-[10px] text-red-600">{errors.nip}</p>}
