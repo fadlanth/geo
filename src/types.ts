@@ -86,6 +86,7 @@ export interface TracerStudy {
   instansi_pekerjaan?: string;
   jabatan?: string;
   tingkat_perusahaan?: 'Lokal' | 'Nasional' | 'Multinasional' | 'Internasional';
+  gaji_pekerjaan?: number;
 
   // Studi Lanjut
   universitas_tujuan?: string;
@@ -99,6 +100,13 @@ export function getMasaTungguKategori(bulan: number): string {
   if (bulan <= 6) return '0-6 bln';
   if (bulan <= 12) return '>6-12 bln';
   return '>12 bln';
+}
+
+export function getGajiKategori(gaji: number | undefined | null): '0-5jt' | '>5-10jt' | '>10jt' | '-' {
+  if (!gaji || gaji <= 0) return '-';
+  if (gaji <= 5_000_000) return '0-5jt';
+  if (gaji <= 10_000_000) return '>5-10jt';
+  return '>10jt';
 }
 
 // Helper type for rekap

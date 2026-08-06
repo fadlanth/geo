@@ -110,11 +110,7 @@ export default function Sidebar({
           <div className={`flex items-center ${collapsed ? 'flex-col px-2 py-3 gap-2' : 'p-4 justify-between'}`} style={{ borderBottom: '1px solid color-mix(in srgb, var(--color-accent) 8%, var(--color-base))' }}>
             <div className={`flex items-center ${collapsed ? '' : 'gap-3'}`}>
               <div className="p-1.5 bg-white rounded-lg flex items-center justify-center shadow-sm">
-                <div className="w-7 h-7 rounded-md bg-[var(--color-primary)] flex items-center justify-center">
-                  <span className="text-white font-display font-extrabold text-[9px] leading-none tracking-tight">
-                    U
-                  </span>
-                </div>
+                <img src="/LOGO-01.png" alt="Logo UNPAD" className="w-7 h-7 rounded-md object-contain" />
               </div>
               {!collapsed && (
                 <div>

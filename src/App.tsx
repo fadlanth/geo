@@ -723,10 +723,8 @@ export default function App() {
 function SplashScreen() {
   return (
     <div className="min-h-screen bg-[var(--color-base)] flex flex-col items-center justify-center gap-4 p-4">
-      <div className="w-16 h-16 rounded-2xl bg-[var(--color-primary)] flex items-center justify-center">
-        <span className="text-white font-display font-extrabold text-sm tracking-tight">
-          UNPAD
-        </span>
+      <div className="w-16 h-16 rounded-2xl bg-white shadow-lg flex items-center justify-center overflow-hidden">
+        <img src="/LOGO-01.png" alt="Logo UNPAD" className="w-full h-full object-contain p-1" />
       </div>
       <div className="w-8 h-8 border-4 border-[var(--color-primary)]/20 border-t-[var(--color-primary)] rounded-full animate-spin" />
       <p className="text-xs text-[var(--color-text-main)]/50 font-medium">

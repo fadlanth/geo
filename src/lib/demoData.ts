@@ -262,6 +262,7 @@ export const INITIAL_ALUMNI: TracerStudy[] = [
     instansi_pekerjaan: 'Pertamina Geothermal Energy',
     jabatan: 'Geophysicist',
     tingkat_perusahaan: 'Multinasional',
+    gaji_pekerjaan: 8500000,
   },
   {
     id_tracer: 'tracer-0002',
@@ -272,6 +273,7 @@ export const INITIAL_ALUMNI: TracerStudy[] = [
     instansi_pekerjaan: 'BMKG Pusat',
     jabatan: 'Seismolog Pratama',
     tingkat_perusahaan: 'Nasional',
+    gaji_pekerjaan: 12500000,
   },
   {
     id_tracer: 'tracer-0003',
@@ -291,6 +293,7 @@ export const INITIAL_ALUMNI: TracerStudy[] = [
     instansi_pekerjaan: 'PT Geoservices',
     jabatan: 'Junior Geophysicist',
     tingkat_perusahaan: 'Nasional',
+    gaji_pekerjaan: 4200000,
   },
   {
     id_tracer: 'tracer-0005',

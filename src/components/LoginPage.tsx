@@ -41,11 +41,7 @@ export default function LoginPage({ onBack }: LoginPageProps) {
         {/* Logo & Header */}
         <div className="text-center mb-8">
           <div className="inline-flex p-3.5 bg-white rounded-3xl shadow-xl border border-gray-100 mb-6 flex items-center justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--color-primary)] flex items-center justify-center">
-              <span className="text-white font-display font-extrabold text-sm tracking-tight">
-                UNPAD
-              </span>
-            </div>
+            <img src="/LOGO-01.png" alt="Logo UNPAD" className="w-16 h-16 rounded-2xl object-contain" />
           </div>
           <h1 className="font-display font-extrabold text-3xl text-[var(--color-text-main)] tracking-tight">
             GEO INFO UNPAD

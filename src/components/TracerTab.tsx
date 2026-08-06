@@ -16,7 +16,8 @@ import {
   ChevronUp,
   Calendar,
   Users,
-  TrendingUp
+  TrendingUp,
+  Download
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -31,10 +32,10 @@ import {
   YAxis,
   CartesianGrid
 } from 'recharts';
-import { TracerStudy, Mahasiswa, getMasaTungguKategori } from '../types';
+import { TracerStudy, Mahasiswa, getMasaTungguKategori, getGajiKategori } from '../types';
 import { useDebounce } from '../lib/hooks';
 import { academicService } from '../lib/academicService';
-import { exportToExcel } from '../lib/exportUtils';
+import { exportToExcel, exportRekapMultiSheetToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
 import ComboboxMahasiswa from './ComboboxMahasiswa';
@@ -95,6 +96,7 @@ export default function TracerTab({
     instansi_pekerjaan: '',
     jabatan: '',
     tingkat_perusahaan: undefined,
+    gaji_pekerjaan: undefined,
     universitas_tujuan: '',
     program_studi: '',
     bidang_usaha: ''
@@ -130,9 +132,55 @@ export default function TracerTab({
     acc[k] = (acc[k] || 0) + 1;
     return acc;
   }, {});
-  const tungguKategoriData = ['0-6 bln', '>6-12 bln', '>12 bln']
-    .filter(k => (tungguKategoriMap[k] || 0) > 0)
-    .map(k => ({ label: k, count: tungguKategoriMap[k] || 0 }));
+   const tungguKategoriData = ['0-6 bln', '>6-12 bln', '>12 bln']
+     .filter(k => (tungguKategoriMap[k] || 0) > 0)
+     .map(k => ({ label: k, count: tungguKategoriMap[k] || 0 }));
+
+   // === Rekap Gaji per Tahun Lulus (hanya alumni Bekerja) ===
+   const GAJI_KATEGORI = ['0-5jt', '>5-10jt', '>10jt'] as const;
+   const sortedTahun = Array.from(new Set(alumni.map(a => a.tahun_lulus))).sort((a, b) => b - a);
+   const gajiPerTahun = sortedTahun.map(th => {
+     const bekerjaTahun = bekerja.filter(a => a.tahun_lulus === th);
+     const counts: Record<typeof GAJI_KATEGORI[number], number> = { '0-5jt': 0, '>5-10jt': 0, '>10jt': 0 };
+     bekerjaTahun.forEach(a => {
+       const kategori = getGajiKategori(a.gaji_pekerjaan);
+       if (kategori !== '-') counts[kategori]++;
+     });
+     return {
+       tahun_lulus: th,
+       '0-5jt': counts['0-5jt'],
+       '>5-10jt': counts['>5-10jt'],
+       '>10jt': counts['>10jt'],
+       total: bekerjaTahun.filter(a => getGajiKategori(a.gaji_pekerjaan) !== '-').length,
+     };
+   });
+   const gajiGrandTotal = GAJI_KATEGORI.reduce((acc, k) => {
+     acc[k] = gajiPerTahun.reduce((s, r) => s + r[k], 0);
+     return acc;
+   }, { '0-5jt': 0, '>5-10jt': 0, '>10jt': 0 } as Record<typeof GAJI_KATEGORI[number], number>);
+
+   // === Rekap Status Lulusan per Tahun Lulus (untuk download, tidak ditampilkan di web) ===
+   const STATUS_KATEGORI = ['Bekerja', 'Wiraswarta', 'Studi Lanjut', 'Belum Bekerja'] as const;
+   const statusPerTahun = sortedTahun.map(th => {
+     const allTahun = alumni.filter(a => a.tahun_lulus === th);
+     const counts: Record<typeof STATUS_KATEGORI[number], number> = {
+       Bekerja: 0, Wiraswarta: 0, 'Studi Lanjut': 0, 'Belum Bekerja': 0
+     };
+     allTahun.forEach(a => {
+       if (a.status_lulusan === 'Wiraswasta') counts.Wiraswarta++;
+       else if (a.status_lulusan === 'Bekerja') counts.Bekerja++;
+       else if (a.status_lulusan === 'Studi Lanjut') counts['Studi Lanjut']++;
+       else counts['Belum Bekerja']++;
+     });
+     return {
+       tahun_lulus: th,
+       Bekerja: counts.Bekerja,
+       Wiraswarta: counts.Wiraswarta,
+       'Studi Lanjut': counts['Studi Lanjut'],
+       'Belum Bekerja': counts['Belum Bekerja'],
+       total: allTahun.length,
+     };
+   });
 
   // === Filter ===
   const tahunOptions = Array.from(new Set(alumni.map(a => a.tahun_lulus))).sort((a, b) => b - a);
@@ -163,6 +211,7 @@ export default function TracerTab({
       instansi_pekerjaan: a.instansi_pekerjaan || '',
       jabatan: a.jabatan || '',
       tingkat_perusahaan: a.tingkat_perusahaan,
+      gaji_pekerjaan: a.gaji_pekerjaan,
       universitas_tujuan: a.universitas_tujuan || '',
       program_studi: a.program_studi || '',
       bidang_usaha: a.bidang_usaha || ''
@@ -208,6 +257,7 @@ export default function TracerTab({
       instansi_pekerjaan: '',
       jabatan: '',
       tingkat_perusahaan: undefined,
+      gaji_pekerjaan: undefined,
       universitas_tujuan: '',
       program_studi: '',
       bidang_usaha: ''
@@ -227,6 +277,7 @@ export default function TracerTab({
         'Instansi': a.instansi_pekerjaan || '',
         'Jabatan': a.jabatan || '',
         'Tingkat Perusahaan': a.tingkat_perusahaan || '',
+        'Gaji (Rp)': a.gaji_pekerjaan || '',
         'Universitas Tujuan': a.universitas_tujuan || '',
         'Program Studi': a.program_studi || '',
         'Bidang Usaha': a.bidang_usaha || ''
@@ -238,6 +289,71 @@ export default function TracerTab({
         kind: 'success',
         title: 'Ekspor Berhasil',
         message: `Berhasil mengunduh ${dataToExport.length} data tracer ke Excel.`
+      });
+    }
+  };
+
+  const handleExportRekapAll = () => {
+    const hasGaji = gajiPerTahun.length > 0;
+    const hasStatus = statusPerTahun.length > 0;
+    if (!hasGaji && !hasStatus) {
+      alert('Tidak ada data rekap untuk diekspor.');
+      return;
+    }
+
+    const sheets: Record<string, any[]> = {};
+
+    if (hasGaji) {
+      const rows: any[] = gajiPerTahun.map(r => ({
+        'Tahun Lulus': r.tahun_lulus,
+        '0-5jt': r['0-5jt'],
+        '>5-10jt': r['>5-10jt'],
+        '>10jt': r['>10jt'],
+        'Total': r.total,
+      }));
+      const grand = gajiGrandTotal;
+      rows.push({
+        'Tahun Lulus': 'TOTAL',
+        '0-5jt': grand['0-5jt'],
+        '>5-10jt': grand['>5-10jt'],
+        '>10jt': grand['>10jt'],
+        'Total': grand['0-5jt'] + grand['>5-10jt'] + grand['>10jt'],
+      });
+      sheets['Rekap Gaji'] = rows;
+    }
+
+    if (hasStatus) {
+      const rows: any[] = statusPerTahun.map(r => ({
+        'Tahun Lulus': r.tahun_lulus,
+        'Bekerja': r.Bekerja,
+        'Wiraswarta': r.Wiraswarta,
+        'Studi Lanjut': r['Studi Lanjut'],
+        'Belum Bekerja': r['Belum Bekerja'],
+        'Total': r.total,
+      }));
+      const grand = statusPerTahun.reduce((acc, r) => ({
+        Bekerja: acc.Bekerja + r.Bekerja,
+        Wiraswarta: acc.Wiraswarta + r.Wiraswarta,
+        'Studi Lanjut': acc['Studi Lanjut'] + r['Studi Lanjut'],
+        'Belum Bekerja': acc['Belum Bekerja'] + r['Belum Bekerja'],
+      }), { Bekerja: 0, Wiraswarta: 0, 'Studi Lanjut': 0, 'Belum Bekerja': 0 });
+      rows.push({
+        'Tahun Lulus': 'TOTAL',
+        'Bekerja': grand.Bekerja,
+        'Wiraswarta': grand.Wiraswarta,
+        'Studi Lanjut': grand['Studi Lanjut'],
+        'Belum Bekerja': grand['Belum Bekerja'],
+        'Total': grand.Bekerja + grand.Wiraswarta + grand['Studi Lanjut'] + grand['Belum Bekerja'],
+      });
+      sheets['Rekap Status'] = rows;
+    }
+
+    exportRekapMultiSheetToExcel(sheets, 'Rekap_Tracer');
+    if (triggerToast) {
+      triggerToast({
+        kind: 'success',
+        title: 'Ekspor Berhasil',
+        message: `Berhasil mengunduh rekap (gaji + status) ke Excel.`
       });
     }
   };
@@ -457,6 +573,46 @@ export default function TracerTab({
             </div>
           )}
 
+          {/* Rekap Gaji Alumni per Tahun Lulus (hanya alumni Bekerja) */}
+          {gajiPerTahun.length > 0 && (
+            <div className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 shadow-xs">
+              <div className="flex items-center mb-3 pb-2 border-b border-gray-100">
+                <h3 className="font-display font-bold text-sm text-[var(--color-text-main)]">Rekap Gaji Alumni per Tahun Lulus</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs md:text-sm">
+                  <thead>
+                    <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 font-bold uppercase tracking-wider">
+                      <th className="p-3 pl-4">Tahun Lulus</th>
+                      <th className="p-3 text-center">0–5jt</th>
+                      <th className="p-3 text-center">&gt;5–10jt</th>
+                      <th className="p-3 text-center">&gt;10jt</th>
+                      <th className="p-3 text-center font-display">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {gajiPerTahun.map(r => (
+                      <tr key={r.tahun_lulus} className="hover:bg-gray-50/30">
+                        <td className="p-3 pl-4 font-bold text-[var(--color-text-main)]">{r.tahun_lulus}</td>
+                        <td className="p-3 text-center text-gray-700">{r['0-5jt']}</td>
+                        <td className="p-3 text-center text-gray-700">{r['>5-10jt']}</td>
+                        <td className="p-3 text-center text-gray-700">{r['>10jt']}</td>
+                        <td className="p-3 text-center font-bold text-[var(--color-primary)]">{r.total}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t-2 border-gray-200 bg-gray-50/30 font-bold">
+                      <td className="p-3 pl-4 text-[var(--color-text-main)]">TOTAL</td>
+                      <td className="p-3 text-center">{gajiGrandTotal['0-5jt']}</td>
+                      <td className="p-3 text-center">{gajiGrandTotal['>5-10jt']}</td>
+                      <td className="p-3 text-center">{gajiGrandTotal['>10jt']}</td>
+                      <td className="p-3 text-center text-[var(--color-primary)]">{gajiGrandTotal['0-5jt'] + gajiGrandTotal['>5-10jt'] + gajiGrandTotal['>10jt']}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Table */}
           <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden">
             <div className="overflow-x-auto">
@@ -581,27 +737,40 @@ export default function TracerTab({
         </>
       )}
 
-      {/* Import Modal */}
+        {/* Download Rekap (gaji + status) - tabel rekap status tidak ditampilkan di web */}
+        {(gajiPerTahun.length > 0 || statusPerTahun.length > 0) && (
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={handleExportRekapAll}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+              title="Download rekap (gaji + status) ke Excel"
+            >
+              <Download className="w-3.5 h-3.5" /> Download Rekap
+            </button>
+          </div>
+        )}
+
+        {/* Import Modal */}
       {showImport && (
         <CsvImporter
           title="Tracer Study Alumni"
           expectedHeaders={[
             'npm_mahasiswa', 'tahun_lulus', 'status_lulusan', 'masa_tunggu_bulan',
-            'instansi_pekerjaan', 'jabatan', 'tingkat_perusahaan',
+            'instansi_pekerjaan', 'jabatan', 'tingkat_perusahaan', 'gaji_pekerjaan',
             'universitas_tujuan', 'program_studi', 'bidang_usaha'
           ]}
           optionalHeaders={[
-            'instansi_pekerjaan', 'jabatan', 'tingkat_perusahaan',
+            'instansi_pekerjaan', 'jabatan', 'tingkat_perusahaan', 'gaji_pekerjaan',
             'universitas_tujuan', 'program_studi', 'bidang_usaha'
           ]}
-          templateCsv={`npm_mahasiswa,tahun_lulus,status_lulusan,masa_tunggu_bulan,instansi_pekerjaan,jabatan,tingkat_perusahaan,universitas_tujuan,program_studi,bidang_usaha
-12318001,2022,Bekerja,3,Pertamina Geothermal Energy,Geophysicist,Multinasional,,,
-12319012,2023,Studi Lanjut,2,,,,"Kyushu University","Earth Resources Engineering",
-12320011,2024,Wiraswasta,5,,,,,,,"Jasa Konsultasi Geofisika"`}
+          templateCsv={`npm_mahasiswa,tahun_lulus,status_lulusan,masa_tunggu_bulan,instansi_pekerjaan,jabatan,tingkat_perusahaan,gaji_pekerjaan,universitas_tujuan,program_studi,bidang_usaha
+12318001,2022,Bekerja,3,Pertamina Geothermal Energy,Geophysicist,Multinasional,8500000,,,
+12319012,2023,Studi Lanjut,2,,,,"","","Kyushu University","Earth Resources Engineering",
+12320011,2024,Wiraswasta,5,,,,,,,,Jasa Konsultasi Geofisika`}
           templateData={[
-            { npm_mahasiswa: '12318001', tahun_lulus: 2022, status_lulusan: 'Bekerja', masa_tunggu_bulan: 3, instansi_pekerjaan: 'Pertamina Geothermal Energy', jabatan: 'Geophysicist', tingkat_perusahaan: 'Multinasional', universitas_tujuan: '', program_studi: '', bidang_usaha: '' },
-            { npm_mahasiswa: '12319012', tahun_lulus: 2023, status_lulusan: 'Studi Lanjut', masa_tunggu_bulan: 2, instansi_pekerjaan: '', jabatan: '', tingkat_perusahaan: '', universitas_tujuan: 'Kyushu University', program_studi: 'Earth Resources Engineering', bidang_usaha: '' },
-            { npm_mahasiswa: '12320011', tahun_lulus: 2024, status_lulusan: 'Wiraswasta', masa_tunggu_bulan: 5, instansi_pekerjaan: '', jabatan: '', tingkat_perusahaan: '', universitas_tujuan: '', program_studi: '', bidang_usaha: 'Jasa Konsultasi Geofisika' }
+            { npm_mahasiswa: '12318001', tahun_lulus: 2022, status_lulusan: 'Bekerja', masa_tunggu_bulan: 3, instansi_pekerjaan: 'Pertamina Geothermal Energy', jabatan: 'Geophysicist', tingkat_perusahaan: 'Multinasional', gaji_pekerjaan: 8500000, universitas_tujuan: '', program_studi: '', bidang_usaha: '' },
+            { npm_mahasiswa: '12319012', tahun_lulus: 2023, status_lulusan: 'Studi Lanjut', masa_tunggu_bulan: 2, instansi_pekerjaan: '', jabatan: '', tingkat_perusahaan: '', gaji_pekerjaan: '', universitas_tujuan: 'Kyushu University', program_studi: 'Earth Resources Engineering', bidang_usaha: '' },
+            { npm_mahasiswa: '12320011', tahun_lulus: 2024, status_lulusan: 'Wiraswasta', masa_tunggu_bulan: 5, instansi_pekerjaan: '', jabatan: '', tingkat_perusahaan: '', gaji_pekerjaan: '', universitas_tujuan: '', program_studi: '', bidang_usaha: 'Jasa Konsultasi Geofisika' }
           ]}
           onImport={async (data) => {
             let count = 0;
@@ -621,6 +790,7 @@ export default function TracerTab({
                 jabatan: String(nr['jabatan'] || '').trim() || undefined,
                 tingkat_perusahaan: (['Lokal', 'Nasional', 'Multinasional', 'Internasional'].includes(String(nr['tingkat_perusahaan'] || '').trim())
                   ? String(nr['tingkat_perusahaan']).trim() as any : undefined),
+                gaji_pekerjaan: nr['gaji_pekerjaan'] ? Number(nr['gaji_pekerjaan']) || undefined : undefined,
                 universitas_tujuan: String(nr['universitas_tujuan'] || '').trim() || undefined,
                 program_studi: String(nr['program_studi'] || '').trim() || undefined,
                 bidang_usaha: String(nr['bidang_usaha'] || '').trim() || undefined
@@ -755,6 +925,19 @@ export default function TracerTab({
                         ))}
                       </select>
                     </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold mb-1">Gaji Bulanan (Rp)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={100000}
+                      placeholder="contoh: 8500000"
+                      value={form.gaji_pekerjaan || ''}
+                      onChange={(e) => setForm({...form, gaji_pekerjaan: e.target.value ? Number(e.target.value) : undefined})}
+                      className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Kategori otomatis: 0-5jt / &gt;5-10jt / &gt;10jt</p>
                   </div>
                 </div>
               )}

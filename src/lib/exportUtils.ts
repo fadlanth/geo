@@ -20,6 +20,28 @@ export function exportToExcel(data: any[], fileName: string, sheetName: string =
 }
 
 /**
+ * Export data rekap (multi-sheet) ke Excel (.xlsx).
+ * @param sheets  object { "Nama Sheet": arrayOfObjects, ... }
+ * @param fileName  tanpa ekstensi
+ */
+export function exportRekapMultiSheetToExcel(
+  sheets: Record<string, any[]>,
+  fileName: string = 'Rekap'
+) {
+  const wb = XLSX.utils.book_new();
+  Object.entries(sheets).forEach(([sheetName, rows]) => {
+    if (rows && rows.length > 0) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName);
+    }
+  });
+  if (Object.keys(wb.SheetNames).length === 0) {
+    alert('Tidak ada data rekap untuk diekspor.');
+    return;
+  }
+  XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+/**
  * Export data tabel aktif (filtered) ke CSV — ringan & universal.
  */
 export function exportToCsv(data: any[], fileName: string) {

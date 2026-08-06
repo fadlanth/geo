@@ -95,6 +95,7 @@ ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS tingkat_perusahaan TEXT
 ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS universitas_tujuan TEXT;
 ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS program_studi TEXT;
 ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS bidang_usaha TEXT;
+ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS gaji_pekerjaan NUMERIC;
 
 -- Natural-key unique constraints (for upsert conflict resolution)
 ALTER TABLE public.riwayat_mbkm ADD CONSTRAINT riwayat_mbkm_unique UNIQUE (npm_mahasiswa, tempat_instansi, semester);
