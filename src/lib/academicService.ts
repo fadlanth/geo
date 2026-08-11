@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.dosen (
   nip TEXT PRIMARY KEY,
   nama TEXT NOT NULL,
   kode_dosen TEXT,
+  sandi_dosen TEXT,
   golongan TEXT,
   pangkat TEXT,
   jabatan TEXT,
@@ -90,6 +91,7 @@ CREATE TABLE IF NOT EXISTS public.tracer_study (
 -- JANGAN jalankan "DISABLE ROW LEVEL SECURITY" pada lingkungan produksi.
 
 -- Migration: add columns for existing database
+ALTER TABLE public.dosen ADD COLUMN IF NOT EXISTS sandi_dosen TEXT;
 ALTER TABLE public.mahasiswa ADD COLUMN IF NOT EXISTS tahun_lulus INTEGER;
 ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS tingkat_perusahaan TEXT;
 ALTER TABLE public.tracer_study ADD COLUMN IF NOT EXISTS universitas_tujuan TEXT;
@@ -136,7 +138,9 @@ export const academicService = {
     const isNew = await this._isNewRow('dosen', 'nip', dosen.nip);
     const { error } = await supabase.from('dosen').upsert(dosen, { onConflict: 'nip' });
     if (error) throw new Error(error.message);
-    await this.logAuditChange('dosen', isNew ? 'insert' : 'update', dosen.nip, dosen);
+    // Jangan bocorkan sandi ke audit log
+    const { sandi_dosen, ...payload } = dosen;
+    await this.logAuditChange('dosen', isNew ? 'insert' : 'update', dosen.nip, payload);
   },
 
   // Cek apakah baris dengan primary key ada (untuk label aksi insert/update)

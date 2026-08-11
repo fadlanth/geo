@@ -33,7 +33,7 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
       if (error) throw error;
       if (data && data[0]) setRekap(data[0] as RekapPublik);
     } catch (err) {
-      console.warn('Agregat publik belum tersedia (jalankan migrasi 0001_security.sql):', err);
+      console.warn('Agregat publik belum tersedia (jalankan migrasi 001_security.sql):', err);
     } finally {
       setLoading(false);
     }

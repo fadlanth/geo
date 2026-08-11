@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle2, AlertCircle, FileText, X } from 'lucide-react';
+import Button from './Button';
 
 interface CsvImporterProps {
   title: string;
@@ -389,18 +390,12 @@ export default function CsvImporter({
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button 
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50"
-                >
+                <Button variant="secondary" onClick={onClose}>
                   Batal
-                </button>
-                <button 
-                  onClick={handleExecuteImport}
-                  className="px-6 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white rounded-xl text-sm font-bold shadow-md transition"
-                >
+                </Button>
+                <Button onClick={handleExecuteImport}>
                   Mulai Import Data
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -415,12 +410,12 @@ export default function CsvImporter({
                 <h4 className="font-bold text-lg text-[var(--color-text-main)]">Import Berhasil!</h4>
                 <p className="text-sm text-gray-500 mt-1">Sebanyak {parsedData.length} baris data telah ditambahkan ke sistem.</p>
               </div>
-              <button 
+              <Button
                 onClick={onClose}
-                className="mt-6 px-8 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-bold transition hover:opacity-90"
+                className="mt-6"
               >
                 Selesai
-              </button>
+              </Button>
             </div>
           )}
         </div>

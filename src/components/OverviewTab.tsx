@@ -24,6 +24,25 @@ import {
 } from 'recharts';
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM } from '../types';
 import { SkeletonCard, SkeletonChart } from './Skeleton';
+import StatusChip from './StatusChip';
+import IconButton from './IconButton';
+
+interface AngkatanRow {
+  angkatan: number;
+  total: number;
+  'Regulasi Akademik': number;
+  Lulus: number;
+  'Alih Prodi': number;
+  'Undur Diri': number;
+}
+
+interface ChartAngkatanRow {
+  name: string;
+  'Regulasi Akademik': number;
+  Lulus: number;
+  'Alih Prodi': number;
+  'Undur Diri': number;
+}
 
 interface OverviewTabProps {
   mahasiswa: Mahasiswa[];
@@ -108,7 +127,7 @@ export default function OverviewTab({
   };
 
   // Per-angkatan detail data
-  const angkatanDetail = mahasiswa.reduce((acc: any, m) => {
+  const angkatanDetail = mahasiswa.reduce<Record<number, AngkatanRow>>((acc, m) => {
     if (!acc[m.angkatan]) acc[m.angkatan] = {
       angkatan: m.angkatan,
       total: 0,
@@ -121,12 +140,12 @@ export default function OverviewTab({
     acc[m.angkatan][m.status]++;
     return acc;
   }, {});
-  const angkatanDetailData = Object.values(angkatanDetail).sort((a: any, b: any) => b.angkatan - a.angkatan) as any[];
+  const angkatanDetailData = Object.values(angkatanDetail).sort((a, b) => b.angkatan - a.angkatan);
 
   // Per-angkatan counts for Regulasi Akademik only
   const regulasiPerAngkatan = mahasiswa
     .filter(m => m.status === 'Regulasi Akademik')
-    .reduce((acc: any, m) => {
+    .reduce<Record<number, number>>((acc, m) => {
       acc[m.angkatan] = (acc[m.angkatan] || 0) + 1;
       return acc;
     }, {});
@@ -135,7 +154,7 @@ export default function OverviewTab({
     .sort((a, b) => b - a);
 
   // 2. Data Rekap Angkatan (Bar Chart Stacked)
-  const angkatanMap = mahasiswa.reduce((acc: any, m) => {
+  const angkatanMap = mahasiswa.reduce<Record<number, ChartAngkatanRow>>((acc, m) => {
     if (!acc[m.angkatan]) acc[m.angkatan] = { name: m.angkatan.toString(), 'Regulasi Akademik': 0, Lulus: 0, 'Alih Prodi': 0, 'Undur Diri': 0 };
     if (m.status === 'Regulasi Akademik') acc[m.angkatan]['Regulasi Akademik']++;
     else if (m.status === 'Lulus') acc[m.angkatan].Lulus++;
@@ -144,10 +163,10 @@ export default function OverviewTab({
     return acc;
   }, {});
   
-  const angkatanChartData = Object.values(angkatanMap).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  const angkatanChartData = Object.values(angkatanMap).sort((a, b) => a.name.localeCompare(b.name));
 
   // 3. Tracer Study Status Lulusan (Pie Chart)
-  const statusLulusanMap = alumni.reduce((acc: any, a) => {
+  const statusLulusanMap = alumni.reduce<Record<string, number>>((acc, a) => {
     acc[a.status_lulusan] = (acc[a.status_lulusan] || 0) + 1;
     return acc;
   }, {});
@@ -211,7 +230,7 @@ export default function OverviewTab({
               <div className="p-3 bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)] rounded-xl">
                 <Users className="w-5 h-5" />
               </div>
-              <span className="chip status-regulasi">{pctRegulasi}%</span>
+              <StatusChip status={`${pctRegulasi}%`} tone="blue" count />
             </div>
              <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">Mahasiswa Aktif</p>
             <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{mhsRegulasi}</p>
@@ -229,9 +248,7 @@ export default function OverviewTab({
               <div className="p-3 bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)] rounded-xl">
                 <Briefcase className="w-5 h-5" />
               </div>
-              <span className="chip status-regulasi">
-                {totalInstansi} Total Instansi
-              </span>
+              <StatusChip status={`${totalInstansi} Total Instansi`} tone="neutral" count />
             </div>
             <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">MBKM / Magang</p>
             <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{totalMbkm}</p>
@@ -249,9 +266,7 @@ export default function OverviewTab({
               <div className="p-3 bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)] rounded-xl">
                 <Award className="w-5 h-5" />
               </div>
-              <span className="chip status-regulasi">
-                {juara1Count} Juara 1
-              </span>
+              <StatusChip status={`${juara1Count} Juara 1`} tone="gold" count />
             </div>
             <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">Prestasi Mahasiswa</p>
             <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{totalPrestasi}</p>
@@ -269,14 +284,12 @@ export default function OverviewTab({
               <div className="p-3 bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)] rounded-xl">
                 <GraduationCap className="w-5 h-5" />
               </div>
-              <span className="chip status-regulasi">
-                {totalAlumni > 0 ? Math.round((alumniBekerja/totalAlumni)*100) : 0}% Kerja
-              </span>
+              <StatusChip status={`${totalAlumni > 0 ? Math.round((alumniBekerja/totalAlumni)*100) : 0}% Kerja`} tone="green" count />
             </div>
             <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">Alumni Terlacak</p>
             <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{totalAlumni}</p>
             <div className="mt-1 flex items-center gap-2 text-xs">
-              <span className="chip status-bekerja">{pctBekerja}% Bekerja</span>
+              <StatusChip status={`${pctBekerja}% Bekerja`} tone="green" />
               <span className="text-[var(--color-text-main)]/50">rata-rata {avgWaktuTunggu} bln tunggu</span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-text-main)]/50 border-t border-gray-100 pt-3">
@@ -406,20 +419,17 @@ export default function OverviewTab({
                 </p>
               </div>
               {drillFilter ? (
-                <button 
+                <IconButton
+                  label="Kembali ke ringkasan"
                   onClick={() => setDrillFilter(null)}
-                  className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition"
-                  title="Kembali ke ringkasan"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
+                  icon={<ChevronLeft className="w-5 h-5" />}
+                />
               ) : (
-                <button 
+                <IconButton
+                  label="Tutup"
                   onClick={() => setShowAngkatanDetail(false)}
-                  className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 transition"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                  icon={<X className="w-5 h-5" />}
+                />
               )}
             </div>
             <div className="overflow-y-auto flex-1 mt-4">
@@ -442,12 +452,7 @@ export default function OverviewTab({
                             <td className="p-3 pl-0 font-mono text-[var(--color-text-main)]">{m.npm}</td>
                             <td className="p-3 font-bold text-[var(--color-text-main)]">{m.nama}</td>
                             <td className="p-3">
-                              <span className={`chip ${
-                                m.status === 'Regulasi Akademik' ? 'status-regulasi' :
-                                m.status === 'Lulus' ? 'status-lulus' :
-                                m.status === 'Alih Prodi' ? 'status-alih' :
-                                'status-undur'
-                              }`}>{m.status}</span>
+                              <StatusChip status={m.status} />
                             </td>
                             <td className="p-3 text-[var(--color-text-main)]/70">{m.fakultas} / {m.prodi}</td>
                             <td className="p-3 pr-0 text-[var(--color-text-main)]/70">
@@ -477,7 +482,7 @@ export default function OverviewTab({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50 text-sm">
-                    {angkatanDetailData.map((row: any) => (
+                    {angkatanDetailData.map((row) => (
                       <tr key={row.angkatan} className="hover:bg-gray-50/50 transition">
                         <td className="p-3 pl-0 font-bold text-[var(--color-text-main)]">
                           <button
@@ -489,7 +494,7 @@ export default function OverviewTab({
                           </button>
                         </td>
                         <td className="p-3 font-bold">
-                          <CountCell angkatan={row.angkatan} count={row.total} chipClass="status-undur" title={`Lihat seluruh mahasiswa angkatan ${row.angkatan}`} />
+                          <CountCell angkatan={row.angkatan} count={row.total} chipClass="status-neutral" title={`Lihat seluruh mahasiswa angkatan ${row.angkatan}`} />
                         </td>
                         <td className="p-3"><CountCell angkatan={row.angkatan} status="Regulasi Akademik" count={row['Regulasi Akademik']} chipClass="status-regulasi" title={`Mahasiswa Regulasi Akademik angkatan ${row.angkatan}`} /></td>
                         <td className="p-3"><CountCell angkatan={row.angkatan} status="Lulus" count={row.Lulus} chipClass="status-lulus" title={`Mahasiswa Lulus angkatan ${row.angkatan}`} /></td>
@@ -501,11 +506,11 @@ export default function OverviewTab({
                   <tfoot>
                     <tr className="border-t-2 border-gray-200 text-sm font-bold text-[var(--color-text-main)]">
                       <td className="p-3 pl-0">Total</td>
-                      <td className="p-3"><CountCell count={angkatanDetailData.reduce((s: number, r: any) => s + r.total, 0)} chipClass="status-undur" title="Lihat seluruh mahasiswa semua angkatan" /></td>
-                      <td className="p-3"><CountCell status="Regulasi Akademik" count={angkatanDetailData.reduce((s: number, r: any) => s + r['Regulasi Akademik'], 0)} chipClass="status-regulasi" title="Mahasiswa Regulasi Akademik semua angkatan" /></td>
-                      <td className="p-3"><CountCell status="Lulus" count={angkatanDetailData.reduce((s: number, r: any) => s + r.Lulus, 0)} chipClass="status-lulus" title="Mahasiswa Lulus semua angkatan" /></td>
-                      <td className="p-3"><CountCell status="Alih Prodi" count={angkatanDetailData.reduce((s: number, r: any) => s + r['Alih Prodi'], 0)} chipClass="status-alih" title="Mahasiswa Alih Prodi semua angkatan" /></td>
-                      <td className="p-3 pr-0"><CountCell status="Undur Diri" count={angkatanDetailData.reduce((s: number, r: any) => s + r['Undur Diri'], 0)} chipClass="status-undur" title="Mahasiswa Undur Diri semua angkatan" /></td>
+                      <td className="p-3"><CountCell count={angkatanDetailData.reduce((s, r) => s + r.total, 0)} chipClass="status-neutral" title="Lihat seluruh mahasiswa semua angkatan" /></td>
+                      <td className="p-3"><CountCell status="Regulasi Akademik" count={angkatanDetailData.reduce((s, r) => s + r['Regulasi Akademik'], 0)} chipClass="status-regulasi" title="Mahasiswa Regulasi Akademik semua angkatan" /></td>
+                      <td className="p-3"><CountCell status="Lulus" count={angkatanDetailData.reduce((s, r) => s + r.Lulus, 0)} chipClass="status-lulus" title="Mahasiswa Lulus semua angkatan" /></td>
+                      <td className="p-3"><CountCell status="Alih Prodi" count={angkatanDetailData.reduce((s, r) => s + r['Alih Prodi'], 0)} chipClass="status-alih" title="Mahasiswa Alih Prodi semua angkatan" /></td>
+                      <td className="p-3 pr-0"><CountCell status="Undur Diri" count={angkatanDetailData.reduce((s, r) => s + r['Undur Diri'], 0)} chipClass="status-undur" title="Mahasiswa Undur Diri semua angkatan" /></td>
                     </tr>
                   </tfoot>
                 </table>

@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import CsvImporter from './CsvImporter';
+import Pagination from './Pagination';
 import DataActions from './DataActions';
+import Button from './Button';
+import IconButton from './IconButton';
+import StatusChip from './StatusChip';
 import {
   Search,
   Plus,
@@ -246,18 +250,20 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-        <div>
-          <h2 className="font-display font-extrabold text-xl text-[var(--color-text-main)]">Magang & MBKM</h2>
-          <p className="text-xs text-[var(--color-text-main)]/50">Rekapitulasi aktivitas magang mahasiswa</p>
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">MBKM / Kampus Merdeka</p>
+          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">Magang & MBKM</h2>
+          <p className="text-xs text-[var(--color-text-main)]/55">Rekapitulasi aktivitas magang mahasiswa</p>
         </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <button
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+          <Button
             onClick={() => setShowAddModal(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-base)] hover:bg-[var(--color-primary-light)] font-semibold text-xs rounded-xl transition shadow-md shadow-[var(--color-primary)]/10"
+            className="flex-1 sm:flex-none"
+            icon={<Plus className="w-4 h-4" />}
           >
-            <Plus className="w-4 h-4" /> Catat Magang
-          </button>
+            Catat Magang
+          </Button>
           <DataActions
             onImportCsv={() => setShowImport(true)}
             onImportExcel={() => setShowImport(true)}
@@ -411,7 +417,7 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                             <div className="text-xs font-mono text-[var(--color-text-main)]/50">{m.npm_mahasiswa}</div>
                           </td>
                           <td className="p-4">
-                            <span className="text-xs font-semibold bg-gray-100 text-gray-700 px-2 py-1 rounded">{m.semester}</span>
+                            <StatusChip status={m.semester} tone="neutral" />
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-1.5 font-bold text-sm">
@@ -420,12 +426,11 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                             </div>
                           </td>
                           <td className="p-4 pr-6 text-center">
-                            <button
+                            <IconButton
+                              label={isExpanded ? 'Tutup detail' : 'Lihat detail'}
                               onClick={(e) => { e.stopPropagation(); toggleExpand(m.id_mbkm); }}
-                              className="p-1.5 hover:bg-gray-200/60 rounded-lg transition text-gray-400 hover:text-gray-600"
-                            >
-                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
+                              icon={isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            />
                           </td>
                         </tr>
                         {isExpanded && (
@@ -479,20 +484,7 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                   Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-{Math.min(safePage * ROWS_PER_PAGE, filteredMbkm.length)} dari {filteredMbkm.length} data
                 </span>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={safePage <= 1}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={safePage >= totalPages}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-                  >
-                    Next
-                  </button>
+                  <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
                 </div>
               </div>
             )}
@@ -607,24 +599,23 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => { setShowAddModal(false); resetForm(); }}
-                  className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-semibold"
                 >
                   Batal
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary-light)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isSubmitting ? (
                     <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Menyimpan...</>
                   ) : (
                     editingMbkm ? 'Simpan Perubahan' : 'Simpan Data Magang'
                   )}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

@@ -31,6 +31,7 @@ export interface Dosen {
   nip: string;                // Primary key
   nama: string;
   kode_dosen: string;
+  sandi_dosen?: string;
   golongan: string;
   pangkat: string;
   jabatan: string;

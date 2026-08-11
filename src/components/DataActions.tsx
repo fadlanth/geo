@@ -1,13 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UploadCloud, ChevronDown, FileText, FileSpreadsheet } from 'lucide-react';
+import Button from './Button';
 
 interface DataActionsProps {
   onImportCsv: () => void;
   onImportExcel: () => void;
   onExportExcel: () => void;
+  onExportRekapPrestasi?: () => void;
 }
 
-export default function DataActions({ onImportCsv, onImportExcel, onExportExcel }: DataActionsProps) {
+export default function DataActions({ onImportCsv, onImportExcel, onExportExcel, onExportRekapPrestasi }: DataActionsProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -21,14 +23,15 @@ export default function DataActions({ onImportCsv, onImportExcel, onExportExcel 
 
   return (
     <div className="relative" ref={ref}>
-      <button
+      <Button
+        variant="secondary"
         onClick={() => setOpen(!open)}
-        className="flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100 font-semibold text-xs rounded-xl transition"
+        icon={<UploadCloud className="w-4 h-4" />}
       >
-        <UploadCloud className="w-4 h-4" /> Data <ChevronDown className={`w-3 h-3 transition ${open ? 'rotate-180' : ''}`} />
-      </button>
+        Data <ChevronDown className={`w-3 h-3 transition ${open ? 'rotate-180' : ''}`} />
+      </Button>
       {open && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-xl shadow-xl z-50 py-1.5">
+        <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl z-50 py-1.5">
           <p className="px-4 py-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Import</p>
           <button
             onClick={() => { setOpen(false); onImportCsv(); }}
@@ -50,6 +53,14 @@ export default function DataActions({ onImportCsv, onImportExcel, onExportExcel 
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Excel
           </button>
+          {onExportRekapPrestasi && (
+            <button
+              onClick={() => { setOpen(false); onExportRekapPrestasi(); }}
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-violet-600" /> Rekap + Grafik
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { 
   Plus, 
   Trash2, 
-  UserCheck, 
   Search, 
   SlidersHorizontal,
   Edit2,
   Users,
-  BookOpen
+  BookOpen,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Dosen, Mahasiswa } from '../types';
 import { validators, val } from '../lib/validators';
@@ -15,7 +16,11 @@ import { useDebounce } from '../lib/hooks';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import CsvImporter from './CsvImporter';
+import Pagination from './Pagination';
 import DataActions from './DataActions';
+import Button from './Button';
+import IconButton from './IconButton';
+import StatusChip from './StatusChip';
 import { SkeletonTable, SkeletonCard } from './Skeleton';
 
 interface DosenTabProps {
@@ -38,7 +43,7 @@ export default function DosenTab({
   triggerToast
 }: DosenTabProps) {
   const [query, setQuery] = useState('');
-  const [filterWali, setFilterWali] = useState('All');
+  const [filterWali, setFilterWali] = useState<'All' | 'Wali' | 'Biasa'>('All');
   const [filterJabatan, setFilterJabatan] = useState('All');
   const [page, setPage] = useState(1);
   const ROWS_PER_PAGE = 25;
@@ -54,11 +59,15 @@ export default function DosenTab({
     nip: '',
     nama: '',
     kode_dosen: '',
+    sandi_dosen: '',
     golongan: 'III/b',
     pangkat: 'Penata Muda Tk. I',
     jabatan: 'Asisten Ahli',
     is_dosen_wali: false
   });
+
+  // Sandi yang sedang diperlihatkan di tabel (per NIP)
+  const [revealSandi, setRevealSandi] = useState<Record<string, boolean>>({});
 
   // Error validasi per-field
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -70,7 +79,8 @@ export default function DosenTab({
     const matchesSearch =
       (d.nama || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       (d.nip || '').includes(searchQuery) ||
-      (d.kode_dosen || '').toLowerCase().includes(searchQuery.toLowerCase());
+      (d.kode_dosen || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (d.sandi_dosen || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesWali =
       filterWali === 'All' ||
@@ -94,6 +104,7 @@ export default function DosenTab({
     if (!editingDosen) errs.npm = val(validators.nip(form.nip));
     errs.nama = val(validators.nama(form.nama));
     errs.jabatan = val(validators.requiredSelect(form.jabatan));
+    errs.sandi = val(validators.sandi(form.sandi_dosen || ''));
     for (const k in errs) if (errs[k] === undefined) delete errs[k];
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
@@ -115,6 +126,7 @@ export default function DosenTab({
         nip: '',
         nama: '',
         kode_dosen: '',
+        sandi_dosen: '',
         golongan: 'III/b',
         pangkat: 'Penata Muda Tk. I',
         jabatan: 'Asisten Ahli',
@@ -166,19 +178,21 @@ export default function DosenTab({
   return (
     <div className="space-y-6">
       {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10 shadow-sm">
-        <div>
-          <h2 className="font-display font-extrabold text-xl text-[var(--color-text-main)]">Data Dosen Geofisika</h2>
-          <p className="text-xs text-[var(--color-text-main)]/50">Kelola informasi fungsionalitas, golongan, jabatan, dan status dosen wali</p>
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">Data Akademik</p>
+          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">Data Dosen Geofisika</h2>
+          <p className="text-xs text-[var(--color-text-main)]/55">Kelola informasi fungsionalitas, golongan, jabatan, dan status dosen wali</p>
         </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <button
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+          <Button
             onClick={() => {
               setEditingDosen(null);
               setForm({
                 nip: '',
                 nama: '',
                 kode_dosen: '',
+                sandi_dosen: '',
                 golongan: 'III/b',
                 pangkat: 'Penata Muda Tk. I',
                 jabatan: 'Asisten Ahli',
@@ -186,10 +200,11 @@ export default function DosenTab({
               });
               setShowAddModal(true);
             }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-base)] hover:bg-[var(--color-primary-light)] font-semibold text-xs rounded-xl transition shadow-md shadow-[var(--color-primary)]/10"
+            className="flex-1 sm:flex-none"
+            icon={<Plus className="w-4 h-4" />}
           >
-            <Plus className="w-4 h-4" /> Registrasi Dosen
-          </button>
+            Registrasi Dosen
+          </Button>
           <DataActions
             onImportCsv={() => setShowImport(true)}
             onImportExcel={() => setShowImport(true)}
@@ -206,54 +221,34 @@ export default function DosenTab({
           <SkeletonCard />
         </div>
       ) : totalDosen === 0 ? (
-        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
+        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-slate-200 shadow-sm text-center">
           <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
           <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data dosen</h3>
           <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Registrasi Dosen" untuk menambahkan data pertama</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-              <BookOpen className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 font-semibold">Total Dosen Aktif</p>
-              <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">{totalDosen} Orang</h3>
-              <p className="text-[10px] text-gray-500 mt-1">Aktif mengajar di Geofisika UNPAD</p>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Total Dosen</p>
+            <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{totalDosen}</p>
           </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-green-50 text-green-600 rounded-xl">
-              <UserCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 font-semibold">Status Pembimbing</p>
-              <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">{totalWali} Dosen Wali</h3>
-              <p className="text-[10px] text-gray-500 mt-1">{totalBiasa} Dosen non-pembimbing akademik</p>
-            </div>
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Dosen Wali</p>
+            <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{totalWali}</p>
           </div>
-
-          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
-              <Users className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 font-semibold">Rasio Bimbingan Mahasiswa</p>
-              <h3 className="text-2xl font-bold font-display text-[var(--color-text-main)] mt-0.5">
-                {totalWali > 0 ? (mahasiswa.length / totalWali).toFixed(1) : 0} Mhs/Wali
-              </h3>
-              <p className="text-[10px] text-gray-500 mt-1">Beban bimbingan per dosen wali</p>
-            </div>
+          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Rasio Bimbingan</p>
+            <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">
+              {totalWali > 0 ? (mahasiswa.length / totalWali).toFixed(1) : 0}
+            </p>
           </div>
         </div>
       )}
 
       {/* Directory & Controls */}
-      <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden shadow-sm">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {/* Filters */}
-        <div className="p-4 border-b border-gray-100 bg-[var(--color-primary)]/5 flex flex-col gap-3">
+        <div className="p-3 sm:p-4 border-b border-slate-200 bg-slate-50/80 flex flex-col gap-3">
           <div className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -262,23 +257,22 @@ export default function DosenTab({
                 placeholder="Cari dosen berdasarkan Nama, NIP, atau Kode Dosen..."
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-                className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition"
+                className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
               />
             </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500 font-medium px-2 shrink-0">
+            <div className="flex items-center gap-2 text-xs text-[var(--color-text-main)]/65 font-medium px-2 shrink-0">
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              Hasil filter: <b>{filteredDosen.length}</b> dosen
+              Hasil filter: <b>{filteredDosen.length}</b>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Filter Dosen Wali */}
             <div>
               <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">Status Pembimbing</label>
               <select
                 value={filterWali}
-                onChange={(e) => { setFilterWali(e.target.value as any); setPage(1); }}
-                className="w-full p-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)]"
+                onChange={(e) => { setFilterWali(e.target.value as 'All' | 'Wali' | 'Biasa'); setPage(1); }}
+                className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
               >
                 <option value="All">Semua Dosen</option>
                 <option value="Wali">Hanya Dosen Wali</option>
@@ -286,13 +280,12 @@ export default function DosenTab({
               </select>
             </div>
 
-            {/* Filter Jabatan */}
             <div>
               <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">Jabatan Fungsional</label>
               <select
                 value={filterJabatan}
                 onChange={(e) => { setFilterJabatan(e.target.value); setPage(1); }}
-                className="w-full p-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)]"
+                className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
               >
                 <option value="All">Semua Jabatan</option>
                 {jabatanOptions.map(jab => (
@@ -315,6 +308,7 @@ export default function DosenTab({
                   <th className="p-4 font-bold text-gray-500 text-xs">Pangkat / Golongan</th>
                   <th className="p-4 font-bold text-gray-500 text-xs">Jabatan Fungsional</th>
                   <th className="p-4 font-bold text-gray-500 text-xs">Status Pembimbing</th>
+                  <th className="p-4 font-bold text-gray-500 text-xs">Sandi</th>
                   <th className="p-4 font-bold text-gray-500 text-xs text-center w-28">Aksi</th>
                 </tr>
               </thead>
@@ -347,35 +341,43 @@ export default function DosenTab({
                         <td className="p-4">
                           {d.is_dosen_wali ? (
                             <div className="flex items-center gap-1.5">
-                              <span className="chip status-regulasi flex items-center gap-1 font-bold text-[10px]">
-                                <UserCheck className="w-3 h-3" /> Dosen Wali
-                              </span>
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">
-                                {mhsCount} Bimbingan
-                              </span>
+                              <StatusChip status="Dosen Wali" tone="blue" />
+                              <StatusChip status={`${mhsCount} Bimbingan`} tone="neutral" />
                             </div>
                           ) : (
-                            <span className="chip status-undur font-semibold text-[10px]">
-                              Bukan Dosen Wali
-                            </span>
+                            <StatusChip status="Bukan Dosen Wali" tone="neutral" />
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {d.sandi_dosen ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs text-gray-600" dir="auto">
+                                {revealSandi[d.nip] ? d.sandi_dosen : '••••••••'}
+                              </span>
+                              <IconButton
+                                label={revealSandi[d.nip] ? 'Sembunyikan sandi' : 'Lihat sandi'}
+                                onClick={() => setRevealSandi(prev => ({ ...prev, [d.nip]: !prev[d.nip] }))}
+                                icon={revealSandi[d.nip] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-gray-300">—</span>
                           )}
                         </td>
                         <td className="p-4 text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <button
+                            <IconButton
+                              label="Edit Data Dosen"
+                              tone="primary"
                               onClick={() => handleEditClick(d)}
-                              className="p-1.5 bg-gray-50 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-lg transition"
-                              title="Edit Data Dosen"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
+                              icon={<Edit2 className="w-3.5 h-3.5" />}
+                            />
+                            <IconButton
+                              label="Hapus Dosen"
+                              tone="danger"
                               onClick={() => handleDeleteClick(d.nip, d.nama)}
-                              className="p-1.5 bg-gray-50 hover:bg-rose-50 text-gray-400 hover:text-rose-600 rounded-lg transition"
-                              title="Hapus Dosen"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                              icon={<Trash2 className="w-3.5 h-3.5" />}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -398,20 +400,7 @@ export default function DosenTab({
               Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-{Math.min(safePage * ROWS_PER_PAGE, filteredDosen.length)} dari {filteredDosen.length} dosen
             </span>
             <div className="flex gap-2">
-              <button
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={safePage <= 1}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-              >
-                Prev
-              </button>
-              <button
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                disabled={safePage >= totalPages}
-                className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-              >
-                Next
-              </button>
+              <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
             </div>
           </div>
         )}
@@ -425,15 +414,14 @@ export default function DosenTab({
               <h3 className="font-display font-bold text-[var(--color-text-main)] text-lg">
                 {editingDosen ? 'Edit Profil Dosen' : 'Registrasi Dosen Baru'}
               </h3>
-              <button 
+              <IconButton
+                label="Tutup"
                 onClick={() => {
                   setShowAddModal(false);
                   setEditingDosen(null);
                 }}
-                className="p-1.5 hover:bg-gray-100 rounded-xl text-gray-400 transition"
-              >
-                ✕
-              </button>
+                icon={<span className="text-sm leading-none">✕</span>}
+              />
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -450,7 +438,7 @@ export default function DosenTab({
                 {errors.nama && <p className="mt-1 text-[10px] text-red-600">{errors.nama}</p>}
               </div>
 
-              <div className="grid grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 mb-1.5">NIP Kepegawaian</label>
                   <input 
@@ -470,9 +458,21 @@ export default function DosenTab({
                     type="text" 
                     placeholder="Contoh: MUF"
                     value={form.kode_dosen}
-                    onChange={(e) => setForm({...form, kode_dosen: e.target.value})}
-                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition"
+                    onChange={(e) => setForm({...form, kode_dosen: e.target.value.toUpperCase()})}
+                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition uppercase"
                   />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sandi Dosen</label>
+                  <input 
+                    type="text" 
+                    autoComplete="off"
+                    placeholder="Contoh: muf2024"
+                    value={form.sandi_dosen || ''}
+                    onChange={(e) => { setForm({...form, sandi_dosen: e.target.value}); if (errors.sandi) setErrors({...errors, sandi: undefined}); }}
+                    className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition ${errors.sandi ? 'border-red-400' : ''}`}
+                  />
+                  {errors.sandi && <p className="mt-1 text-[10px] text-red-600">{errors.sandi}</p>}
                 </div>
               </div>
 
@@ -538,22 +538,19 @@ export default function DosenTab({
               </div>
 
               <div className="flex gap-2.5 justify-end pt-4 border-t border-gray-100">
-                <button 
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => {
                     setShowAddModal(false);
                     setEditingDosen(null);
                   }}
-                  className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-50 transition"
                 >
                   Batal
-                </button>
-                <button 
-                  type="submit"
-                  className="px-5 py-2.5 bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary-light)] rounded-xl text-xs font-bold transition shadow-md shadow-[var(--color-primary)]/10"
-                >
+                </Button>
+                <Button type="submit">
                   {editingDosen ? 'Simpan Perubahan' : 'Registrasi Dosen'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -564,15 +561,15 @@ export default function DosenTab({
       {showImport && (
         <CsvImporter 
           title="Data Dosen Geofisika"
-          expectedHeaders={['NAMA', 'NIP', 'GOL', 'PANGKAT', 'JABATAN', 'IS DOSEN WALI']}
-          templateCsv={`NAMA,NIP,GOL,PANGKAT,JABATAN,IS DOSEN WALI
-Dr. Maryadi,198001012005011001,IV/a,Pembina,Lektor Kepala,Ya
-Prof. Kartini,197502022000122002,IV/d,Pembina Utama Madya,Guru Besar,Ya
-Yudha Hartanto S.T. M.T.,199003032018011003,III/b,Penata Muda Tk. I,Asisten Ahli,Tidak`}
+          expectedHeaders={['NAMA', 'NIP', 'GOL', 'PANGKAT', 'JABATAN', 'IS DOSEN WALI', 'SANDI DOSEN']}
+          templateCsv={`NAMA,NIP,GOL,PANGKAT,JABATAN,IS DOSEN WALI,SANDI DOSEN
+Dr. Maryadi,198001012005011001,IV/a,Pembina,Lektor Kepala,Ya,mary2024
+Prof. Kartini,197502022000122002,IV/d,Pembina Utama Madya,Guru Besar,Ya,kart2024
+Yudha Hartanto S.T. M.T.,199003032018011003,III/b,Penata Muda Tk. I,Asisten Ahli,Tidak,yudha24`}
           templateData={[
-            { NAMA: 'Dr. Maryadi', NIP: '198001012005011001', GOL: 'IV/a', PANGKAT: 'Pembina', JABATAN: 'Lektor Kepala', 'IS DOSEN WALI': 'Ya' },
-            { NAMA: 'Prof. Kartini', NIP: '197502022000122002', GOL: 'IV/d', PANGKAT: 'Pembina Utama Madya', JABATAN: 'Guru Besar', 'IS DOSEN WALI': 'Ya' },
-            { NAMA: 'Yudha Hartanto S.T. M.T.', NIP: '199003032018011003', GOL: 'III/b', PANGKAT: 'Penata Muda Tk. I', JABATAN: 'Asisten Ahli', 'IS DOSEN WALI': 'Tidak' }
+            { NAMA: 'Dr. Maryadi', NIP: '198001012005011001', GOL: 'IV/a', PANGKAT: 'Pembina', JABATAN: 'Lektor Kepala', 'IS DOSEN WALI': 'Ya', 'SANDI DOSEN': 'mary2024' },
+            { NAMA: 'Prof. Kartini', NIP: '197502022000122002', GOL: 'IV/d', PANGKAT: 'Pembina Utama Madya', JABATAN: 'Guru Besar', 'IS DOSEN WALI': 'Ya', 'SANDI DOSEN': 'kart2024' },
+            { NAMA: 'Yudha Hartanto S.T. M.T.', NIP: '199003032018011003', GOL: 'III/b', PANGKAT: 'Penata Muda Tk. I', JABATAN: 'Asisten Ahli', 'IS DOSEN WALI': 'Tidak', 'SANDI DOSEN': 'yudha24' }
           ]}
           onImport={onBulkImportDosen}
           onClose={() => setShowImport(false)}

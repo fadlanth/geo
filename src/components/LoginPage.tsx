@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Mail, AlertCircle, ArrowRight, ArrowLeft, KeyRound, CheckCircle2, LogIn } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import Button from './Button';
 
 interface LoginPageProps {
   onBack?: () => void;
@@ -144,10 +145,10 @@ export default function LoginPage({ onBack }: LoginPageProps) {
               </button>
             )}
 
-            <button
+            <Button
               type="submit"
               disabled={submitting}
-              className="w-full flex items-center justify-center gap-2 bg-[var(--color-primary)] text-white py-4 rounded-xl font-bold hover:bg-[var(--color-primary-light)] transition shadow-lg shadow-[var(--color-primary)]/20 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full py-4 shadow-lg shadow-[var(--color-primary)]/20"
             >
               {submitting ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -160,7 +161,7 @@ export default function LoginPage({ onBack }: LoginPageProps) {
                   Kirim Tautan Reset <KeyRound className="w-5 h-5" />
                 </>
               )}
-            </button>
+            </Button>
           </form>
         </div>
 

@@ -28,6 +28,14 @@ export const validators = {
     return { ok: true };
   },
 
+  sandi: (value: string): Validation => {
+    const v = (value || '').trim();
+    if (!v) return { ok: true };
+    if (v.length < 4) return { ok: false, message: 'Sandi minimal 4 karakter.' };
+    if (v.length > 50) return { ok: false, message: 'Sandi terlalu panjang (maks 50 karakter).' };
+    return { ok: true };
+  },
+
   angkatan: (value: number | string): Validation => {
     const n = Number(value);
     if (!n || isNaN(n)) return { ok: false, message: 'Angkatan tidak valid.' };

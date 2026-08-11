@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import CsvImporter from './CsvImporter';
+import Pagination from './Pagination';
 import DataActions from './DataActions';
+import Button from './Button';
+import IconButton from './IconButton';
+import StatusChip from './StatusChip';
 import {
   GraduationCap,
   Search,
@@ -56,16 +60,6 @@ const STATUS_OPTIONS = ['Bekerja', 'Studi Lanjut', 'Wiraswasta', 'Belum Bekerja'
 
 const COLORS_PIE = ['var(--color-primary)', '#8b5cf6', 'var(--color-warning)', 'var(--color-muted)'];
 const COLORS_BAR = ['#60a5fa', '#3b82f6', '#1d4ed8', '#1e3a5f'];
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'Bekerja': return 'chip status-bekerja';
-    case 'Studi Lanjut': return 'chip status-studi';
-    case 'Wiraswasta': return 'chip status-wira';
-    case 'Belum Bekerja': return 'chip status-belumbekerja';
-    default: return 'chip';
-  }
-}
 
 export default function TracerTab({
   alumni,
@@ -417,18 +411,20 @@ export default function TracerTab({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-        <div>
-          <h2 className="font-display font-extrabold text-xl text-[var(--color-text-main)]">Tracer Study Alumni</h2>
-          <p className="text-xs text-[var(--color-text-main)]/50">Profil lulusan: bekerja, studi lanjut, wiraswasta</p>
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">Tracer Study</p>
+          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">Tracer Study Alumni</h2>
+          <p className="text-xs text-[var(--color-text-main)]/55">Profil lulusan: bekerja, studi lanjut, wiraswasta</p>
         </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <button
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+          <Button
             onClick={() => setShowAddModal(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-base)] hover:bg-[var(--color-primary-light)] font-semibold text-xs rounded-xl transition shadow-md shadow-[var(--color-primary)]/10"
+            className="flex-1 sm:flex-none"
+            icon={<Plus className="w-4 h-4" />}
           >
-            <Plus className="w-4 h-4" /> Tambah Data Tracer
-          </button>
+            Tambah Data Tracer
+          </Button>
           <DataActions
             onImportCsv={() => setShowImport(true)}
             onImportExcel={() => setShowImport(true)}
@@ -647,7 +643,7 @@ export default function TracerTab({
                           </td>
                           <td className="p-4">
                             <div className="flex flex-col gap-1">
-                              <span className={getStatusColor(a.status_lulusan)}>{a.status_lulusan}</span>
+                              <StatusChip status={a.status_lulusan} />
                               <span className="text-[10px] text-gray-500">{a.tahun_lulus}</span>
                             </div>
                           </td>
@@ -657,12 +653,11 @@ export default function TracerTab({
                             </span>
                           </td>
                           <td className="p-4 pr-6 text-center">
-                            <button
+                            <IconButton
+                              label={isExpanded ? 'Tutup detail' : 'Lihat detail'}
                               onClick={(e) => { e.stopPropagation(); toggleExpand(a.id_tracer); }}
-                              className="p-1.5 hover:bg-gray-200/60 rounded-lg transition text-gray-400 hover:text-gray-600"
-                            >
-                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
+                              icon={isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            />
                           </td>
                         </tr>
                         {isExpanded && (
@@ -716,20 +711,7 @@ export default function TracerTab({
                   Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-{Math.min(safePage * ROWS_PER_PAGE, filteredAlumni.length)} dari {filteredAlumni.length} data
                 </span>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={safePage <= 1}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={safePage >= totalPages}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-                  >
-                    Next
-                  </button>
+                  <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
                 </div>
               </div>
             )}
@@ -740,13 +722,16 @@ export default function TracerTab({
         {/* Download Rekap (gaji + status) - tabel rekap status tidak ditampilkan di web */}
         {(gajiPerTahun.length > 0 || statusPerTahun.length > 0) && (
           <div className="mt-4 flex justify-end">
-            <button
+            <Button
+              size="sm"
+              variant="secondary"
               onClick={handleExportRekapAll}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+              className="text-emerald-700 border-emerald-200 bg-emerald-50 hover:bg-emerald-100"
               title="Download rekap (gaji + status) ke Excel"
+              icon={<Download className="w-3.5 h-3.5" />}
             >
-              <Download className="w-3.5 h-3.5" /> Download Rekap
-            </button>
+              Download Rekap
+            </Button>
           </div>
         )}
 
@@ -784,12 +769,12 @@ export default function TracerTab({
               const a: TracerStudy = {
                 npm_mahasiswa: npmVal,
                 tahun_lulus: Number(nr['tahun_lulus'] || new Date().getFullYear()) || new Date().getFullYear(),
-                status_lulusan: (nr['status_lulusan'] || 'Bekerja') as any,
+                status_lulusan: (nr['status_lulusan'] || 'Bekerja') as TracerStudy['status_lulusan'],
                 masa_tunggu_bulan: Number(nr['masa_tunggu_bulan'] || 0) || 0,
                 instansi_pekerjaan: String(nr['instansi_pekerjaan'] || '').trim() || undefined,
                 jabatan: String(nr['jabatan'] || '').trim() || undefined,
                 tingkat_perusahaan: (['Lokal', 'Nasional', 'Multinasional', 'Internasional'].includes(String(nr['tingkat_perusahaan'] || '').trim())
-                  ? String(nr['tingkat_perusahaan']).trim() as any : undefined),
+                  ? String(nr['tingkat_perusahaan']).trim() as TracerStudy['tingkat_perusahaan'] : undefined),
                 gaji_pekerjaan: nr['gaji_pekerjaan'] ? Number(nr['gaji_pekerjaan']) || undefined : undefined,
                 universitas_tujuan: String(nr['universitas_tujuan'] || '').trim() || undefined,
                 program_studi: String(nr['program_studi'] || '').trim() || undefined,
@@ -833,7 +818,11 @@ export default function TracerTab({
               <h3 className="font-display font-bold text-lg">
                 {editingAlumni ? 'Edit Data Tracer' : 'Tambah Data Tracer'}
               </h3>
-              <button onClick={() => { setShowAddModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600">✕</button>
+              <IconButton
+                label="Tutup"
+                onClick={() => { setShowAddModal(false); resetForm(); }}
+                icon={<span className="text-sm leading-none">✕</span>}
+              />
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -867,7 +856,7 @@ export default function TracerTab({
                   <label className="block text-xs font-semibold mb-1">Status Lulusan *</label>
                   <select
                     value={form.status_lulusan}
-                    onChange={(e) => setForm({...form, status_lulusan: e.target.value as any})}
+                    onChange={(e) => setForm({...form, status_lulusan: e.target.value as TracerStudy['status_lulusan']})}
                     className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   >
                     <option value="Bekerja">Bekerja</option>
@@ -916,7 +905,7 @@ export default function TracerTab({
                       <label className="block text-xs font-semibold mb-1">Tingkat Perusahaan</label>
                       <select
                         value={form.tingkat_perusahaan || ''}
-                        onChange={(e) => setForm({...form, tingkat_perusahaan: (e.target.value || undefined) as any})}
+                        onChange={(e) => setForm({...form, tingkat_perusahaan: (e.target.value || undefined) as TracerStudy['tingkat_perusahaan']})}
                         className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                       >
                         <option value="">-- Pilih --</option>
@@ -987,24 +976,23 @@ export default function TracerTab({
               )}
 
               <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => { setShowAddModal(false); resetForm(); }}
-                  className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-semibold"
                 >
                   Batal
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary-light)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isSubmitting ? (
                     <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Menyimpan...</>
                   ) : (
                     editingAlumni ? 'Simpan Perubahan' : 'Simpan Data'
                   )}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

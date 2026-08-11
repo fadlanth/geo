@@ -11,7 +11,11 @@ import { Mahasiswa, Dosen } from '../types';
 import { validators, val, JENIS_STATUS_MAHASISWA } from '../lib/validators';
 import { useDebounce } from '../lib/hooks';
 import CsvImporter from './CsvImporter';
+import Pagination from './Pagination';
 import DataActions from './DataActions';
+import Button from './Button';
+import IconButton from './IconButton';
+import StatusChip from './StatusChip';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable } from './Skeleton';
@@ -171,21 +175,22 @@ export default function MahasiswaTab({
     }
   };
 
+  const totalMahasiswa = mahasiswa.length;
+  const aktifMahasiswa = mahasiswa.filter(m => m.status === 'Regulasi Akademik').length;
+  const lulusMahasiswa = mahasiswa.filter(m => m.status === 'Lulus').length;
+  const dosenWaliCount = mahasiswa.filter(m => !!m.nip_dosen_wali).length;
+
   return (
     <div className="space-y-6">
       {/* Header Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-        <div>
-          <h2 className="font-display font-extrabold text-xl text-[var(--color-text-main)]">Data Mahasiswa</h2>
-          <p className="text-xs text-[var(--color-text-main)]/50">Direktori dan plotting dosen wali mahasiswa Geofisika</p>
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">Data Akademik</p>
+          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">Data Mahasiswa</h2>
+          <p className="text-xs text-[var(--color-text-main)]/55">Direktori dan plotting dosen wali mahasiswa Geofisika</p>
         </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <DataActions
-            onImportCsv={() => setShowImport(true)}
-            onImportExcel={() => setShowImport(true)}
-            onExportExcel={handleExportMhs}
-          />
-          <button
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+          <Button
             onClick={() => {
               setEditingMhs(null);
               setMhsForm({
@@ -196,206 +201,205 @@ export default function MahasiswaTab({
                 fakultas: 'FMIPA',
                 prodi: 'Geofisika',
                 status: 'Regulasi Akademik',
-                nip_dosen_wali: ''
+                nip_dosen_wali: '',
+                tahun_lulus: undefined
               });
               setShowAddMhs(true);
             }}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-base)] hover:bg-[var(--color-primary-light)] font-semibold text-xs rounded-xl transition shadow-md shadow-[var(--color-primary)]/10"
+            className="flex-1 sm:flex-none"
+            icon={<UserPlus className="w-4 h-4" />}
           >
-            <UserPlus className="w-4 h-4" /> Mahasiswa Baru
-          </button>
+            Mahasiswa Baru
+          </Button>
+          <DataActions
+            onImportCsv={() => setShowImport(true)}
+            onImportExcel={() => setShowImport(true)}
+            onExportExcel={handleExportMhs}
+          />
         </div>
       </div>
 
-
-
-      {/* Main Student Directory with Search, Filter & Assignment */}
       {!loading && mahasiswa.length === 0 ? (
-        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
+        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-slate-200 shadow-sm text-center">
           <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
           <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data mahasiswa</h3>
           <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Mahasiswa Baru" atau import CSV/Excel untuk menambahkan data</p>
         </div>
       ) : (
-      <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden">
-        {/* Sub-header Filter Panel */}
-        <div className="p-4 border-b border-gray-100 bg-[var(--color-primary)]/5 flex flex-col gap-3">
-          <div className="flex flex-col md:flex-row gap-3">
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40" />
-              <input
-                type="text"
-                placeholder="Cari mahasiswa berdasarkan Nama, NPM..."
-                value={rawSearch}
-                onChange={(e) => { setRawSearch(e.target.value); setPage(1); }}
-                className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition"
-              />
+        <>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Total Mahasiswa</p>
+              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{totalMahasiswa}</p>
             </div>
-            
-            {/* Quick stats label inside filter */}
-            <div className="flex items-center gap-2 text-xs text-[var(--color-text-main)]/60 font-medium px-2 shrink-0">
-              <SlidersHorizontal className="w-3.5 h-3.5" />
-              Hasil filter: <b>{filteredMahasiswa.length}</b> mahasiswa
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Aktif</p>
+              <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{aktifMahasiswa}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Lulus</p>
+              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{lulusMahasiswa}</p>
+            </div>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Dosen Wali</p>
+              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{dosenWaliCount}</p>
             </div>
           </div>
 
-          {/* Sliders / Filter Selection Rows */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {/* Cohort (Angkatan) */}
-            <div>
-              <label className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Angkatan</label>
-              <select
-                value={filterAngkatan}
-                onChange={(e) => { setFilterAngkatan(e.target.value); setPage(1); }}
-                className="w-full p-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)]"
-              >
-                <option value="All">Semua Angkatan</option>
-                {[...new Set(mahasiswa.map(m => m.angkatan))].sort((a, b) => b - a).map(y => (
-                  <option key={y} value={y.toString()}>{y}</option>
-                ))}
-              </select>
-            </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            {/* Sub-header Filter Panel */}
+            <div className="p-3 sm:p-4 border-b border-slate-200 bg-slate-50/80 flex flex-col gap-3">
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40" />
+                  <input
+                    type="text"
+                    placeholder="Cari mahasiswa berdasarkan Nama, NPM..."
+                    value={rawSearch}
+                    onChange={(e) => { setRawSearch(e.target.value); setPage(1); }}
+                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
+                  />
+                </div>
 
-            {/* Status */}
-            <div>
-              <label className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Status Akademik</label>
-              <select
-                value={filterStatus}
-                onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-                className="w-full p-2 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)]"
-              >
-                <option value="All">Semua Status</option>
-                <option value="Regulasi Akademik">Regulasi Akademik</option>
-                <option value="Lulus">Lulus</option>
-                <option value="Alih Prodi">Alih Prodi</option>
-                <option value="Undur Diri">Undur Diri</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {loading ? (
-          <SkeletonTable rows={10} cols={6} />
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 text-xs font-bold font-display uppercase tracking-wider">
-                    <th className="p-4 pl-6">NPM / Nama</th>
-                    <th className="p-4">Angkatan</th>
-                    <th className="p-4">Fakultas/Prodi</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Plotting Dosen Wali</th>
-                    <th className="p-4 pr-6 text-center">Aksi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 text-sm">
-                  {paginatedMahasiswa.map((student) => {
-                    return (
-                      <tr key={student.npm} className="hover:bg-gray-50/30 transition">
-                        <td className="p-4 pl-6">
-                          <div className="flex flex-col">
-                            <span className="font-bold text-[var(--color-text-main)]">{student.nama}</span>
-                            <span className="text-xs text-[var(--color-text-main)]/50 font-mono mt-0.5">{student.npm}</span>
-                          </div>
-                        </td>
-                        <td className="p-4 text-[var(--color-text-main)]/70 font-medium">
-                          {student.angkatan}
-                        </td>
-                        <td className="p-4">
-                          <span className="text-xs font-medium text-[var(--color-text-main)]/75">
-                            {student.fakultas} - {student.prodi}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <span className={`chip ${
-                            student.status === 'Regulasi Akademik' ? 'status-regulasi' :
-                            student.status === 'Lulus' ? 'status-lulus' :
-                            student.status === 'Alih Prodi' ? 'status-alih' :
-                            'status-undur'
-                          }`}>
-                            {student.status}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-1.5">
-                            <select
-                              value={student.nip_dosen_wali || 'unassigned'}
-                              onChange={(e) => handleQuickAssignDosen(student.npm, e.target.value)}
-                              className={`text-xs p-1.5 border rounded-lg focus:outline-none focus:border-[var(--color-primary)] max-w-[200px] truncate ${
-                                !student.nip_dosen_wali 
-                                  ? 'select-unassigned' 
-                                  : 'border-gray-200 bg-white text-[var(--color-text-main)]/80'
-                              }`}
-                            >
-                              <option value="unassigned">⚠️ Belum Diplot</option>
-                              {dosen.filter(d => d.is_dosen_wali !== false).map(d => (
-                                <option key={d.nip} value={d.nip}>
-                                  {d.nama}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        </td>
-                        <td className="p-4 pr-6 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => handleEditMhsClick(student)}
-                              className="p-1.5 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-lg transition"
-                              title="Edit Mahasiswa"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => onDeleteMahasiswa(student.npm)}
-                              className="p-1.5 hover:bg-rose-50 text-gray-400 hover:text-rose-600 rounded-lg transition"
-                              title="Hapus Mahasiswa"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {filteredMahasiswa.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="text-center py-12 text-sm text-gray-400">
-                        Tidak menemukan mahasiswa sesuai kriteria pencarian & filter.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-            {filteredMahasiswa.length > ROWS_PER_PAGE && (
-              <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 bg-gray-50/30">
-                <span className="text-xs text-gray-500">
-                  Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-{Math.min(safePage * ROWS_PER_PAGE, filteredMahasiswa.length)} dari {filteredMahasiswa.length} mahasiswa
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={safePage <= 1}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={safePage >= totalPages}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-                  >
-                    Next
-                  </button>
+                <div className="flex items-center gap-2 text-xs text-[var(--color-text-main)]/65 font-medium px-2 shrink-0">
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  Hasil filter: <b>{filteredMahasiswa.length}</b>
                 </div>
               </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Angkatan</label>
+                  <select
+                    value={filterAngkatan}
+                    onChange={(e) => { setFilterAngkatan(e.target.value); setPage(1); }}
+                    className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
+                  >
+                    <option value="All">Semua Angkatan</option>
+                    {[...new Set(mahasiswa.map(m => m.angkatan))].sort((a, b) => b - a).map(y => (
+                      <option key={y} value={y.toString()}>{y}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Status Akademik</label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                    className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
+                  >
+                    <option value="All">Semua Status</option>
+                    <option value="Regulasi Akademik">Regulasi Akademik</option>
+                    <option value="Lulus">Lulus</option>
+                    <option value="Alih Prodi">Alih Prodi</option>
+                    <option value="Undur Diri">Undur Diri</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {loading ? (
+              <SkeletonTable rows={10} cols={6} />
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 text-xs font-bold font-display uppercase tracking-wider">
+                        <th className="p-4 pl-6">NPM / Nama</th>
+                        <th className="p-4">Angkatan</th>
+                        <th className="p-4">Fakultas/Prodi</th>
+                        <th className="p-4">Status</th>
+                        <th className="p-4">Plotting Dosen Wali</th>
+                        <th className="p-4 pr-6 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-sm">
+                      {paginatedMahasiswa.map((student) => {
+                        return (
+                          <tr key={student.npm} className="hover:bg-gray-50/30 transition">
+                            <td className="p-4 pl-6">
+                              <div className="flex flex-col">
+                                <span className="font-bold text-[var(--color-text-main)]">{student.nama}</span>
+                                <span className="text-xs text-[var(--color-text-main)]/50 font-mono mt-0.5">{student.npm}</span>
+                              </div>
+                            </td>
+                            <td className="p-4 text-[var(--color-text-main)]/70 font-medium">
+                              {student.angkatan}
+                            </td>
+                            <td className="p-4">
+                              <span className="text-xs font-medium text-[var(--color-text-main)]/75">
+                                {student.fakultas} - {student.prodi}
+                              </span>
+                            </td>
+                            <td className="p-4">
+                              <StatusChip status={student.status} />
+                            </td>
+                            <td className="p-4">
+                              <div className="flex items-center gap-1.5">
+                                <select
+                                  value={student.nip_dosen_wali || 'unassigned'}
+                                  onChange={(e) => handleQuickAssignDosen(student.npm, e.target.value)}
+                                  className={`text-xs p-1.5 border rounded-lg focus:outline-none focus:border-[var(--color-primary)] max-w-[200px] truncate ${
+                                    !student.nip_dosen_wali 
+                                      ? 'select-unassigned' 
+                                      : 'border-gray-200 bg-white text-[var(--color-text-main)]/80'
+                                  }`}
+                                >
+                                  <option value="unassigned">⚠️ Belum Diplot</option>
+                                  {dosen.filter(d => d.is_dosen_wali !== false).map(d => (
+                                    <option key={d.nip} value={d.nip}>
+                                      {d.nama}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </td>
+                            <td className="p-4 pr-6 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <IconButton
+                                  label="Edit Mahasiswa"
+                                  tone="primary"
+                                  onClick={() => handleEditMhsClick(student)}
+                                  icon={<Edit2 className="w-3.5 h-3.5" />}
+                                />
+                                <IconButton
+                                  label="Hapus Mahasiswa"
+                                  tone="danger"
+                                  onClick={() => onDeleteMahasiswa(student.npm)}
+                                  icon={<Trash2 className="w-3.5 h-3.5" />}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {filteredMahasiswa.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center py-12 text-sm text-gray-400">
+                            Tidak menemukan mahasiswa sesuai kriteria pencarian & filter.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+                {filteredMahasiswa.length > ROWS_PER_PAGE && (
+                  <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 bg-gray-50/30">
+                    <span className="text-xs text-gray-500">
+                      Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-{Math.min(safePage * ROWS_PER_PAGE, filteredMahasiswa.length)} dari {filteredMahasiswa.length} mahasiswa
+                    </span>
+                    <div className="flex gap-2">
+                      <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
-      </div>)}
+          </div>
+        </>
+      )}
 
       {/* MODAL: ADD / EDIT STUDENT */}
       {showAddMhs && (
@@ -405,15 +409,14 @@ export default function MahasiswaTab({
               <h3 className="font-display font-extrabold text-[var(--color-text-main)] text-base">
                 {editingMhs ? 'Edit Profil Mahasiswa' : 'Registrasi Mahasiswa Baru'}
               </h3>
-              <button 
+              <IconButton
+                label="Tutup"
                 onClick={() => {
                   setShowAddMhs(false);
                   setEditingMhs(null);
                 }}
-                className="p-1 hover:bg-gray-100 rounded-md text-gray-400"
-              >
-                ✕
-              </button>
+                icon={<span className="text-sm leading-none">✕</span>}
+              />
             </div>
 
             <form onSubmit={handleAddMhsSubmit} className="space-y-4">
@@ -534,22 +537,19 @@ export default function MahasiswaTab({
               </div>
 
               <div className="flex gap-2 justify-end pt-3">
-                <button 
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => {
                     setShowAddMhs(false);
                     setEditingMhs(null);
                   }}
-                  className="px-4 py-2 border border-gray-200 rounded-xl text-xs font-semibold text-gray-500 hover:bg-gray-50 transition"
                 >
                   Batal
-                </button>
-                <button 
-                  type="submit"
-                  className="px-4 py-2 bg-[var(--color-primary)] text-[var(--color-base)] hover:bg-[var(--color-primary-light)] rounded-xl text-xs font-semibold transition"
-                >
+                </Button>
+                <Button type="submit">
                   {editingMhs ? 'Simpan Perubahan' : 'Daftarkan'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

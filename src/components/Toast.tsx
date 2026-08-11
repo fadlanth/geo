@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
 
-export type ToastKind = 'success' | 'error';
+export type ToastKind = 'success' | 'error' | 'warning';
 
 export type ToastOptions = {
   kind: ToastKind;

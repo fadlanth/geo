@@ -1,23 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { 
   Menu, 
   User, 
   Database
 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
-import OverviewTab from './components/OverviewTab';
-import MahasiswaTab from './components/MahasiswaTab';
-import DosenTab from './components/DosenTab';
-import PrestasiTab from './components/PrestasiTab';
-import TracerTab from './components/TracerTab';
-import MagangTab from './components/MagangTab';
-import AuditTab from './components/AuditTab';
 import LoginPage from './components/LoginPage';
 import PublicLanding from './components/PublicLanding';
 import Toast, { ToastOptions } from './components/Toast';
+import ConfirmDialog from './components/ConfirmDialog';
 import { academicService } from './lib/academicService';
 import { useAuth } from './lib/AuthContext';
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM, AnggotaPrestasi } from './types';
+
+// Code-split: tab dimuat on-demand saat pertama kali dibuka
+const OverviewTab = lazy(() => import('./components/OverviewTab'));
+const MahasiswaTab = lazy(() => import('./components/MahasiswaTab'));
+const DosenTab = lazy(() => import('./components/DosenTab'));
+const PrestasiTab = lazy(() => import('./components/PrestasiTab'));
+const TracerTab = lazy(() => import('./components/TracerTab'));
+const MagangTab = lazy(() => import('./components/MagangTab'));
+const AuditTab = lazy(() => import('./components/AuditTab'));
 
 export default function App() {
   const { isAuthenticated, isLoading: authLoading, logout, username, role } = useAuth();
@@ -28,6 +31,14 @@ export default function App() {
 
   // Toast notifications state
   const [toast, setToast] = useState<(ToastOptions & { id: string }) | null>(null);
+
+  // Delete confirmation dialog state
+  const [confirmAction, setConfirmAction] = useState<{
+    title: string;
+    message: string;
+    detail?: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const triggerToast = (options: ToastOptions) => {
     const id = Date.now().toString() + Math.random().toString();
@@ -132,7 +143,7 @@ export default function App() {
         jenis_kelamin: normalizeGender(String(row['Jenis Kelamin'] || row.jenis_kelamin || '')),
         fakultas: String(row.Fakultas || row.fakultas || '').trim() || 'FMIPA',
         prodi: String(row.Prodi || row.prodi || '').trim() || 'Geofisika',
-        status: (String(row.Status || row.status || '').trim() as any) || 'Regulasi Akademik',
+        status: (String(row.Status || row.status || '').trim() as Mahasiswa['status']) || 'Regulasi Akademik',
         nip_dosen_wali: String(row['NIP Dosen Wali'] || row.nip_dosen_wali || '').replace(/\s+/g, '') || null,
         tahun_lulus: row['Tahun Lulus'] || row.tahun_lulus ? Number(row['Tahun Lulus'] || row.tahun_lulus) : undefined
       })).filter(m => m.npm && m.nama);
@@ -159,23 +170,27 @@ export default function App() {
   };
 
   const handleDeleteMahasiswa = async (npm: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus mahasiswa ini dari sistem akademik?')) {
-      try {
-        await academicService.deleteMahasiswa(npm);
-        await fetchAllData();
-        triggerToast({
-          kind: 'success',
-          title: 'Data Dihapus',
-          message: 'Berhasil menghapus mahasiswa dari sistem.'
-        });
-      } catch (err: any) {
-        triggerToast({
-          kind: 'error',
-          title: 'Gagal Menghapus',
-          message: err.message || 'Tidak dapat menghapus data mahasiswa.'
-        });
+    setConfirmAction({
+      title: 'Hapus Mahasiswa',
+      message: 'Apakah Anda yakin ingin menghapus mahasiswa ini dari sistem akademik?',
+      onConfirm: async () => {
+        try {
+          await academicService.deleteMahasiswa(npm);
+          await fetchAllData();
+          triggerToast({
+            kind: 'success',
+            title: 'Data Dihapus',
+            message: 'Berhasil menghapus mahasiswa dari sistem.'
+          });
+        } catch (err: any) {
+          triggerToast({
+            kind: 'error',
+            title: 'Gagal Menghapus',
+            message: err.message || 'Tidak dapat menghapus data mahasiswa.'
+          });
+        }
       }
-    }
+    });
   };
 
   // --- ADVISOR ACTION HANDLERS ---
@@ -201,27 +216,31 @@ export default function App() {
     const dObj = dosen.find(d => d.nip === nip);
     const nama = dObj ? dObj.nama : 'Dosen';
     const studentsWithThisAdvisor = mahasiswa.filter(m => m.nip_dosen_wali === nip);
-    const mhsMsg = studentsWithThisAdvisor.length > 0 
-      ? `\n\nPerhatian: Ada ${studentsWithThisAdvisor.length} mahasiswa bimbingan yang akan diplot ulang ke 'Belum Diplot'.` 
-      : '';
 
-    if (confirm(`Apakah Anda yakin ingin menghapus data dosen ${nama}?${mhsMsg}`)) {
-      try {
-        await academicService.deleteDosen(nip);
-        await fetchAllData();
-        triggerToast({
-          kind: 'success',
-          title: 'Dosen Wali Dihapus',
-          message: `Berhasil menghapus dosen ${nama} dari sistem.`
-        });
-      } catch (err: any) {
-        triggerToast({
-          kind: 'error',
-          title: 'Gagal Menghapus',
-          message: err.message || 'Tidak dapat menghapus data dosen.'
-        });
+    setConfirmAction({
+      title: 'Hapus Dosen',
+      message: `Apakah Anda yakin ingin menghapus data dosen ${nama} dari sistem?`,
+      detail: studentsWithThisAdvisor.length > 0
+        ? `Ada ${studentsWithThisAdvisor.length} mahasiswa bimbingan yang akan diplot ulang ke 'Belum Diplot'.`
+        : undefined,
+      onConfirm: async () => {
+        try {
+          await academicService.deleteDosen(nip);
+          await fetchAllData();
+          triggerToast({
+            kind: 'success',
+            title: 'Dosen Wali Dihapus',
+            message: `Berhasil menghapus dosen ${nama} dari sistem.`
+          });
+        } catch (err: any) {
+          triggerToast({
+            kind: 'error',
+            title: 'Gagal Menghapus',
+            message: err.message || 'Tidak dapat menghapus data dosen.'
+          });
+        }
       }
-    }
+    });
   };
 
   const handleBulkImportDosen = async (data: any[]) => {
@@ -248,11 +267,13 @@ export default function App() {
           initials = 'DSN';
         }
         const kode_dosen = String(row['Kode Dosen'] || row.kode_dosen || initials).trim().toUpperCase();
+        const sandi_dosen = String(row['SANDI DOSEN'] || row['Sandi Dosen'] || row.sandi_dosen || '').trim() || undefined;
 
         return {
           nip,
           nama,
           kode_dosen,
+          sandi_dosen,
           golongan,
           pangkat,
           jabatan,
@@ -301,23 +322,27 @@ export default function App() {
   };
 
   const handleDeletePrestasi = async (id: string) => {
-    if (confirm('Hapus pencatatan prestasi ini?')) {
-      try {
-        await academicService.deletePrestasi(id);
-        await fetchAllData();
-        triggerToast({
-          kind: 'success',
-          title: 'Prestasi Dihapus',
-          message: 'Pencatatan prestasi berhasil dihapus.'
-        });
-      } catch (err: any) {
-        triggerToast({
-          kind: 'error',
-          title: 'Gagal Menghapus',
-          message: err.message || 'Gagal menghapus data prestasi.'
-        });
+    setConfirmAction({
+      title: 'Hapus Prestasi',
+      message: 'Apakah Anda yakin ingin menghapus pencatatan prestasi ini dari sistem?',
+      onConfirm: async () => {
+        try {
+          await academicService.deletePrestasi(id);
+          await fetchAllData();
+          triggerToast({
+            kind: 'success',
+            title: 'Prestasi Dihapus',
+            message: 'Pencatatan prestasi berhasil dihapus.'
+          });
+        } catch (err: any) {
+          triggerToast({
+            kind: 'error',
+            title: 'Gagal Menghapus',
+            message: err.message || 'Gagal menghapus data prestasi.'
+          });
+        }
       }
-    }
+    });
   };
 
   // --- ANGGOTA PRESTASI ACTION HANDLERS ---
@@ -403,7 +428,7 @@ export default function App() {
         npm_mahasiswa: npm || undefined,
         nama_mahasiswa: namaMhs || undefined,
         nama_kompetisi: String(row.nama_kompetisi || row['Nama Kompetisi'] || '').trim(),
-        tingkat: (row.tingkat || row['Tingkat'] || 'Nasional') as any,
+        tingkat: (row.tingkat || row['Tingkat'] || 'Nasional') as Prestasi['tingkat'],
         juara_ke: juaraNum,
         jenis_peserta: (row.jenis_peserta || row['Jenis Peserta'] || 'Individu') as 'Individu' | 'Kelompok',
         tahun_kegiatan: Number(row.tahun_kegiatan || row['Tahun'] || row['Tahun Kegiatan'] || 0) || undefined,
@@ -491,23 +516,27 @@ export default function App() {
   };
 
   const handleDeleteMbkm = async (id: string) => {
-    if (confirm('Hapus data riwayat MBKM ini?')) {
-      try {
-        await academicService.deleteMBKM(id);
-        await fetchAllData();
-        triggerToast({
-          kind: 'success',
-        title: 'Data Magang Dihapus',
-        message: 'Data magang berhasil dihapus.'
-        });
-      } catch (err: any) {
-        triggerToast({
-          kind: 'error',
-        title: 'Gagal Menghapus',
-        message: err.message || 'Gagal menghapus data magang.'
-        });
+    setConfirmAction({
+      title: 'Hapus Riwayat MBKM',
+      message: 'Apakah Anda yakin ingin menghapus data riwayat MBKM ini dari sistem?',
+      onConfirm: async () => {
+        try {
+          await academicService.deleteMBKM(id);
+          await fetchAllData();
+          triggerToast({
+            kind: 'success',
+            title: 'Data Magang Dihapus',
+            message: 'Data magang berhasil dihapus.'
+          });
+        } catch (err: any) {
+          triggerToast({
+            kind: 'error',
+            title: 'Gagal Menghapus',
+            message: err.message || 'Gagal menghapus data magang.'
+          });
+        }
       }
-    }
+    });
   };
 
   // --- TRACER STUDY ALUMNI ACTION HANDLERS ---
@@ -530,23 +559,27 @@ export default function App() {
   };
 
   const handleDeleteAlumni = async (id: string) => {
-    if (confirm('Hapus data tracer alumni ini?')) {
-      try {
-        await academicService.deleteTracerAlumni(id);
-        await fetchAllData();
-        triggerToast({
-          kind: 'success',
-          title: 'Data Tracer Study Dihapus',
-          message: 'Data tracer study alumni berhasil dihapus.'
-        });
-      } catch (err: any) {
-        triggerToast({
-          kind: 'error',
-          title: 'Gagal Menghapus',
-          message: err.message || 'Gagal menghapus data tracer study.'
-        });
+    setConfirmAction({
+      title: 'Hapus Data Tracer Study',
+      message: 'Apakah Anda yakin ingin menghapus data tracer study alumni ini dari sistem?',
+      onConfirm: async () => {
+        try {
+          await academicService.deleteTracerAlumni(id);
+          await fetchAllData();
+          triggerToast({
+            kind: 'success',
+            title: 'Data Tracer Study Dihapus',
+            message: 'Data tracer study alumni berhasil dihapus.'
+          });
+        } catch (err: any) {
+          triggerToast({
+            kind: 'error',
+            title: 'Gagal Menghapus',
+            message: err.message || 'Gagal menghapus data tracer study.'
+          });
+        }
       }
-    }
+    });
   };
 
   if (authLoading) {
@@ -622,7 +655,11 @@ export default function App() {
         {/* PAGE BODY SCROLL CONTAINER */}
         <main className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* MAIN PAGE ROUTER CONTROLLER */}
-          <>
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-24">
+              <div className="w-8 h-8 border-4 border-[var(--color-primary)]/20 border-t-[var(--color-primary)] rounded-full animate-spin" />
+            </div>
+          }>
             {activeTab === 'ringkasan' && (
               <OverviewTab 
                 mahasiswa={mahasiswa} 
@@ -708,9 +745,23 @@ export default function App() {
                 triggerToast={triggerToast}
               />
             )}
-          </>
+          </Suspense>
         </main>
       </div>
+
+      {/* Global Confirm Dialog render */}
+      {confirmAction && (
+        <ConfirmDialog
+          title={confirmAction.title}
+          message={confirmAction.message}
+          detail={confirmAction.detail}
+          onConfirm={() => {
+            confirmAction.onConfirm();
+            setConfirmAction(null);
+          }}
+          onCancel={() => setConfirmAction(null)}
+        />
+      )}
 
       {/* Global Toast render */}
       {toast && (

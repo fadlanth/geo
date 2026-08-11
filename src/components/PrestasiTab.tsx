@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
 import CsvImporter from './CsvImporter';
+import Pagination from './Pagination';
 import DataActions from './DataActions';
+import Button from './Button';
+import IconButton from './IconButton';
+import StatusChip from './StatusChip';
 import {
   Search,
   Plus,
@@ -19,7 +23,7 @@ import {
 } from 'lucide-react';
 import { Prestasi, Mahasiswa, AnggotaPrestasi, getPrestasiNamaMahasiswa } from '../types';
 import { useDebounce } from '../lib/hooks';
-import { exportToExcel } from '../lib/exportUtils';
+import { exportToExcel, exportPrestasiRekapToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard } from './Skeleton';
 import ComboboxMahasiswa from './ComboboxMahasiswa';
@@ -236,6 +240,31 @@ export default function PrestasiTab({
     }
   };
 
+  const handleExportPrestasiRekap = () => {
+    const uniqueByNpm = prestasi.filter((p) => typeof p.npm_mahasiswa === 'string' && p.npm_mahasiswa.trim() !== '');
+
+    if (uniqueByNpm.length === 0) {
+      if (triggerToast) {
+        triggerToast({
+          kind: 'warning',
+          title: 'Tidak Ada Data',
+          message: 'Belum ada data prestasi per individu mahasiswa untuk diekspor.'
+        });
+      }
+      return;
+    }
+
+    exportPrestasiRekapToExcel(prestasi, 'rekap_prestasi_mahasiswa');
+
+    if (triggerToast) {
+      triggerToast({
+        kind: 'success',
+        title: 'Ekspor Rekap Berhasil',
+        message: 'File Excel rekap dan grafik prestasi berhasil diunduh.'
+      });
+    }
+  };
+
   const toggleExpand = (id: string | undefined) => {
     if (!id) return;
     setExpandedId(prev => prev === id ? null : id);
@@ -273,22 +302,25 @@ export default function PrestasiTab({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-        <div>
-          <h2 className="font-display font-extrabold text-xl text-[var(--color-text-main)]">Prestasi Mahasiswa</h2>
-          <p className="text-xs text-[var(--color-text-main)]/50">Rekapitulasi pencapaian kompetisi mahasiswa</p>
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">Data Akademik</p>
+          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">Prestasi Mahasiswa</h2>
+          <p className="text-xs text-[var(--color-text-main)]/55">Rekapitulasi pencapaian kompetisi mahasiswa</p>
         </div>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <button
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button
             onClick={() => setShowAddModal(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[var(--color-primary)] text-[var(--color-base)] hover:bg-[var(--color-primary-light)] font-semibold text-xs rounded-xl transition shadow-md shadow-[var(--color-primary)]/10"
+            className="flex-1 sm:flex-none"
+            icon={<Plus className="w-4 h-4" />}
           >
-            <Plus className="w-4 h-4" /> Catat Prestasi Baru
-          </button>
+            Catat Prestasi Baru
+          </Button>
           <DataActions
             onImportCsv={() => setShowImport(true)}
             onImportExcel={() => setShowImport(true)}
             onExportExcel={handleExportPrestasi}
+            onExportRekapPrestasi={handleExportPrestasiRekap}
           />
         </div>
       </div>
@@ -304,34 +336,41 @@ export default function PrestasiTab({
           </div>
         </>
       ) : prestasi.length === 0 ? (
-        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
+        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-slate-200 shadow-sm text-center">
           <Trophy className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
           <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data prestasi</h3>
           <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Catat Prestasi Baru" untuk menambahkan data pertama</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Jumlah Prestasi Mahasiswa</p>
-              <p className="text-2xl font-bold font-display">{prestasi.length}</p>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Total Record</p>
+              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{prestasi.length}</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Nasional & Int'l</p>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Nasional & Int'l</p>
               <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{totalNasionalIntl}</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-              <p className="text-xs font-semibold mb-1 flex items-center gap-1"><span className="chip status-juara1">Juara 1</span> <Trophy className="w-3 h-3"/></p>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2 mb-2">
+                <StatusChip status="Juara 1" />
+                <Trophy className="w-3.5 h-3.5 text-[var(--color-warning)]" />
+              </div>
               <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara1}</p>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10 flex gap-4">
-              <div className="flex-1">
-                <p className="text-xs font-semibold mb-1 flex items-center gap-1"><span className="chip status-juara2">Juara 2</span></p>
-                <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara2}</p>
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <StatusChip status="Juara 2" />
+                <StatusChip status="Juara 3" />
               </div>
-              <div className="flex-1 border-l border-gray-200 pl-4">
-                <p className="text-xs font-semibold mb-1 flex items-center gap-1"><span className="chip status-juara3">Juara 3</span></p>
-                <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara3}</p>
+              <div className="flex items-end gap-4">
+                <div>
+                  <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara2}</p>
+                </div>
+                <div className="border-l border-slate-200 pl-4">
+                  <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara3}</p>
+                </div>
               </div>
             </div>
           </div>
@@ -357,42 +396,44 @@ export default function PrestasiTab({
       )}
 
       {/* Main Content Area */}
-      <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {/* Filters */}
-        <div className="p-4 border-b border-gray-100 bg-[var(--color-primary)]/5 flex flex-col md:flex-row gap-3">
+        <div className="p-3 sm:p-4 border-b border-slate-200 bg-slate-50/80 flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40" />
             <input
               type="text"
               placeholder="Cari nama mahasiswa atau nama kompetisi..."
-                value={query}
-                onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
-                className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
-              />
-            </div>
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
+              className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
+            />
+          </div>
 
+          <div className="flex flex-col sm:flex-row gap-3 md:w-auto">
             <select
               value={filterTingkat}
               onChange={(e) => { setFilterTingkat(e.target.value); setPage(1); setExpandedId(null); }}
-            className="p-2 text-xs bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] md:w-40"
-          >
-            <option value="All">Semua Tingkat</option>
-            <option value="Internasional">Internasional</option>
-            <option value="Nasional">Nasional</option>
-            <option value="Wilayah">Wilayah</option>
-            <option value="Universitas">Universitas</option>
-          </select>
+              className="p-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm md:w-40"
+            >
+              <option value="All">Semua Tingkat</option>
+              <option value="Internasional">Internasional</option>
+              <option value="Nasional">Nasional</option>
+              <option value="Wilayah">Wilayah</option>
+              <option value="Universitas">Universitas</option>
+            </select>
 
             <select
               value={filterJuara}
               onChange={(e) => { setFilterJuara(e.target.value); setPage(1); setExpandedId(null); }}
-                className="p-2 text-xs bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] md:w-32"
-          >
-            <option value="All">Semua Juara</option>
-            <option value="1">Juara 1</option>
-            <option value="2">Juara 2</option>
-            <option value="3">Juara 3</option>
-          </select>
+              className="p-2.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm md:w-32"
+            >
+              <option value="All">Semua Juara</option>
+              <option value="1">Juara 1</option>
+              <option value="2">Juara 2</option>
+              <option value="3">Juara 3</option>
+            </select>
+          </div>
         </div>
 
         {/* Table List */}
@@ -444,13 +485,7 @@ export default function PrestasiTab({
                             <div className="font-semibold text-[var(--color-text-main)] max-w-sm truncate">{p.nama_kompetisi}</div>
                           </td>
                           <td className="p-4">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              p.tingkat === 'Internasional' ? 'chip status-studi' :
-                                p.tingkat === 'Nasional' ? 'chip status-bekerja' :
-                                'chip status-undur'
-                            }`}>
-                              {p.tingkat}
-                            </span>
+                            <StatusChip status={p.tingkat} />
                           </td>
                           <td className="p-4">
                             <div className="flex items-center gap-2">
@@ -459,12 +494,11 @@ export default function PrestasiTab({
                             </div>
                           </td>
                           <td className="p-4 pr-6 text-center">
-                            <button
+                            <IconButton
+                              label={isExpanded ? 'Tutup detail' : 'Lihat detail'}
                               onClick={(e) => { e.stopPropagation(); toggleExpand(p.id_prestasi); }}
-                              className="p-1.5 hover:bg-gray-200/60 rounded-lg transition text-gray-400 hover:text-gray-600"
-                            >
-                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </button>
+                              icon={isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            />
                           </td>
                         </tr>
                         {isExpanded && (
@@ -489,12 +523,14 @@ export default function PrestasiTab({
                                         <Users className="w-4 h-4 text-violet-500" />
                                         Peserta ({anggota.length} orang)
                                       </div>
-                                      <button
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
                                         onClick={(e) => { e.stopPropagation(); setShowAnggotaForm(showAnggotaForm === p.id_prestasi ? null : p.id_prestasi); }}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-violet-50 border border-violet-200 rounded-lg text-xs font-semibold text-violet-700 hover:bg-violet-100 transition"
+                                        icon={<UserPlus className="w-3.5 h-3.5" />}
                                       >
-                                        <UserPlus className="w-3.5 h-3.5" /> Tambah Anggota
-                                      </button>
+                                        Tambah Anggota
+                                      </Button>
                                     </div>
 
                                     {anggota.length > 0 && (
@@ -520,17 +556,16 @@ export default function PrestasiTab({
                                                   <td className="p-2">{a.prodi || '—'}</td>
                                                   <td className="p-2">{a.universitas || '—'}</td>
                                                   <td className="p-2">
-                                                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                                                      {a.peran || 'Anggota'}
-                                                    </span>
+                                                    <StatusChip status={a.peran || 'Anggota'} tone="neutral" />
                                                   </td>
                                                   <td className="p-2 pr-3 text-center">
-                                                    <button
+                                                    <IconButton
+                                                      label="Hapus anggota"
+                                                      size="sm"
+                                                      tone="danger"
                                                       onClick={(e) => { e.stopPropagation(); a.id_anggota && onDeleteAnggota(a.id_anggota); }}
-                                                      className="p-1 hover:bg-rose-50 text-gray-300 hover:text-rose-500 rounded transition"
-                                                    >
-                                                      <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
+                                                      icon={<Trash2 className="w-3.5 h-3.5" />}
+                                                    />
                                                   </td>
                                                 </tr>
                                               );
@@ -594,19 +629,20 @@ export default function PrestasiTab({
                                             <option value="Anggota">Anggota</option>
                                             <option value="Presenter">Presenter</option>
                                           </select>
-                                          <button
+                                          <Button
+                                            size="sm"
                                             onClick={() => p.id_prestasi && handleAddAnggota(p.id_prestasi)}
                                             disabled={!anggotaForm.nama_lengkap.trim()}
-                                            className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-semibold hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed transition"
                                           >
                                             Simpan
-                                          </button>
-                                          <button
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="secondary"
                                             onClick={(e) => { e.stopPropagation(); resetAnggotaForm(); }}
-                                            className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-semibold hover:bg-gray-200 transition"
                                           >
                                             Batal
-                                          </button>
+                                          </Button>
                                         </div>
                                       </div>
                                     )}
@@ -650,20 +686,7 @@ export default function PrestasiTab({
                   Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-{Math.min(safePage * ROWS_PER_PAGE, filteredPrestasi.length)} dari {filteredPrestasi.length} prestasi
                 </span>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={safePage <= 1}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-                  >
-                    Prev
-                  </button>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={safePage >= totalPages}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed enabled:hover:bg-gray-200 bg-gray-100 text-gray-700"
-                  >
-                    Next
-                  </button>
+                  <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
                 </div>
               </div>
             )}
@@ -679,7 +702,11 @@ export default function PrestasiTab({
               <h3 className="font-display font-bold text-lg">
                 {editingPrestasi ? 'Edit Prestasi' : 'Catat Prestasi Baru'}
               </h3>
-              <button onClick={() => { setShowAddModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600">✕</button>
+              <IconButton
+                label="Tutup"
+                onClick={() => { setShowAddModal(false); resetForm(); }}
+                icon={<span className="text-sm leading-none">✕</span>}
+              />
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -722,7 +749,7 @@ export default function PrestasiTab({
                     <label className="block text-xs font-semibold mb-1">Tingkat <span className="text-rose-500">*</span></label>
                     <select
                       value={form.tingkat}
-                      onChange={(e) => setForm({...form, tingkat: e.target.value as any})}
+                      onChange={(e) => setForm({...form, tingkat: e.target.value as Prestasi['tingkat']})}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                     >
                       <option value="Internasional">Internasional</option>
@@ -809,24 +836,23 @@ export default function PrestasiTab({
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
                   onClick={() => { setShowAddModal(false); resetForm(); }}
-                  className="px-4 py-2 bg-gray-100 rounded-xl text-sm font-semibold"
                 >
                   Batal
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold hover:bg-[var(--color-primary-light)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isSubmitting ? (
                     <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Menyimpan...</>
                   ) : (
                     editingPrestasi ? 'Simpan Perubahan' : 'Simpan Prestasi'
                   )}
-                </button>
+                </Button>
               </div>
             </form>
           </div>

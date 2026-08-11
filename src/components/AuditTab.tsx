@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Activity, Search, RefreshCw, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { SkeletonTable } from './Skeleton';
+import IconButton from './IconButton';
+import StatusChip from './StatusChip';
 import { ToastOptions } from './Toast';
 
 interface AuditLog {
@@ -57,28 +59,30 @@ export default function AuditTab({ loading, triggerToast }: AuditTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h2 className="font-display font-bold text-xl text-[var(--color-text-main)] flex items-center gap-2">
-          <Activity className="w-5 h-5 text-[var(--color-primary)]" /> Log Aktivitas Sistem
-        </h2>
-        <div className="flex items-center gap-3">
-          <div className="relative w-full sm:w-64">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">Monitoring Sistem</p>
+          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)] flex items-center gap-2">
+            <Activity className="w-5 h-5 text-[var(--color-primary)]" /> Log Aktivitas Sistem
+          </h2>
+          <p className="text-xs text-[var(--color-text-main)]/55">Jejak perubahan data oleh pengguna sistem</p>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64 sm:flex-none">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               placeholder="Cari entitas / aksi / email..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+              className="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
             />
           </div>
-          <button
+          <IconButton
+            label="Muat ulang log"
             onClick={() => setRefreshKey((k) => k + 1)}
-            className="p-2 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition"
-            title="Muat ulang log"
-          >
-            <RefreshCw className="w-4 h-4 text-[var(--color-text-main)]/60" />
-          </button>
+            icon={<RefreshCw className="w-4 h-4" />}
+          />
         </div>
       </div>
 
@@ -108,13 +112,13 @@ export default function AuditTab({ loading, triggerToast }: AuditTabProps) {
                       {row.actor_email || <span className="text-gray-400">— sistem —</span>}
                     </td>
                     <td className="p-3">
-                      <span className="chip status-bekerja">{row.entitas}</span>
+                      <StatusChip status={row.entitas} tone="neutral" />
                     </td>
                     <td className="p-3 capitalize">
-                      {row.aksi === 'insert' && <span className="text-[var(--color-success)]">tambah</span>}
-                      {row.aksi === 'update' && <span className="text-[var(--color-primary)]">ubah</span>}
-                      {row.aksi === 'delete' && <span className="text-[var(--color-warning)]">hapus</span>}
-                      {row.aksi === 'replace' && <span className="text-[var(--color-primary-dark)]">ganti</span>}
+                      {row.aksi === 'insert' && <StatusChip status="tambah" tone="green" />}
+                      {row.aksi === 'update' && <StatusChip status="ubah" tone="blue" />}
+                      {row.aksi === 'delete' && <StatusChip status="hapus" tone="red" />}
+                      {row.aksi === 'replace' && <StatusChip status="ganti" tone="amber" />}
                       {!['insert','update','delete','replace'].includes(row.aksi) && row.aksi}
                     </td>
                     <td className="p-3 font-mono text-xs text-[var(--color-text-main)]/70 truncate max-w-[140px]">

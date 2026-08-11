@@ -1,10 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function SkeletonBlock({ className = '' }: { className?: string; key?: any }) {
+export function SkeletonBlock({ className = '' }: { className?: string; key?: string | number }) {
   return <div className={`bg-gray-100 rounded-xl animate-pulse ${className}`} />;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function SkeletonRow({ cols = 6 }: { cols?: number; key?: any }) {
+export function SkeletonRow({ cols = 6 }: { cols?: number; key?: string | number }) {
   return (
     <div className="flex items-center gap-4 p-4 border-b border-gray-100">
       <SkeletonBlock className="w-8 h-4" />
@@ -16,7 +16,7 @@ export function SkeletonRow({ cols = 6 }: { cols?: number; key?: any }) {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function SkeletonTable({ rows = 8, cols = 6 }: { rows?: number; cols?: number; key?: any }) {
+export function SkeletonTable({ rows = 8, cols = 6 }: { rows?: number; cols?: number; key?: string | number }) {
   return (
     <div className="divide-y divide-gray-100">
       <div className="flex items-center gap-4 p-4 bg-gray-50/50">
