@@ -306,10 +306,10 @@ export default function TracerTab({
       return;
     }
 
-    const sheets: Record<string, any[]> = {};
+    const sheets: Record<string, Record<string, unknown>[]> = {};
 
     if (hasGaji) {
-      const rows: any[] = gajiPerTahun.map(r => ({
+      const rows: Record<string, unknown>[] = gajiPerTahun.map(r => ({
         'Tahun Lulus': r.tahun_lulus,
         '0-5jt': r['0-5jt'],
         '>5-10jt': r['>5-10jt'],
@@ -328,7 +328,7 @@ export default function TracerTab({
     }
 
     if (hasStatus) {
-      const rows: any[] = statusPerTahun.map(r => ({
+      const rows: Record<string, unknown>[] = statusPerTahun.map(r => ({
         'Tahun Lulus': r.tahun_lulus,
         'Bekerja': r.Bekerja,
         'Wiraswarta': r.Wiraswarta,
@@ -471,6 +471,7 @@ export default function TracerTab({
               <input
                 type="text"
                 placeholder="Cari alumni, instansi, atau universitas..."
+                aria-label="Cari data tracer study"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
                 className="w-full pl-10 pr-9 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -854,8 +855,9 @@ export default function TracerTab({
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Identitas */}
               <div>
-                <label className="block text-xs font-semibold mb-1">Mahasiswa (Lulusan) *</label>
+                <label htmlFor="tracer-mahasiswa" className="block text-xs font-semibold mb-1">Mahasiswa (Lulusan) *</label>
                 <ComboboxMahasiswa
+                  id="tracer-mahasiswa"
                   mahasiswa={mahasiswa.filter(m => m.status === 'Lulus' || alumni.some(a => a.npm_mahasiswa === m.npm))}
                   value={form.npm_mahasiswa}
                   onChange={(npm) => {
@@ -869,8 +871,9 @@ export default function TracerTab({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold mb-1">Tahun Lulus *</label>
+                  <label htmlFor="tracer-tahun" className="block text-xs font-semibold mb-1">Tahun Lulus *</label>
                   <input
+                    id="tracer-tahun"
                     type="number"
                     required
                     value={form.tahun_lulus}
@@ -879,8 +882,9 @@ export default function TracerTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1">Status Lulusan *</label>
+                  <label htmlFor="tracer-status" className="block text-xs font-semibold mb-1">Status Lulusan *</label>
                   <select
+                    id="tracer-status"
                     value={form.status_lulusan}
                     onChange={(e) => setForm({...form, status_lulusan: e.target.value as TracerStudy['status_lulusan']})}
                     className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -894,8 +898,9 @@ export default function TracerTab({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold mb-1">Masa Tunggu (bulan) *</label>
+                <label htmlFor="tracer-tunggu" className="block text-xs font-semibold mb-1">Masa Tunggu (bulan) *</label>
                 <input
+                  id="tracer-tunggu"
                   type="number"
                   min={0}
                   value={form.masa_tunggu_bulan}
@@ -909,8 +914,9 @@ export default function TracerTab({
                 <div className="border-t border-gray-100 pt-4 space-y-4">
                   <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-wider">Data Pekerjaan</h4>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Instansi / Perusahaan</label>
+                    <label htmlFor="tracer-instansi" className="block text-xs font-semibold mb-1">Instansi / Perusahaan</label>
                     <input
+                      id="tracer-instansi"
                       type="text"
                       value={form.instansi_pekerjaan || ''}
                       onChange={(e) => setForm({...form, instansi_pekerjaan: e.target.value})}
@@ -919,8 +925,9 @@ export default function TracerTab({
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-semibold mb-1">Jabatan / Posisi</label>
+                      <label htmlFor="tracer-jabatan" className="block text-xs font-semibold mb-1">Jabatan / Posisi</label>
                       <input
+                        id="tracer-jabatan"
                         type="text"
                         value={form.jabatan || ''}
                         onChange={(e) => setForm({...form, jabatan: e.target.value})}
@@ -928,8 +935,9 @@ export default function TracerTab({
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold mb-1">Tingkat Perusahaan</label>
+                      <label htmlFor="tracer-tingkat" className="block text-xs font-semibold mb-1">Tingkat Perusahaan</label>
                       <select
+                        id="tracer-tingkat"
                         value={form.tingkat_perusahaan || ''}
                         onChange={(e) => setForm({...form, tingkat_perusahaan: (e.target.value || undefined) as TracerStudy['tingkat_perusahaan']})}
                         className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -942,8 +950,9 @@ export default function TracerTab({
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Gaji Bulanan (Rp)</label>
+                    <label htmlFor="tracer-gaji" className="block text-xs font-semibold mb-1">Gaji Bulanan (Rp)</label>
                     <input
+                      id="tracer-gaji"
                       type="number"
                       min={0}
                       step={100000}
@@ -962,8 +971,9 @@ export default function TracerTab({
                 <div className="border-t border-gray-100 pt-4 space-y-4">
                   <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-wider">Data Studi Lanjut</h4>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Universitas / Institusi Tujuan</label>
+                    <label htmlFor="tracer-univ" className="block text-xs font-semibold mb-1">Universitas / Institusi Tujuan</label>
                     <input
+                      id="tracer-univ"
                       type="text"
                       placeholder="Kyushu University, ITB, UI..."
                       value={form.universitas_tujuan || ''}
@@ -972,8 +982,9 @@ export default function TracerTab({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Program Studi</label>
+                    <label htmlFor="tracer-prodi" className="block text-xs font-semibold mb-1">Program Studi</label>
                     <input
+                      id="tracer-prodi"
                       type="text"
                       placeholder="Magister Teknik Geofisika"
                       value={form.program_studi || ''}
@@ -989,8 +1000,9 @@ export default function TracerTab({
                 <div className="border-t border-gray-100 pt-4 space-y-4">
                   <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-wider">Data Wiraswasta</h4>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Bidang Usaha</label>
+                    <label htmlFor="tracer-usaha" className="block text-xs font-semibold mb-1">Bidang Usaha</label>
                     <input
+                      id="tracer-usaha"
                       type="text"
                       placeholder="Konsultasi Geofisika, Startup Teknologi..."
                       value={form.bidang_usaha || ''}

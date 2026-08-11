@@ -3,6 +3,7 @@ import { Search, Check, ChevronDown } from 'lucide-react';
 import { Mahasiswa } from '../types';
 
 interface ComboboxMahasiswaProps {
+  id?: string;
   mahasiswa: Mahasiswa[];
   value: string;
   onChange: (npm: string) => void;
@@ -12,6 +13,7 @@ interface ComboboxMahasiswaProps {
 }
 
 export default function ComboboxMahasiswa({
+  id,
   mahasiswa,
   value,
   onChange,
@@ -86,6 +88,7 @@ export default function ComboboxMahasiswa({
         <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40 pointer-events-none" />
         <input
           ref={inputRef}
+          id={id}
           type="text"
           value={inputValue}
           onChange={handleInputChange}

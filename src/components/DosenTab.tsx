@@ -32,7 +32,7 @@ interface DosenTabProps {
   loading?: boolean;
   onSaveDosen: (d: Dosen) => Promise<void>;
   onDeleteDosen: (nip: string) => Promise<void>;
-  onBulkImportDosen: (data: any[]) => Promise<void>;
+  onBulkImportDosen: (data: Record<string, unknown>[]) => Promise<void>;
   triggerToast?: (options: ToastOptions) => void;
 }
 
@@ -255,6 +255,7 @@ export default function DosenTab({
               <input
                 type="text"
                 placeholder="Cari dosen berdasarkan Nama, NIP, atau Kode Dosen..."
+                aria-label="Cari dosen"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                 className="w-full pl-10 pr-9 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
@@ -277,8 +278,9 @@ export default function DosenTab({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">Status Pembimbing</label>
+              <label htmlFor="dosen-filter-wali" className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">Status Pembimbing</label>
               <select
+                id="dosen-filter-wali"
                 value={filterWali}
                 onChange={(e) => { setFilterWali(e.target.value as 'All' | 'Wali' | 'Biasa'); setPage(1); }}
                 className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
@@ -290,8 +292,9 @@ export default function DosenTab({
             </div>
 
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">Jabatan Fungsional</label>
+              <label htmlFor="dosen-filter-jabatan" className="block text-[10px] uppercase tracking-wider font-bold text-gray-400 mb-1">Jabatan Fungsional</label>
               <select
+                id="dosen-filter-jabatan"
                 value={filterJabatan}
                 onChange={(e) => { setFilterJabatan(e.target.value); setPage(1); }}
                 className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
@@ -435,8 +438,9 @@ export default function DosenTab({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Nama Lengkap & Gelar</label>
+                <label htmlFor="dosen-nama" className="block text-xs font-semibold text-gray-500 mb-1.5">Nama Lengkap & Gelar</label>
                 <input 
+                  id="dosen-nama"
                   type="text" 
                   required
                   placeholder="Contoh: Dr. Maria Ulfah, S.Si., M.Si."
@@ -449,8 +453,9 @@ export default function DosenTab({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">NIP Kepegawaian</label>
+                  <label htmlFor="dosen-nip" className="block text-xs font-semibold text-gray-500 mb-1.5">NIP Kepegawaian</label>
                   <input 
+                    id="dosen-nip"
                     type="text" 
                     required
                     disabled={!!editingDosen}
@@ -462,8 +467,9 @@ export default function DosenTab({
                   {errors.nip && <p className="mt-1 text-[10px] text-red-600">{errors.nip}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Kode Dosen</label>
+                  <label htmlFor="dosen-kode" className="block text-xs font-semibold text-gray-500 mb-1.5">Kode Dosen</label>
                   <input 
+                    id="dosen-kode"
                     type="text" 
                     placeholder="Contoh: MUF"
                     value={form.kode_dosen}
@@ -472,8 +478,9 @@ export default function DosenTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Sandi Dosen</label>
+                  <label htmlFor="dosen-sandi" className="block text-xs font-semibold text-gray-500 mb-1.5">Sandi Dosen</label>
                   <input 
+                    id="dosen-sandi"
                     type="text" 
                     autoComplete="off"
                     placeholder="Contoh: muf2024"
@@ -487,8 +494,9 @@ export default function DosenTab({
 
               <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Golongan</label>
+                  <label htmlFor="dosen-golongan" className="block text-xs font-semibold text-gray-500 mb-1.5">Golongan</label>
                   <select
+                    id="dosen-golongan"
                     value={form.golongan}
                     onChange={(e) => setForm({...form, golongan: e.target.value})}
                     className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] bg-white"
@@ -505,8 +513,9 @@ export default function DosenTab({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Pangkat</label>
+                  <label htmlFor="dosen-pangkat" className="block text-xs font-semibold text-gray-500 mb-1.5">Pangkat</label>
                   <input 
+                    id="dosen-pangkat"
                     type="text" 
                     placeholder="Contoh: Penata"
                     value={form.pangkat}
@@ -518,8 +527,9 @@ export default function DosenTab({
 
               <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Jabatan Akademik</label>
+                  <label htmlFor="dosen-jabatan" className="block text-xs font-semibold text-gray-500 mb-1.5">Jabatan Akademik</label>
                   <select
+                    id="dosen-jabatan"
                     value={form.jabatan}
                     onChange={(e) => { setForm({...form, jabatan: e.target.value}); if (errors.jabatan) setErrors({...errors, jabatan: undefined}); }}
                     className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] bg-white ${errors.jabatan ? 'border-red-400' : ''}`}

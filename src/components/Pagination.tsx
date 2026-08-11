@@ -27,6 +27,7 @@ export default function Pagination({ page, totalPages, onChange }: PaginationPro
       <button
         onClick={() => onChange(Math.max(1, page - 1))}
         disabled={page <= 1}
+        aria-label="Halaman sebelumnya"
         className="h-8 px-2.5 flex items-center gap-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none transition"
       >
         <ChevronLeft className="w-3.5 h-3.5" />
@@ -51,6 +52,7 @@ export default function Pagination({ page, totalPages, onChange }: PaginationPro
       <button
         onClick={() => onChange(Math.min(totalPages, page + 1))}
         disabled={page >= totalPages}
+        aria-label="Halaman berikutnya"
         className="h-8 px-2.5 flex items-center gap-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 disabled:opacity-30 disabled:pointer-events-none transition"
       >
         <ChevronRight className="w-3.5 h-3.5" />

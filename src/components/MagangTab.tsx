@@ -44,7 +44,7 @@ interface MagangTabProps {
   loading?: boolean;
   onSaveMbkm: (m: RiwayatMBKM) => void;
   onDeleteMbkm: (id: string) => void;
-  onBulkImportMagang: (data: any[]) => Promise<void>;
+  onBulkImportMagang: (data: Record<string, unknown>[]) => Promise<void>;
   onRefresh: () => Promise<void>;
   activeSubTab?: string;
   triggerToast?: (options: ToastOptions) => void;
@@ -366,6 +366,7 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
             <input
               type="text"
               placeholder="Cari mahasiswa atau instansi magang..."
+              aria-label="Cari data magang"
                value={query}
                onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
               className="w-full pl-10 pr-9 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -520,8 +521,9 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                 <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Data Wajib</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold mb-1">Mahasiswa <span className="text-rose-500">*</span></label>
+                    <label htmlFor="magang-mahasiswa" className="block text-xs font-semibold mb-1">Mahasiswa <span className="text-rose-500">*</span></label>
                     <ComboboxMahasiswa
+                      id="magang-mahasiswa"
                       mahasiswa={mahasiswa}
                       value={form.npm_mahasiswa}
                       onChange={(npm) => setForm({...form, npm_mahasiswa: npm})}
@@ -531,8 +533,9 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold mb-1">Tempat / Instansi Magang <span className="text-rose-500">*</span></label>
+                    <label htmlFor="magang-tempat" className="block text-xs font-semibold mb-1">Tempat / Instansi Magang <span className="text-rose-500">*</span></label>
                     <input
+                      id="magang-tempat"
                       type="text"
                       required
                       placeholder="Pertamina Geothermal Energy, BMKG, Chevron..."
@@ -543,8 +546,9 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold mb-1">Semester Pelaksanaan <span className="text-rose-500">*</span></label>
+                    <label htmlFor="magang-semester" className="block text-xs font-semibold mb-1">Semester Pelaksanaan <span className="text-rose-500">*</span></label>
                     <input
+                      id="magang-semester"
                       type="text"
                       required
                       placeholder="Genap 2025/2026"
@@ -561,8 +565,9 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                 <h4 className="text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider mb-3">Data Tambahan (Opsional)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold mb-1">Judul Topik Magang</label>
+                    <label htmlFor="magang-judul" className="block text-xs font-semibold mb-1">Judul Topik Magang</label>
                     <input
+                      id="magang-judul"
                       type="text"
                       placeholder="Analisis Petrofisika dan Penentuan Net Pay..."
                       value={form.judul_topik_magang || ''}
@@ -572,8 +577,9 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Dosen Pembimbing Lapangan</label>
+                    <label htmlFor="magang-dpl" className="block text-xs font-semibold mb-1">Dosen Pembimbing Lapangan</label>
                     <input
+                      id="magang-dpl"
                       type="text"
                       placeholder="Nama + instansi, misal: Bapak Andi (PGE)"
                       value={form.dosen_pembimbing_lapangan || ''}
@@ -583,8 +589,9 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Dosen Pembimbing Dalam (UNPAD)</label>
+                    <label htmlFor="magang-dpd" className="block text-xs font-semibold mb-1">Dosen Pembimbing Dalam (UNPAD)</label>
                     <select
+                      id="magang-dpd"
                       value={form.nip_dosen_pembimbing_dalam || ''}
                       onChange={(e) => setForm({...form, nip_dosen_pembimbing_dalam: e.target.value || null})}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -597,8 +604,9 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Periode Magang</label>
+                    <label htmlFor="magang-periode" className="block text-xs font-semibold mb-1">Periode Magang</label>
                     <input
+                      id="magang-periode"
                       type="text"
                       placeholder="6 Juli - 6 Agustus 2026"
                       value={form.periode_magang || ''}

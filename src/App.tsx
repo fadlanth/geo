@@ -10,6 +10,7 @@ import PublicLanding from './components/PublicLanding';
 import Toast, { ToastOptions } from './components/Toast';
 import ConfirmDialog from './components/ConfirmDialog';
 import { academicService } from './lib/academicService';
+import { errMsg } from './lib/format';
 import { useAuth } from './lib/AuthContext';
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM, AnggotaPrestasi } from './types';
 
@@ -62,32 +63,32 @@ export default function App() {
     setIsRefreshing(true);
     try {
       setDosen(await academicService.getDosen());
-    } catch (err: any) {
+    } catch (err) {
       console.error('Gagal memuat dosen:', err);
     }
     try {
       setMahasiswa(await academicService.getMahasiswa());
-    } catch (err: any) {
+    } catch (err) {
       console.error('Gagal memuat mahasiswa:', err);
     }
     try {
       setPrestasi(await academicService.getPrestasi());
-    } catch (err: any) {
+    } catch (err) {
       console.error('Gagal memuat prestasi:', err);
     }
     try {
       setAnggotaPrestasi(await academicService.getAnggotaPrestasi());
-    } catch (err: any) {
+    } catch (err) {
       console.error('Gagal memuat anggota prestasi:', err);
     }
     try {
       setAlumni(await academicService.getTracerAlumni());
-    } catch (err: any) {
+    } catch (err) {
       console.error('Gagal memuat alumni:', err);
     }
     try {
       setMbkm(await academicService.getMBKM());
-    } catch (err: any) {
+    } catch (err) {
       console.error('Gagal memuat MBKM:', err);
     }
     setIsRefreshing(false);
@@ -133,7 +134,7 @@ export default function App() {
     return 'L';
   };
 
-  const handleBulkImportMahasiswa = async (data: any[]) => {
+  const handleBulkImportMahasiswa = async (data: Record<string, unknown>[]) => {
     try {
       // Basic validation & formatting
       const formattedData: Mahasiswa[] = data.map(row => ({
@@ -159,11 +160,11 @@ export default function App() {
         title: 'Import Berhasil',
         message: `Berhasil menambahkan/memperbarui ${formattedData.length} data mahasiswa.`
       });
-    } catch (err: any) {
+    } catch (err) {
       triggerToast({
         kind: 'error',
         title: 'Import Gagal',
-        message: err.message || 'Terjadi kesalahan format data atau koneksi.'
+        message: errMsg(err, 'Terjadi kesalahan format data atau koneksi.')
       });
       throw err;
     }
@@ -182,11 +183,11 @@ export default function App() {
             title: 'Data Dihapus',
             message: 'Berhasil menghapus mahasiswa dari sistem.'
           });
-        } catch (err: any) {
+        } catch (err) {
           triggerToast({
             kind: 'error',
             title: 'Gagal Menghapus',
-            message: err.message || 'Tidak dapat menghapus data mahasiswa.'
+            message: errMsg(err, 'Tidak dapat menghapus data mahasiswa.')
           });
         }
       }
@@ -232,18 +233,18 @@ export default function App() {
             title: 'Dosen Wali Dihapus',
             message: `Berhasil menghapus dosen ${nama} dari sistem.`
           });
-        } catch (err: any) {
+        } catch (err) {
           triggerToast({
             kind: 'error',
             title: 'Gagal Menghapus',
-            message: err.message || 'Tidak dapat menghapus data dosen.'
+            message: errMsg(err, 'Tidak dapat menghapus data dosen.')
           });
         }
       }
     });
   };
 
-  const handleBulkImportDosen = async (data: any[]) => {
+  const handleBulkImportDosen = async (data: Record<string, unknown>[]) => {
     try {
       const formattedData: Dosen[] = data.map(row => {
         const nama = String(row.NAMA || row.Nama || row.nama || '').trim();
@@ -292,11 +293,11 @@ export default function App() {
         title: 'Import Dosen Berhasil',
         message: `Berhasil menambahkan/memperbarui ${formattedData.length} data dosen.`
       });
-    } catch (err: any) {
+    } catch (err) {
       triggerToast({
         kind: 'error',
         title: 'Import Gagal',
-        message: err.message || 'Terjadi kesalahan format data atau koneksi.'
+        message: errMsg(err, 'Terjadi kesalahan format data atau koneksi.')
       });
       throw err;
     }
@@ -312,11 +313,11 @@ export default function App() {
         title: 'Prestasi Tersimpan',
         message: `Data prestasi ${p.nama_kompetisi} berhasil disimpan.`
       });
-    } catch (err: any) {
+    } catch (err) {
       triggerToast({
         kind: 'error',
         title: 'Gagal Menyimpan',
-        message: err.message || 'Terjadi kesalahan saat menyimpan data prestasi.'
+        message: errMsg(err, 'Terjadi kesalahan saat menyimpan data prestasi.')
       });
     }
   };
@@ -334,11 +335,11 @@ export default function App() {
             title: 'Prestasi Dihapus',
             message: 'Pencatatan prestasi berhasil dihapus.'
           });
-        } catch (err: any) {
+        } catch (err) {
           triggerToast({
             kind: 'error',
             title: 'Gagal Menghapus',
-            message: err.message || 'Gagal menghapus data prestasi.'
+            message: errMsg(err, 'Gagal menghapus data prestasi.')
           });
         }
       }
@@ -355,11 +356,11 @@ export default function App() {
         title: 'Anggota Tersimpan',
         message: `Data anggota prestasi berhasil disimpan.`
       });
-    } catch (err: any) {
+    } catch (err) {
       triggerToast({
         kind: 'error',
         title: 'Gagal Menyimpan',
-        message: err.message || 'Terjadi kesalahan saat menyimpan data anggota prestasi.'
+        message: errMsg(err, 'Terjadi kesalahan saat menyimpan data anggota prestasi.')
       });
     }
   };
@@ -373,11 +374,11 @@ export default function App() {
         title: 'Anggota Dihapus',
         message: 'Anggota prestasi berhasil dihapus.'
       });
-    } catch (err: any) {
+    } catch (err) {
       triggerToast({
         kind: 'error',
         title: 'Gagal Menghapus',
-        message: err.message || 'Gagal menghapus data anggota prestasi.'
+        message: errMsg(err, 'Gagal menghapus data anggota prestasi.')
       });
     }
   };
@@ -386,11 +387,11 @@ export default function App() {
     try {
       await academicService.bulkReplaceAnggotaPrestasi(id_prestasi, anggota);
       await fetchAllData();
-    } catch (err: any) {
+    } catch (err) {
       triggerToast({
         kind: 'error',
         title: 'Gagal Simpan Anggota',
-        message: err.message || 'Terjadi kesalahan saat menyimpan anggota prestasi.'
+        message: errMsg(err, 'Terjadi kesalahan saat menyimpan anggota prestasi.')
       });
     }
   };
@@ -405,17 +406,17 @@ export default function App() {
         title: 'Magang Tersimpan',
         message: `Data magang ${m.tempat_instansi} berhasil disimpan.`
       });
-    } catch (err: any) {
+    } catch (err) {
       triggerToast({
         kind: 'error',
         title: 'Gagal Menyimpan',
-        message: err.message || 'Terjadi kesalahan saat menyimpan data magang.'
+        message: errMsg(err, 'Terjadi kesalahan saat menyimpan data magang.')
       });
       throw err;
     }
   };
 
-  const handleBulkImportPrestasi = async (data: any[]) => {
+  const handleBulkImportPrestasi = async (data: Record<string, unknown>[]) => {
     let count = 0;
     let errors = 0;
     for (const row of data) {
@@ -460,7 +461,7 @@ export default function App() {
     }
   };
 
-  const handleBulkImportMagang = async (data: any[]) => {
+  const handleBulkImportMagang = async (data: Record<string, unknown>[]) => {
     let count = 0;
     let errors = 0;
     for (const row of data) {
@@ -528,11 +529,11 @@ export default function App() {
             title: 'Data Magang Dihapus',
             message: 'Data magang berhasil dihapus.'
           });
-        } catch (err: any) {
+        } catch (err) {
           triggerToast({
             kind: 'error',
             title: 'Gagal Menghapus',
-            message: err.message || 'Gagal menghapus data magang.'
+            message: errMsg(err, 'Gagal menghapus data magang.')
           });
         }
       }
@@ -549,11 +550,11 @@ export default function App() {
         title: 'Data Tracer Tersimpan',
         message: `Data tracer study alumni berhasil disimpan.`
       });
-    } catch (err: any) {
+    } catch (err) {
       triggerToast({
         kind: 'error',
         title: 'Gagal Menyimpan',
-        message: err.message || 'Terjadi kesalahan saat menyimpan data tracer study.'
+        message: errMsg(err, 'Terjadi kesalahan saat menyimpan data tracer study.')
       });
     }
   };
@@ -571,11 +572,11 @@ export default function App() {
             title: 'Data Tracer Study Dihapus',
             message: 'Data tracer study alumni berhasil dihapus.'
           });
-        } catch (err: any) {
+        } catch (err) {
           triggerToast({
             kind: 'error',
             title: 'Gagal Menghapus',
-            message: err.message || 'Gagal menghapus data tracer study.'
+            message: errMsg(err, 'Gagal menghapus data tracer study.')
           });
         }
       }

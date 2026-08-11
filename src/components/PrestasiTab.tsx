@@ -41,7 +41,7 @@ interface PrestasiTabProps {
   onSaveAnggota: (anggota: AnggotaPrestasi) => void;
   onDeleteAnggota: (id: string) => void;
   onBulkReplaceAnggota: (id_prestasi: string, anggota: AnggotaPrestasi[]) => void;
-  onBulkImportPrestasi: (data: any[]) => Promise<void>;
+  onBulkImportPrestasi: (data: Record<string, unknown>[]) => Promise<void>;
   onRefresh: () => Promise<void>;
   activeSubTab?: string;
   triggerToast?: (options: ToastOptions) => void;
@@ -411,6 +411,7 @@ export default function PrestasiTab({
             <input
               type="text"
               placeholder="Cari nama mahasiswa atau nama kompetisi..."
+              aria-label="Cari prestasi"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
               className="w-full pl-10 pr-9 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
@@ -595,8 +596,9 @@ export default function PrestasiTab({
                                       <div onClick={(e) => e.stopPropagation()} className="bg-white border border-violet-200 rounded-xl p-3 mt-2 space-y-2.5">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
                                           <div className="lg:col-span-2">
-                                            <label className="block text-[10px] font-semibold mb-0.5 text-gray-500">Nama Lengkap *</label>
+                                            <label htmlFor="anggota-nama" className="block text-[10px] font-semibold mb-0.5 text-gray-500">Nama Lengkap *</label>
                                             <input
+                                              id="anggota-nama"
                                               type="text"
                                               placeholder="Nama peserta"
                                               value={anggotaForm.nama_lengkap}
@@ -605,8 +607,9 @@ export default function PrestasiTab({
                                             />
                                           </div>
                                           <div>
-                                            <label className="block text-[10px] font-semibold mb-0.5 text-gray-500">NPM (opsional)</label>
+                                            <label htmlFor="anggota-npm" className="block text-[10px] font-semibold mb-0.5 text-gray-500">NPM (opsional)</label>
                                             <input
+                                              id="anggota-npm"
                                               type="text"
                                               placeholder="NPM"
                                               value={anggotaForm.npm}
@@ -615,8 +618,9 @@ export default function PrestasiTab({
                                             />
                                           </div>
                                           <div>
-                                            <label className="block text-[10px] font-semibold mb-0.5 text-gray-500">Prodi</label>
+                                            <label htmlFor="anggota-prodi" className="block text-[10px] font-semibold mb-0.5 text-gray-500">Prodi</label>
                                             <input
+                                              id="anggota-prodi"
                                               type="text"
                                               placeholder="Geofisika"
                                               value={anggotaForm.prodi}
@@ -625,8 +629,9 @@ export default function PrestasiTab({
                                             />
                                           </div>
                                           <div>
-                                            <label className="block text-[10px] font-semibold mb-0.5 text-gray-500">Universitas</label>
+                                            <label htmlFor="anggota-univ" className="block text-[10px] font-semibold mb-0.5 text-gray-500">Universitas</label>
                                             <input
+                                              id="anggota-univ"
                                               type="text"
                                               placeholder="UNPAD"
                                               value={anggotaForm.universitas}
@@ -731,8 +736,9 @@ export default function PrestasiTab({
                 <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Data Wajib</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Mahasiswa (NPM)</label>
+                    <label htmlFor="prestasi-mahasiswa" className="block text-xs font-semibold mb-1">Mahasiswa (NPM)</label>
                     <ComboboxMahasiswa
+                      id="prestasi-mahasiswa"
                       mahasiswa={mahasiswa}
                       value={form.npm_mahasiswa || ''}
                       onChange={(npm) => setForm({...form, npm_mahasiswa: npm})}
@@ -740,8 +746,9 @@ export default function PrestasiTab({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Nama Mahasiswa (jika tidak terdaftar)</label>
+                    <label htmlFor="prestasi-nama" className="block text-xs font-semibold mb-1">Nama Mahasiswa (jika tidak terdaftar)</label>
                     <input
+                      id="prestasi-nama"
                       type="text"
                       placeholder="Nama lengkap"
                       value={form.nama_mahasiswa || ''}
@@ -751,8 +758,9 @@ export default function PrestasiTab({
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold mb-1">Nama Kompetisi/Lomba <span className="text-rose-500">*</span></label>
+                    <label htmlFor="prestasi-kompetisi" className="block text-xs font-semibold mb-1">Nama Kompetisi/Lomba <span className="text-rose-500">*</span></label>
                     <input
+                      id="prestasi-kompetisi"
                       type="text"
                       required
                       value={form.nama_kompetisi}
@@ -762,8 +770,9 @@ export default function PrestasiTab({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Tingkat <span className="text-rose-500">*</span></label>
+                    <label htmlFor="prestasi-tingkat" className="block text-xs font-semibold mb-1">Tingkat <span className="text-rose-500">*</span></label>
                     <select
+                      id="prestasi-tingkat"
                       value={form.tingkat}
                       onChange={(e) => setForm({...form, tingkat: e.target.value as Prestasi['tingkat']})}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -775,8 +784,9 @@ export default function PrestasiTab({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Peringkat/Juara <span className="text-rose-500">*</span></label>
+                    <label htmlFor="prestasi-juara" className="block text-xs font-semibold mb-1">Peringkat/Juara <span className="text-rose-500">*</span></label>
                     <select
+                      id="prestasi-juara"
                       value={form.juara_ke}
                       onChange={(e) => setForm({...form, juara_ke: Number(e.target.value)})}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -789,8 +799,9 @@ export default function PrestasiTab({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Jenis Peserta</label>
+                    <label htmlFor="prestasi-jenis" className="block text-xs font-semibold mb-1">Jenis Peserta</label>
                     <select
+                      id="prestasi-jenis"
                       value={form.jenis_peserta}
                       onChange={(e) => setForm({...form, jenis_peserta: e.target.value as 'Individu' | 'Kelompok'})}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -819,8 +830,9 @@ export default function PrestasiTab({
                 <h4 className="text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider mb-3">Data Tambahan (Opsional)</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Tahun Kegiatan</label>
+                    <label htmlFor="prestasi-tahun" className="block text-xs font-semibold mb-1">Tahun Kegiatan</label>
                     <input
+                      id="prestasi-tahun"
                       type="number"
                       placeholder="2025"
                       value={form.tahun_kegiatan || ''}
@@ -829,8 +841,9 @@ export default function PrestasiTab({
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold mb-1">Tempat</label>
+                    <label htmlFor="prestasi-tempat" className="block text-xs font-semibold mb-1">Tempat</label>
                     <input
+                      id="prestasi-tempat"
                       type="text"
                       placeholder="Bandung, Jakarta, Tokyo..."
                       value={form.tempat || ''}
@@ -839,8 +852,9 @@ export default function PrestasiTab({
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-semibold mb-1">Dosen Pembimbing</label>
+                    <label htmlFor="prestasi-pembimbing" className="block text-xs font-semibold mb-1">Dosen Pembimbing</label>
                     <input
+                      id="prestasi-pembimbing"
                       type="text"
                       placeholder="Prof. Dr. Ir. Subroto Wardoyo, M.T."
                       value={form.dosen_pembimbing || ''}

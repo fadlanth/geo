@@ -5,6 +5,7 @@ import { SkeletonTable } from './Skeleton';
 import IconButton from './IconButton';
 import StatusChip from './StatusChip';
 import { ToastOptions } from './Toast';
+import { errMsg } from '../lib/format';
 
 interface AuditLog {
   id: string;
@@ -12,7 +13,7 @@ interface AuditLog {
   entitas: string;
   aksi: string;
   entitas_id: string;
-  payload: any;
+  payload: unknown;
   created_at: string;
 }
 
@@ -44,8 +45,8 @@ export default function AuditTab({ loading, triggerToast }: AuditTabProps) {
       const { data, error } = await query;
       if (error) throw error;
       setLogs(data as AuditLog[] || []);
-    } catch (err: any) {
-      triggerToast?.({ kind: 'error', title: 'Gagal Memuat', message: err.message || 'Tidak dapat memuat log audit.' });
+    } catch (err) {
+      triggerToast?.({ kind: 'error', title: 'Gagal Memuat', message: errMsg(err, 'Tidak dapat memuat log audit.') });
       setLogs([]);
     }
   };
@@ -73,6 +74,7 @@ export default function AuditTab({ loading, triggerToast }: AuditTabProps) {
             <input
               type="text"
               placeholder="Cari entitas / aksi / email..."
+              aria-label="Cari log aktivitas"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="w-full pl-10 pr-9 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"

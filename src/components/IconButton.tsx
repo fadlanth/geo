@@ -9,7 +9,7 @@ interface IconButtonProps {
   tone?: IconButtonTone;
   size?: IconButtonSize;
   className?: string;
-  onClick?: (e: any) => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 const BASE = 'inline-flex items-center justify-center rounded-lg transition';

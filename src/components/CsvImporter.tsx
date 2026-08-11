@@ -2,15 +2,16 @@ import * as XLSX from 'xlsx';
 import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle2, AlertCircle, FileText, X } from 'lucide-react';
 import Button from './Button';
+import { errMsg } from '../lib/format';
 
 interface CsvImporterProps {
   title: string;
   expectedHeaders: string[];
   optionalHeaders?: string[]; // Headers that are not required in the file
-  onImport: (data: any[]) => Promise<void>;
+  onImport: (data: Record<string, unknown>[]) => Promise<void>;
   onClose: () => void;
   templateCsv?: string; // Optional raw string of template CSV
-  templateData?: any[]; // Optional array of template data for Excel export
+  templateData?: Record<string, unknown>[]; // Optional array of template data for Excel export
 }
 
 export default function CsvImporter({
@@ -24,19 +25,19 @@ export default function CsvImporter({
 }: CsvImporterProps) {
   const [dragActive, setDragActive] = useState(false);
   const [status, setStatus] = useState<'idle' | 'parsing' | 'preview' | 'importing' | 'success' | 'error'>('idle');
-  const [parsedData, setParsedData] = useState<any[]>([]);
+  const [parsedData, setParsedData] = useState<Record<string, unknown>[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [sheets, setSheets] = useState<string[]>([]); // For Excel files with multiple sheets
   const [selectedSheet, setSelectedSheet] = useState<string>('');
-  const [allSheetData, setAllSheetData] = useState<{ [key: string]: any[] }>({});
+  const [allSheetData, setAllSheetData] = useState<{ [key: string]: Record<string, unknown>[] }>({});
 
   // Normalize header for flexible matching
   const normalizeHeader = (h: string) => h.trim().toLowerCase();
 
   // Get headers missing from rows (only required ones, not optional)
-  const getMissingRequiredHeaders = (rows: any[]): string[] => {
+  const getMissingRequiredHeaders = (rows: Record<string, unknown>[]): string[] => {
     if (rows.length === 0) return expectedHeaders.filter(h => !optionalHeaders.includes(h));
     const fileHeaders = Object.keys(rows[0]).map(normalizeHeader);
     return expectedHeaders.filter(h => {
@@ -85,11 +86,11 @@ export default function CsvImporter({
           throw new Error('File Excel tidak memiliki sheet data.');
         }
 
-        const allData: { [key: string]: any[] } = {};
+        const allData: { [key: string]: Record<string, unknown>[] } = {};
         sheetNames.forEach((sheetName) => {
           const ws = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(ws, { defval: '' });
-          allData[sheetName] = jsonData;
+          allData[sheetName] = jsonData as Record<string, unknown>[];
         });
 
         setAllSheetData(allData);
@@ -103,8 +104,8 @@ export default function CsvImporter({
 
         setParsedData(firstSheetData);
         setStatus('preview');
-      } catch (err: any) {
-        setErrorMsg(err.message || 'Gagal memproses file Excel.');
+      } catch (err) {
+        setErrorMsg(errMsg(err, 'Gagal memproses file Excel.'));
         setStatus('error');
       }
     };
@@ -133,10 +134,10 @@ export default function CsvImporter({
           throw new Error(`Kolom hilang: ${missingHeaders.join(', ')}. Pastikan format sesuai template.`);
         }
 
-        const data = [];
+        const data: Record<string, unknown>[] = [];
         for (let i = 1; i < rows.length; i++) {
           const values = rows[i].split(',').map(v => v.trim());
-          const obj: any = {};
+          const obj: Record<string, unknown> = {};
           headers.forEach((header, index) => {
             obj[header] = values[index] !== undefined ? values[index] : '';
           });
@@ -145,8 +146,8 @@ export default function CsvImporter({
 
         setParsedData(data);
         setStatus('preview');
-      } catch (err: any) {
-        setErrorMsg(err.message || 'Gagal memproses file CSV.');
+      } catch (err) {
+        setErrorMsg(errMsg(err, 'Gagal memproses file CSV.'));
         setStatus('error');
       }
     };
@@ -200,8 +201,8 @@ export default function CsvImporter({
     try {
       await onImport(parsedData);
       setStatus('success');
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Terjadi kesalahan saat menyimpan data ke server.');
+    } catch (err) {
+      setErrorMsg(errMsg(err, 'Terjadi kesalahan saat menyimpan data ke server.'));
       setStatus('error');
     }
   };
@@ -376,7 +377,7 @@ export default function CsvImporter({
                       <tr key={idx} className="border-b border-gray-100 last:border-0">
                         <td className="p-2 text-center text-gray-400">{idx + 1}</td>
                         {expectedHeaders.map(h => (
-                          <td key={h} className="p-2">{row[h] ?? ''}</td>
+                          <td key={h} className="p-2">{String(row[h] ?? '')}</td>
                         ))}
                       </tr>
                     ))}

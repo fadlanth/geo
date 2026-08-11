@@ -29,7 +29,7 @@ interface MahasiswaTabProps {
   loading?: boolean;
   onSaveMahasiswa: (mhs: Mahasiswa) => void;
   onDeleteMahasiswa: (npm: string) => void;
-  onBulkImportMahasiswa: (data: any[]) => Promise<void>;
+  onBulkImportMahasiswa: (data: Record<string, unknown>[]) => Promise<void>;
   activeSubTab?: string;
   triggerToast?: (options: ToastOptions) => void;
 }
@@ -254,6 +254,7 @@ export default function MahasiswaTab({
                   <input
                     type="text"
                     placeholder="Cari mahasiswa berdasarkan Nama, NPM..."
+                    aria-label="Cari mahasiswa"
                     value={rawSearch}
                     onChange={(e) => { setRawSearch(e.target.value); setPage(1); }}
                     className="w-full pl-10 pr-9 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
@@ -277,8 +278,9 @@ export default function MahasiswaTab({
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <div>
-                  <label className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Angkatan</label>
+                  <label htmlFor="mhs-filter-angkatan" className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Angkatan</label>
                   <select
+                    id="mhs-filter-angkatan"
                     value={filterAngkatan}
                     onChange={(e) => { setFilterAngkatan(e.target.value); setPage(1); }}
                     className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
@@ -291,8 +293,9 @@ export default function MahasiswaTab({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Status Akademik</label>
+                  <label htmlFor="mhs-filter-status" className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Status Akademik</label>
                   <select
+                    id="mhs-filter-status"
                     value={filterStatus}
                     onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
                     className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
@@ -429,8 +432,9 @@ export default function MahasiswaTab({
 
             <form onSubmit={handleAddMhsSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Nama Lengkap</label>
+                <label htmlFor="mhs-nama" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Nama Lengkap</label>
                 <input 
+                  id="mhs-nama"
                   type="text" 
                   required
                   placeholder="Contoh: Andi Pratama"
@@ -443,8 +447,9 @@ export default function MahasiswaTab({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">NPM</label>
+                  <label htmlFor="mhs-npm" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">NPM</label>
                   <input 
+                    id="mhs-npm"
                     type="text" 
                     required
                     disabled={!!editingMhs}
@@ -456,8 +461,9 @@ export default function MahasiswaTab({
                   {errors.npm && <p className="mt-1 text-[10px] text-red-600">{errors.npm}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Angkatan</label>
+                  <label htmlFor="mhs-angkatan" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Angkatan</label>
                   <input 
+                    id="mhs-angkatan"
                     type="number" 
                     required
                     value={mhsForm.angkatan}
@@ -470,8 +476,9 @@ export default function MahasiswaTab({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Jenis Kelamin</label>
+                  <label htmlFor="mhs-jk" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Jenis Kelamin</label>
                   <select
+                    id="mhs-jk"
                     value={mhsForm.jenis_kelamin}
                     onChange={(e) => setMhsForm({...mhsForm, jenis_kelamin: e.target.value})}
                     className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -481,8 +488,9 @@ export default function MahasiswaTab({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Fakultas</label>
+                  <label htmlFor="mhs-fakultas" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Fakultas</label>
                   <input 
+                    id="mhs-fakultas"
                     type="text" 
                     required
                     value={mhsForm.fakultas}
@@ -494,8 +502,9 @@ export default function MahasiswaTab({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Program Studi</label>
+                  <label htmlFor="mhs-prodi" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Program Studi</label>
                   <input 
+                    id="mhs-prodi"
                     type="text" 
                     required
                     value={mhsForm.prodi}
@@ -504,8 +513,9 @@ export default function MahasiswaTab({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Status Akademik</label>
+                  <label htmlFor="mhs-status" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Status Akademik</label>
                   <select
+                    id="mhs-status"
                     value={mhsForm.status}
                     onChange={(e) => setMhsForm({...mhsForm, status: e.target.value as Mahasiswa['status']})}
                     className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.status ? 'border-red-400' : ''}`}
@@ -518,8 +528,9 @@ export default function MahasiswaTab({
                 </div>
                 {mhsForm.status === 'Lulus' && (
                   <div className="mt-3">
-                    <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Tahun Lulus</label>
+                    <label htmlFor="mhs-tahun-lulus" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Tahun Lulus</label>
                     <input
+                      id="mhs-tahun-lulus"
                       type="number"
                       placeholder="2024"
                       value={mhsForm.tahun_lulus || ''}
@@ -530,8 +541,9 @@ export default function MahasiswaTab({
                   </div>
                 )}
                 <div>
-                  <label className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Dosen Wali (Opsional)</label>
+                  <label htmlFor="mhs-wali" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Dosen Wali (Opsional)</label>
                   <select
+                    id="mhs-wali"
                     value={mhsForm.nip_dosen_wali || ''}
                     onChange={(e) => setMhsForm({...mhsForm, nip_dosen_wali: e.target.value})}
                     className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"

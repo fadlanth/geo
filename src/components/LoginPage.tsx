@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock, Mail, AlertCircle, ArrowRight, ArrowLeft, KeyRound, CheckCircle2, LogIn } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
+import { errMsg } from '../lib/format';
 import Button from './Button';
 
 interface LoginPageProps {
@@ -29,8 +30,8 @@ export default function LoginPage({ onBack }: LoginPageProps) {
         await login(email.trim(), password);
         // Sukses: auth berubah → App otomatis menampilkan dashboard.
       }
-    } catch (err: any) {
-      setError(err?.message || 'Gagal masuk. Periksa email dan kata sandi Anda.');
+    } catch (err) {
+      setError(errMsg(err, 'Gagal masuk. Periksa email dan kata sandi Anda.'));
     } finally {
       setSubmitting(false);
     }
@@ -91,12 +92,13 @@ export default function LoginPage({ onBack }: LoginPageProps) {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-xs font-bold text-[var(--color-text-main)]/60 uppercase tracking-wider mb-2">
+              <label htmlFor="login-email" className="block text-xs font-bold text-[var(--color-text-main)]/60 uppercase tracking-wider mb-2">
                 Email Pengguna
               </label>
               <div className="relative">
                 <Mail className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
+                  id="login-email"
                   type="email"
                   required
                   value={email}
@@ -110,12 +112,13 @@ export default function LoginPage({ onBack }: LoginPageProps) {
 
             {mode === 'login' && (
               <div>
-                <label className="block text-xs font-bold text-[var(--color-text-main)]/60 uppercase tracking-wider mb-2">
+                <label htmlFor="login-password" className="block text-xs font-bold text-[var(--color-text-main)]/60 uppercase tracking-wider mb-2">
                   Kata Sandi
                 </label>
                 <div className="relative">
                   <Lock className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
+                    id="login-password"
                     type="password"
                     required
                     value={password}

@@ -12,7 +12,7 @@ interface ButtonProps {
   title?: string;
   className?: string;
   children?: React.ReactNode;
-  onClick?: (e: any) => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
 const BASE = 'inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-xs transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed';
