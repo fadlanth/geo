@@ -35,3 +35,18 @@ export function useSearch(initialPage: (page: number) => void) {
 
   return { query, setQuery, debounced };
 }
+
+/**
+ * Menutup modal/dialog saat tombol Escape ditekan.
+ * Listener hanya aktif ketika `open` bernilai true.
+ */
+export function useEscapeClose(open: boolean, onClose: () => void) {
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+}

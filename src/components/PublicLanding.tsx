@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Users, BookOpen, Award, GraduationCap, ShieldCheck, ArrowRight, Database, Sparkles, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { fmt } from '../lib/format';
 
 interface PublicLandingProps {
   onLogin: () => void;
@@ -117,7 +118,7 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
                     <Icon className="w-5 h-5" />
                   </div>
                   <p className="text-3xl font-bold font-display text-[var(--color-text-main)]">
-                    {s.value.toLocaleString('id-ID')}
+                    {fmt(s.value)}
                   </p>
                   <p className="text-xs text-[var(--color-text-main)]/60 font-medium mt-1">{s.label}</p>
                 </div>

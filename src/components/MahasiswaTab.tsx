@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Users, 
   UserPlus, 
   Search, 
   Trash2, 
   SlidersHorizontal,
-  Edit2
+  Edit2,
+  X
 } from 'lucide-react';
 import { Mahasiswa, Dosen } from '../types';
 import { validators, val, JENIS_STATUS_MAHASISWA } from '../lib/validators';
-import { useDebounce } from '../lib/hooks';
+import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { fmt } from '../lib/format';
+import StatCard from './StatCard';
 import CsvImporter from './CsvImporter';
 import Pagination from './Pagination';
 import DataActions from './DataActions';
@@ -46,12 +49,20 @@ export default function MahasiswaTab({
   const [filterAngkatan, setFilterAngkatan] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
   const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement | null>(null);
   const ROWS_PER_PAGE = 25;
   const searchQuery = useDebounce(rawSearch, 350);
 
   // Modals / Form toggles
   const [showAddMhs, setShowAddMhs] = useState(false);
   const [showImport, setShowImport] = useState(false);
+
+  useEscapeClose(showAddMhs, () => setShowAddMhs(false));
+  useEscapeClose(showImport, () => setShowImport(false));
+
+  useEffect(() => {
+    if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [page]);
 
   // Editing state
   const [editingMhs, setEditingMhs] = useState<Mahasiswa | null>(null);
@@ -228,22 +239,10 @@ export default function MahasiswaTab({
       ) : (
         <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Total Mahasiswa</p>
-              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{totalMahasiswa}</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Aktif</p>
-              <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{aktifMahasiswa}</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Lulus</p>
-              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{lulusMahasiswa}</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Dosen Wali</p>
-              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{dosenWaliCount}</p>
-            </div>
+            <StatCard label="Total Mahasiswa" value={fmt(totalMahasiswa)} />
+            <StatCard label="Aktif" value={fmt(aktifMahasiswa)} accent />
+            <StatCard label="Lulus" value={fmt(lulusMahasiswa)} />
+            <StatCard label="Dosen Wali" value={fmt(dosenWaliCount)} />
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -257,8 +256,17 @@ export default function MahasiswaTab({
                     placeholder="Cari mahasiswa berdasarkan Nama, NPM..."
                     value={rawSearch}
                     onChange={(e) => { setRawSearch(e.target.value); setPage(1); }}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
+                    className="w-full pl-10 pr-9 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
                   />
+                  {rawSearch && (
+                    <button
+                      onClick={() => { setRawSearch(''); setPage(1); }}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                      aria-label="Bersihkan pencarian"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-[var(--color-text-main)]/65 font-medium px-2 shrink-0">
@@ -303,7 +311,7 @@ export default function MahasiswaTab({
               <SkeletonTable rows={10} cols={6} />
             ) : (
               <>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" ref={tableRef}>
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 text-xs font-bold font-display uppercase tracking-wider">

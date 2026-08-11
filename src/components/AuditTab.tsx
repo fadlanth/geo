@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Activity, Search, RefreshCw, Eye } from 'lucide-react';
+import { Activity, Search, RefreshCw, Eye, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { SkeletonTable } from './Skeleton';
 import IconButton from './IconButton';
@@ -75,8 +75,17 @@ export default function AuditTab({ loading, triggerToast }: AuditTabProps) {
               placeholder="Cari entitas / aksi / email..."
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
+              className="w-full pl-10 pr-9 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
             />
+            {search && (
+              <button
+                onClick={() => { setSearch(''); setPage(1); }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                aria-label="Bersihkan pencarian"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
           <IconButton
             label="Muat ulang log"

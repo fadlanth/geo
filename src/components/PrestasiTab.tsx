@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import CsvImporter from './CsvImporter';
 import Pagination from './Pagination';
 import DataActions from './DataActions';
@@ -19,10 +19,13 @@ import {
   MapPin,
   UserCheck,
   Users,
-  UserPlus
+  UserPlus,
+  X
 } from 'lucide-react';
 import { Prestasi, Mahasiswa, AnggotaPrestasi, getPrestasiNamaMahasiswa } from '../types';
-import { useDebounce } from '../lib/hooks';
+import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { fmt } from '../lib/format';
+import StatCard from './StatCard';
 import { exportToExcel, exportPrestasiRekapToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard } from './Skeleton';
@@ -71,6 +74,7 @@ export default function PrestasiTab({
   const [filterTingkat, setFilterTingkat] = useState('All');
   const [filterJuara, setFilterJuara] = useState('All');
   const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const ROWS_PER_PAGE = 25;
 
@@ -78,6 +82,13 @@ export default function PrestasiTab({
   const [showImport, setShowImport] = useState(false);
   const [editingPrestasi, setEditingPrestasi] = useState<Prestasi | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEscapeClose(showAddModal, () => setShowAddModal(false));
+  useEscapeClose(showImport, () => setShowImport(false));
+
+  useEffect(() => {
+    if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [page]);
   const [form, setForm] = useState<Prestasi>({
     npm_mahasiswa: '',
     nama_mahasiswa: '',
@@ -344,35 +355,31 @@ export default function PrestasiTab({
       ) : (
         <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Total Record</p>
-              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{prestasi.length}</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Nasional & Int'l</p>
-              <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{totalNasionalIntl}</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <StatusChip status="Juara 1" />
-                <Trophy className="w-3.5 h-3.5 text-[var(--color-warning)]" />
-              </div>
-              <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara1}</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <StatusChip status="Juara 2" />
-                <StatusChip status="Juara 3" />
-              </div>
-              <div className="flex items-end gap-4">
-                <div>
-                  <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara2}</p>
+            <StatCard label="Total Record" value={fmt(prestasi.length)} />
+            <StatCard label="Nasional & Int'l" value={fmt(totalNasionalIntl)} accent />
+            <StatCard
+              header={
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <StatusChip status="Juara 1" />
+                  <Trophy className="w-4 h-4 text-[var(--color-warning)] shrink-0" />
                 </div>
-                <div className="border-l border-slate-200 pl-4">
-                  <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{juara3}</p>
+              }
+              value={<span className="flex items-center justify-between gap-2">{fmt(juara1)}<span /></span>}
+            />
+            <StatCard
+              header={
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <StatusChip status="Juara 2" />
+                  <StatusChip status="Juara 3" />
                 </div>
-              </div>
-            </div>
+              }
+              value={
+                <div className="flex items-center justify-between gap-2">
+                  <span>{fmt(juara2)}</span>
+                  <span>{fmt(juara3)}</span>
+                </div>
+              }
+            />
           </div>
 
           </>
@@ -406,8 +413,17 @@ export default function PrestasiTab({
               placeholder="Cari nama mahasiswa atau nama kompetisi..."
               value={query}
               onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
-              className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
+              className="w-full pl-10 pr-9 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
             />
+            {query && (
+              <button
+                onClick={() => { setQuery(''); setPage(1); setExpandedId(null); }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                aria-label="Bersihkan pencarian"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 md:w-auto">
@@ -441,7 +457,7 @@ export default function PrestasiTab({
           <SkeletonTable rows={10} cols={6} />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" ref={tableRef}>
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 text-xs font-bold uppercase">
@@ -526,7 +542,7 @@ export default function PrestasiTab({
                                       <Button
                                         size="sm"
                                         variant="secondary"
-                                        onClick={(e) => { e.stopPropagation(); setShowAnggotaForm(showAnggotaForm === p.id_prestasi ? null : p.id_prestasi); }}
+                                        onClick={(e) => { e.stopPropagation(); setShowAnggotaForm(showAnggotaForm === Number(p.id_prestasi) ? null : Number(p.id_prestasi)); }}
                                         icon={<UserPlus className="w-3.5 h-3.5" />}
                                       >
                                         Tambah Anggota
@@ -575,7 +591,7 @@ export default function PrestasiTab({
                                       </div>
                                     )}
 
-                                    {showAnggotaForm === p.id_prestasi && (
+                                    {showAnggotaForm === Number(p.id_prestasi) && (
                                       <div onClick={(e) => e.stopPropagation()} className="bg-white border border-violet-200 rounded-xl p-3 mt-2 space-y-2.5">
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
                                           <div className="lg:col-span-2">

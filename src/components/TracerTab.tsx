@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import CsvImporter from './CsvImporter';
 import Pagination from './Pagination';
 import DataActions from './DataActions';
@@ -21,7 +21,8 @@ import {
   Calendar,
   Users,
   TrendingUp,
-  Download
+  Download,
+  X
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -37,7 +38,9 @@ import {
   CartesianGrid
 } from 'recharts';
 import { TracerStudy, Mahasiswa, getMasaTungguKategori, getGajiKategori } from '../types';
-import { useDebounce } from '../lib/hooks';
+import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { fmt } from '../lib/format';
+import StatCard from './StatCard';
 import { academicService } from '../lib/academicService';
 import { exportToExcel, exportRekapMultiSheetToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
@@ -75,6 +78,7 @@ export default function TracerTab({
   const searchQuery = useDebounce(query, 350);
   const [filterTahun, setFilterTahun] = useState('All');
   const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const ROWS_PER_PAGE = 25;
 
@@ -82,6 +86,13 @@ export default function TracerTab({
   const [showImport, setShowImport] = useState(false);
   const [editingAlumni, setEditingAlumni] = useState<TracerStudy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEscapeClose(showAddModal, () => setShowAddModal(false));
+  useEscapeClose(showImport, () => setShowImport(false));
+
+  useEffect(() => {
+    if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [page]);
   const [form, setForm] = useState<TracerStudy>({
     npm_mahasiswa: '',
     tahun_lulus: new Date().getFullYear(),
@@ -291,7 +302,7 @@ export default function TracerTab({
     const hasGaji = gajiPerTahun.length > 0;
     const hasStatus = statusPerTahun.length > 0;
     if (!hasGaji && !hasStatus) {
-      alert('Tidak ada data rekap untuk diekspor.');
+      triggerToast?.({ kind: 'warning', title: 'Tidak Ada Data', message: 'Tidak ada data rekap untuk diekspor.' });
       return;
     }
 
@@ -462,8 +473,17 @@ export default function TracerTab({
                 placeholder="Cari alumni, instansi, atau universitas..."
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
-                className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                className="w-full pl-10 pr-9 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
               />
+              {query && (
+                <button
+                  onClick={() => { setQuery(''); setPage(1); setExpandedId(null); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                  aria-label="Bersihkan pencarian"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <select
               value={filterTahun}
@@ -483,7 +503,7 @@ export default function TracerTab({
             <div className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 flex flex-col">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-sm flex items-center gap-2"><GraduationCap className="w-4 h-4"/> Status Lulusan</h3>
-                <span className="text-xs font-bold text-gray-500">{totalAlumni} Alumni</span>
+                <span className="text-xs font-bold text-gray-500">{fmt(totalAlumni)} Alumni</span>
               </div>
               <div className="flex-1 h-56">
                 {statusChartData.length > 0 ? (
@@ -512,18 +532,24 @@ export default function TracerTab({
 
             {/* Bento Stats */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10 flex flex-col items-center justify-center text-center">
-                <Clock className="w-5 h-5 text-[var(--color-primary)] mb-1" />
-                <p className="text-2xl font-bold font-display">{avgTunggu}</p>
-                <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Rata Masa Tunggu</p>
-                <p className="text-[9px] text-gray-400">(bulan, alumni bekerja)</p>
-              </div>
-              <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10 flex flex-col items-center justify-center text-center">
-                <Briefcase className="w-5 h-5 text-[var(--color-primary)] mb-1" />
-                <p className="text-2xl font-bold font-display">{bekerja.length}</p>
-                <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider">Bekerja</p>
-                <p className="text-[9px] text-gray-400">{totalAlumni > 0 ? Math.round((bekerja.length / totalAlumni) * 100) : 0}% alumni</p>
-              </div>
+              <StatCard
+                variant="primary-border"
+                align="center"
+                icon={Clock}
+                label="Rata Masa Tunggu"
+                labelPosition="bottom"
+                value={avgTunggu}
+                sub="(bulan, alumni bekerja)"
+              />
+              <StatCard
+                variant="primary-border"
+                align="center"
+                icon={Briefcase}
+                label="Bekerja"
+                labelPosition="bottom"
+                value={fmt(bekerja.length)}
+                sub={`${totalAlumni > 0 ? Math.round((bekerja.length / totalAlumni) * 100) : 0}% alumni`}
+              />
 
               {/* Distribusi Tingkat Perusahaan (bar chart mini) */}
               <div className="col-span-2 bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
@@ -611,7 +637,7 @@ export default function TracerTab({
 
           {/* Table */}
           <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" ref={tableRef}>
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 text-xs font-bold uppercase">

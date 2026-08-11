@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import CsvImporter from './CsvImporter';
 import Pagination from './Pagination';
 import DataActions from './DataActions';
@@ -16,7 +16,8 @@ import {
   BookOpen,
   UserCheck,
   Calendar,
-  BarChart3
+  BarChart3,
+  X
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -28,7 +29,9 @@ import {
   CartesianGrid
 } from 'recharts';
 import { RiwayatMBKM, Mahasiswa, Dosen } from '../types';
-import { useDebounce } from '../lib/hooks';
+import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { fmt } from '../lib/format';
+import StatCard from './StatCard';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
@@ -63,6 +66,7 @@ export default function MagangTab({
   const searchQuery = useDebounce(query, 350);
   const [filterSemester, setFilterSemester] = useState('All');
   const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const ROWS_PER_PAGE = 25;
 
@@ -70,6 +74,13 @@ export default function MagangTab({
   const [showImport, setShowImport] = useState(false);
   const [editingMbkm, setEditingMbkm] = useState<RiwayatMBKM | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEscapeClose(showAddModal, () => setShowAddModal(false));
+  useEscapeClose(showImport, () => setShowImport(false));
+
+  useEffect(() => {
+    if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [page]);
   const [form, setForm] = useState<RiwayatMBKM>({
     npm_mahasiswa: '',
     tempat_instansi: '',
@@ -291,18 +302,9 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Total Magang</p>
-              <p className="text-2xl font-bold font-display">{totalMbkm}</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Mahasiswa Magang</p>
-              <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{new Set(mbkm.filter(m => m.npm_mahasiswa).map(m => m.npm_mahasiswa)).size}</p>
-            </div>
-            <div className="bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-              <p className="text-xs text-[var(--color-text-main)]/50 font-semibold mb-1">Instansi Mitra</p>
-              <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{new Set(mbkm.map(m => m.tempat_instansi)).size}</p>
-            </div>
+            <StatCard variant="primary-border" label="Total Magang" value={fmt(totalMbkm)} />
+            <StatCard variant="primary-border" label="Mahasiswa Magang" value={fmt(new Set(mbkm.filter(m => m.npm_mahasiswa).map(m => m.npm_mahasiswa)).size)} accent />
+            <StatCard variant="primary-border" label="Instansi Mitra" value={fmt(new Set(mbkm.map(m => m.tempat_instansi)).size)} accent />
           </div>
 
           {semesterChartData.length > 0 && (
@@ -366,8 +368,17 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
               placeholder="Cari mahasiswa atau instansi magang..."
                value={query}
                onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
-              className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+              className="w-full pl-10 pr-9 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
             />
+            {query && (
+              <button
+                onClick={() => { setQuery(''); setPage(1); setExpandedId(null); }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                aria-label="Bersihkan pencarian"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
           <select
             value={filterSemester}
@@ -386,7 +397,7 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
           <SkeletonTable rows={10} cols={5} />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" ref={tableRef}>
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 text-xs font-bold uppercase">

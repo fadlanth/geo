@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -8,11 +8,14 @@ import {
   Users,
   BookOpen,
   Eye,
+  X,
   EyeOff
 } from 'lucide-react';
 import { Dosen, Mahasiswa } from '../types';
 import { validators, val } from '../lib/validators';
-import { useDebounce } from '../lib/hooks';
+import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { fmt } from '../lib/format';
+import StatCard from './StatCard';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import CsvImporter from './CsvImporter';
@@ -46,6 +49,7 @@ export default function DosenTab({
   const [filterWali, setFilterWali] = useState<'All' | 'Wali' | 'Biasa'>('All');
   const [filterJabatan, setFilterJabatan] = useState('All');
   const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement | null>(null);
   const ROWS_PER_PAGE = 25;
 
   const searchQuery = useDebounce(query, 350); // debounced; pakai untuk filter
@@ -54,6 +58,13 @@ export default function DosenTab({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingDosen, setEditingDosen] = useState<Dosen | null>(null);
+
+  useEscapeClose(showAddModal, () => setShowAddModal(false));
+  useEscapeClose(showImport, () => setShowImport(false));
+
+  useEffect(() => {
+    if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [page]);
 
   const [form, setForm] = useState<Dosen>({
     nip: '',
@@ -228,20 +239,9 @@ export default function DosenTab({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Total Dosen</p>
-            <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{totalDosen}</p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Dosen Wali</p>
-            <p className="text-2xl font-bold font-display text-[var(--color-primary)]">{totalWali}</p>
-          </div>
-          <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 mb-2">Rasio Bimbingan</p>
-            <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">
-              {totalWali > 0 ? (mahasiswa.length / totalWali).toFixed(1) : 0}
-            </p>
-          </div>
+          <StatCard label="Total Dosen" value={fmt(totalDosen)} />
+          <StatCard label="Dosen Wali" value={fmt(totalWali)} accent />
+          <StatCard label="Rasio Bimbingan" value={totalWali > 0 ? (mahasiswa.length / totalWali).toFixed(1) : 0} />
         </div>
       )}
 
@@ -257,8 +257,17 @@ export default function DosenTab({
                 placeholder="Cari dosen berdasarkan Nama, NIP, atau Kode Dosen..."
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-                className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
+                className="w-full pl-10 pr-9 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
               />
+              {query && (
+                <button
+                  onClick={() => { setQuery(''); setPage(1); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                  aria-label="Bersihkan pencarian"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
             <div className="flex items-center gap-2 text-xs text-[var(--color-text-main)]/65 font-medium px-2 shrink-0">
               <SlidersHorizontal className="w-3.5 h-3.5" />
@@ -299,7 +308,7 @@ export default function DosenTab({
         {loading ? (
           <SkeletonTable rows={10} cols={6} />
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" ref={tableRef}>
             <table className="w-full text-left border-collapse whitespace-nowrap text-xs md:text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>

@@ -23,6 +23,8 @@ import {
   Cell 
 } from 'recharts';
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM } from '../types';
+import { useEscapeClose } from '../lib/hooks';
+import { fmt } from '../lib/format';
 import { SkeletonCard, SkeletonChart } from './Skeleton';
 import StatusChip from './StatusChip';
 import IconButton from './IconButton';
@@ -95,6 +97,8 @@ export default function OverviewTab({
   const [showAngkatanDetail, setShowAngkatanDetail] = useState(false);
   // Drill-down: klik sel angka -> tampilkan daftar mahasiswa per angkatan / status
   const [drillFilter, setDrillFilter] = useState<{ angkatan?: number; status?: string } | null>(null);
+
+  useEscapeClose(showAngkatanDetail, () => setShowAngkatanDetail(false));
 
   // Map NIP -> nama dosen (resolve dosen wali pada drill-down)
   const dosenMap = new Map(dosen.map(d => [d.nip, d.nama]));
@@ -233,8 +237,8 @@ export default function OverviewTab({
               <StatusChip status={`${pctRegulasi}%`} tone="blue" count />
             </div>
              <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">Mahasiswa Aktif</p>
-            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{mhsRegulasi}</p>
-            <p className="text-xs text-[var(--color-text-main)]/50 mt-1">Total {totalMhs} mahasiswa</p>
+            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{fmt(mhsRegulasi)}</p>
+            <p className="text-xs text-[var(--color-text-main)]/50 mt-1">Total {fmt(totalMhs)} mahasiswa</p>
             <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--color-text-main)]/50 border-t border-gray-100 pt-3">
               {regulasiAngkatanList.map(angk => (
                 <span key={angk}>{angk}: <b>{regulasiPerAngkatan[angk]}</b></span>
@@ -251,7 +255,7 @@ export default function OverviewTab({
               <StatusChip status={`${totalInstansi} Total Instansi`} tone="neutral" count />
             </div>
             <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">MBKM / Magang</p>
-            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{totalMbkm}</p>
+            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{fmt(totalMbkm)}</p>
             <p className="text-xs text-[var(--color-text-main)]/50 mt-1">{pctMbkm}% dari mahasiswa regulasi aktif</p>
             <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-text-main)]/50 border-t border-gray-100 pt-3">
               <button onClick={() => setActiveTab('mbkm')} className="text-[var(--color-primary)] hover:underline flex items-center gap-1 font-semibold">
@@ -269,8 +273,8 @@ export default function OverviewTab({
               <StatusChip status={`${juara1Count} Juara 1`} tone="gold" count />
             </div>
             <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">Prestasi Mahasiswa</p>
-            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{totalPrestasi}</p>
-            <p className="text-xs text-[var(--color-text-main)]/50 mt-1">{totalNasionalIntl} di tingkat Nasional/Internasional</p>
+            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{fmt(totalPrestasi)}</p>
+            <p className="text-xs text-[var(--color-text-main)]/50 mt-1">{fmt(totalNasionalIntl)} di tingkat Nasional/Internasional</p>
             <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-text-main)]/50 border-t border-gray-100 pt-3">
               <button onClick={() => setActiveTab('prestasi')} className="text-[var(--color-primary)] hover:underline flex items-center gap-1 font-semibold">
                 Lihat Data <ArrowUpRight className="w-3 h-3" />
@@ -287,7 +291,7 @@ export default function OverviewTab({
               <StatusChip status={`${totalAlumni > 0 ? Math.round((alumniBekerja/totalAlumni)*100) : 0}% Kerja`} tone="green" count />
             </div>
             <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">Alumni Terlacak</p>
-            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{totalAlumni}</p>
+            <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{fmt(totalAlumni)}</p>
             <div className="mt-1 flex items-center gap-2 text-xs">
               <StatusChip status={`${pctBekerja}% Bekerja`} tone="green" />
               <span className="text-[var(--color-text-main)]/50">rata-rata {avgWaktuTunggu} bln tunggu</span>
@@ -312,7 +316,7 @@ export default function OverviewTab({
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h3 className="font-display font-bold text-base text-[var(--color-text-main)]">Rekapitulasi Mahasiswa per Angkatan</h3>
-                <p className="text-xs text-[var(--color-text-main)]/50">{totalMhs} total · {mhsRegulasi} aktif ({pctRegulasi}%) · {mhsLulus} lulus</p>
+                <p className="text-xs text-[var(--color-text-main)]/50">{fmt(totalMhs)} total · {fmt(mhsRegulasi)} aktif ({pctRegulasi}%) · {fmt(mhsLulus)} lulus</p>
               </div>
               <button onClick={() => setActiveTab('mahasiswa')} className="p-2 bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 rounded-lg text-[var(--color-primary)] transition">
                 <ArrowUpRight className="w-4 h-4" />

@@ -89,8 +89,8 @@ export default function ComboboxMahasiswa({
           type="text"
           value={inputValue}
           onChange={handleInputChange}
-          onFocus={(e) => { setShowDropdown(true); setHighlightIdx(0); e.target.select(); }}
-          onClick={(e) => { setShowDropdown(true); e.target.select(); }}
+          onFocus={(e) => { setShowDropdown(true); setHighlightIdx(0); (e.target as HTMLInputElement).select(); }}
+          onClick={(e) => { setShowDropdown(true); (e.target as HTMLInputElement).select(); }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           required={required}
