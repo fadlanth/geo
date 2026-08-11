@@ -1,7 +1,7 @@
-# GEO INFO — Sistem Informasi Akademik Geofisika UNPAD
+# GEO INFO — Sistem Informasi Akademik Geosains Universitas
 
 Aplikasi web (React + TypeScript + Vite + Tailwind + Supabase) untuk Program Studi
-Geofisika Universitas Padjadjaran. Fokus pada **akses publik terbatas** (angka
+Geosains Universitas. Fokus pada **akses publik terbatas** (angka
 agregat tanpa login) + **data pribadi terlindungi** (CRUD hanya pengguna
 terautentikasi, diamankan Row Level Security).
 
@@ -88,7 +88,7 @@ Untuk menjadikan akun **admin/operator**, jalankan di SQL Editor (ganti email):
 ```sql
 UPDATE public.profiles
 SET role = 'admin'   -- atau 'operator' / 'dosen'
-WHERE email = 'nama@unpad.ac.id';
+WHERE email = 'nama@example.ac.id';
 ```
 
 | Peran | Akses |
@@ -108,4 +108,4 @@ WHERE email = 'nama@unpad.ac.id';
 
 ## Lisensi
 
-UNPAD / Program Studi Geofisika, Fakultas MIPA.
+Universitas / Program Studi Geosains, Fakultas Sains.
