@@ -17,7 +17,6 @@ import {
   UserCheck,
   Calendar,
   BarChart3,
-  Download,
   X
 } from 'lucide-react';
 import {
@@ -32,7 +31,6 @@ import {
 import { RiwayatMBKM, Mahasiswa, Dosen } from '../types';
 import { useDebounce, useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
-import { downloadChartAsSvg } from '../lib/chartExport';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
@@ -100,9 +98,6 @@ export default function MagangTab({
     return acc;
   }, {});
   const topInstansi = Object.entries(instansiCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
-
-  // Ref untuk unduh grafik sebagai SVG
-  const chartSemesterRef = useRef<HTMLDivElement | null>(null);
 
   const filteredMbkm = mbkm.filter(m => {
     const mhs = mahasiswa.find(s => s.npm === m.npm_mahasiswa);
@@ -347,13 +342,8 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                   <BarChart3 className="w-5 h-5 text-[var(--color-primary)]" />
                   <h3 className="font-bold text-sm text-[var(--color-text-main)]">Rekap Magang per Semester</h3>
                 </div>
-                <IconButton
-                  label="Unduh grafik (SVG)"
-                  onClick={() => downloadChartAsSvg(chartSemesterRef.current, 'rekap_magang_per_semester')}
-                  icon={<Download className="w-4 h-4" />}
-                />
               </div>
-              <div className="h-44" ref={chartSemesterRef}>
+              <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={semesterChartData} barSize={32} margin={{ top: 5, right: 20, left: -15, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-primary)" strokeOpacity={0.08} />

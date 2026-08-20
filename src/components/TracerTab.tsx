@@ -39,7 +39,6 @@ import {
 import { TracerStudy, Mahasiswa, getMasaTungguKategori, getGajiKategori } from '../types';
 import { useDebounce, useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
-import { downloadChartAsSvg } from '../lib/chartExport';
 import StatCard from './StatCard';
 import { academicService } from '../lib/academicService';
 import { exportToExcel, exportRekapMultiSheetToExcel } from '../lib/exportUtils';
@@ -86,10 +85,6 @@ export default function TracerTab({
   const [showImport, setShowImport] = useState(false);
   const [editingAlumni, setEditingAlumni] = useState<TracerStudy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Ref untuk unduh grafik sebagai SVG
-  const chartStatusRef = useRef<HTMLDivElement | null>(null);
-  const chartTingkatRef = useRef<HTMLDivElement | null>(null);
 
   // Label donat: angka & persentase selalu tampil (tanpa harus hover)
   const renderDonutLabel = (props: any) => {
@@ -535,11 +530,6 @@ export default function TracerTab({
                 <h3 className="font-bold text-sm flex items-center gap-2"><GraduationCap className="w-4 h-4"/> Status Lulusan</h3>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-bold text-gray-500">{fmt(totalAlumni)} Alumni</span>
-                  <IconButton
-                    label="Unduh grafik (SVG)"
-                    onClick={() => downloadChartAsSvg(chartStatusRef.current, 'tracer_status_lulusan')}
-                    icon={<Download className="w-3.5 h-3.5" />}
-                  />
                 </div>
               </div>
               <div className="flex-1 h-56">
@@ -593,14 +583,9 @@ export default function TracerTab({
               <div className="col-span-2 bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Distribusi Tingkat Perusahaan</p>
-                  <IconButton
-                    label="Unduh grafik (SVG)"
-                    onClick={() => downloadChartAsSvg(chartTingkatRef.current, 'tracer_tingkat_perusahaan')}
-                    icon={<Download className="w-3.5 h-3.5" />}
-                  />
                 </div>
                 {tingkatChartData.length > 0 ? (
-                  <div className="h-28" ref={chartTingkatRef}>
+                  <div className="h-28">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={tingkatChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                         <XAxis dataKey="name" tick={{ fontSize: 9 }} />

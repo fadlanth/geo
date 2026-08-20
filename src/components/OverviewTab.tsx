@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { 
   Users, 
   Award, 
@@ -8,8 +8,7 @@ import {
   ArrowUpRight,
   Briefcase,
   ChevronLeft,
-  X,
-  Download
+  X
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -26,7 +25,6 @@ import {
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM } from '../types';
 import { useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
-import { downloadChartAsSvg } from '../lib/chartExport';
 import { SkeletonCard, SkeletonChart } from './Skeleton';
 import StatusChip from './StatusChip';
 import IconButton from './IconButton';
@@ -99,10 +97,6 @@ export default function OverviewTab({
   const [showAngkatanDetail, setShowAngkatanDetail] = useState(false);
   // Drill-down: klik sel angka -> tampilkan daftar mahasiswa per angkatan / status
   const [drillFilter, setDrillFilter] = useState<{ angkatan?: number; status?: string } | null>(null);
-
-  // Ref untuk unduh grafik sebagai SVG
-  const chartAngkatanRef = useRef<HTMLDivElement | null>(null);
-  const chartStatusRef = useRef<HTMLDivElement | null>(null);
 
   useEscapeClose(showAngkatanDetail, () => setShowAngkatanDetail(false));
 
@@ -325,17 +319,12 @@ export default function OverviewTab({
                 <p className="text-xs text-[var(--color-text-main)]/50">{fmt(totalMhs)} total · {fmt(mhsRegulasi)} aktif ({pctRegulasi}%) · {fmt(mhsLulus)} lulus</p>
               </div>
               <div className="flex items-center gap-1">
-                <IconButton
-                  label="Unduh grafik (SVG)"
-                  onClick={() => downloadChartAsSvg(chartAngkatanRef.current, 'rekap_mahasiswa_per_angkatan')}
-                  icon={<Download className="w-4 h-4" />}
-                />
                 <button onClick={() => setActiveTab('mahasiswa')} className="p-2 bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 rounded-lg text-[var(--color-primary)] transition">
                   <ArrowUpRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
-            <div className="h-64 w-full" ref={chartAngkatanRef}>
+            <div className="h-64 w-full">
               {angkatanChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={angkatanChartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
@@ -368,17 +357,12 @@ export default function OverviewTab({
                 <p className="text-xs text-[var(--color-text-main)]/50">{pctBekerja}% bekerja · rata-rata tunggu {avgWaktuTunggu} bulan · {alumniKerjaCepat} kerja &lt; 6 bln</p>
               </div>
               <div className="flex items-center gap-1">
-                <IconButton
-                  label="Unduh grafik (SVG)"
-                  onClick={() => downloadChartAsSvg(chartStatusRef.current, 'status_kelulusan_alumni')}
-                  icon={<Download className="w-4 h-4" />}
-                />
                 <button onClick={() => setActiveTab('tracer')} className="p-2 bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 rounded-lg text-[var(--color-primary)] transition">
                   <ArrowUpRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
-            <div className="h-64 w-full" ref={chartStatusRef}>
+            <div className="h-64 w-full">
               {statusChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
