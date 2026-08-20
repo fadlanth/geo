@@ -27,6 +27,17 @@ const fixSvgColors = (root: SVGElement) => {
   root.querySelectorAll('*').forEach((el) => fixAttr(el as SVGElement));
 };
 
+const downloadBlob = (blob: Blob, fileName: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
 /**
  * Unduh chart (SVG di dalam container) sebagai file PNG.
  * CSS variables pada fill/stroke di-resolve agar warna tampil benar.
@@ -37,40 +48,63 @@ export function downloadChartAsPng(container: HTMLElement | null, fileName: stri
   if (!svg) return;
 
   const rect = svg.getBoundingClientRect();
-  const width = Math.max(rect.width, 200);
-  const height = Math.max(rect.height, 120);
+  const attrWidth = parseFloat(svg.getAttribute('width') || '0');
+  const attrHeight = parseFloat(svg.getAttribute('height') || '0');
+  const width = Math.max(rect.width, attrWidth, 400);
+  const height = Math.max(rect.height, attrHeight, 240);
   const scale = 2;
 
   const clone = svg.cloneNode(true) as SVGSVGElement;
+  clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   clone.setAttribute('width', String(width * scale));
   clone.setAttribute('height', String(height * scale));
   clone.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+  // Beri warna dasar agar elemen ber-fill "currentColor" tetap terlihat.
+  const rootText = getComputedStyle(document.documentElement).getPropertyValue('--color-text-main').trim();
+  if (rootText) clone.setAttribute('color', rootText);
+
   fixSvgColors(clone);
 
   const xml = new XMLSerializer().serializeToString(clone);
-  const svgData = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+  const blob = new Blob([xml], { type: 'image/svg+xml;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
 
   const img = new Image();
   img.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${fileName}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const finish = (out: Blob | null) => {
+        URL.revokeObjectURL(url);
+        if (out) downloadBlob(out, `${fileName}.png`);
+      };
+      if (typeof canvas.toBlob === 'function') {
+        canvas.toBlob(finish, 'image/png');
+      } else {
+        const dataUrl = canvas.toDataURL('image/png');
+        URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = `${fileName}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    } catch (err) {
+      console.error('Gagal merasterisasi grafik:', err);
       URL.revokeObjectURL(url);
-    }, 'image/png');
+    }
   };
-  img.src = svgData;
+  img.onerror = () => {
+    console.error('Gagal memuat SVG untuk ekspor grafik.');
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
 }

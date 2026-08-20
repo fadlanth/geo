@@ -361,12 +361,9 @@ export default function DosenTab({
                     return (
                       <tr key={d.nip} className="hover:bg-gray-50/50 transition">
                         <td className="p-4">
-                          <p className="font-semibold font-mono text-[var(--color-text-main)]">{d.nip}</p>
-                          {d.sandi_dosen && (
-                            <span className="inline-block mt-1 font-semibold text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-mono" dir="auto">
-                              Sandi: {d.sandi_dosen}
-                            </span>
-                          )}
+                          <p className="font-semibold font-mono text-[var(--color-text-main)]" dir="auto">
+                            {d.nip}{d.sandi_dosen ? ` / ${d.sandi_dosen}` : ''}
+                          </p>
                         </td>
                         <td className="p-4">
                           <p className="font-bold text-gray-900">{d.nama}</p>
