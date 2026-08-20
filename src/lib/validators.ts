@@ -10,7 +10,7 @@ export const validators = {
   npm: (value: string): Validation => {
     const v = (value || '').trim();
     if (!v) return { ok: false, message: 'NPM tidak boleh kosong.' };
-    if (!/^\d{6,10}$/.test(v)) return { ok: false, message: 'NPM harus 6–10 angka.' };
+    if (!/^\d{6,20}$/.test(v)) return { ok: false, message: 'NPM harus 6–20 angka.' };
     return { ok: true };
   },
 
