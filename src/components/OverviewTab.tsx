@@ -25,6 +25,7 @@ import {
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM } from '../types';
 import { useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
+import { renderDonutLabel, DonutCenterTotal } from '../lib/chartUtils';
 import { SkeletonCard, SkeletonChart } from './Skeleton';
 import StatusChip from './StatusChip';
 import IconButton from './IconButton';
@@ -374,11 +375,14 @@ export default function OverviewTab({
                       outerRadius={80}
                       paddingAngle={3}
                       dataKey="Jumlah"
+                      isAnimationActive={false}
+                      label={renderDonutLabel(statusChartData.map(d => d.color))}
                     >
                       {statusChartData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
+                    <DonutCenterTotal value={fmt(totalAlumni)} unit="alumni" />
                     <Tooltip 
                       contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid var(--color-primary)', fontSize: '12px' }}
                     />

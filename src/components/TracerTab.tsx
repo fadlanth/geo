@@ -39,6 +39,7 @@ import {
 import { TracerStudy, Mahasiswa, getMasaTungguKategori, getGajiKategori } from '../types';
 import { useDebounce, useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
+import { renderDonutLabel } from '../lib/chartUtils';
 import StatCard from './StatCard';
 import { academicService } from '../lib/academicService';
 import { exportToExcel, exportRekapMultiSheetToExcel } from '../lib/exportUtils';
@@ -85,30 +86,6 @@ export default function TracerTab({
   const [showImport, setShowImport] = useState(false);
   const [editingAlumni, setEditingAlumni] = useState<TracerStudy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Label donat: angka & persentase selalu tampil (tanpa harus hover)
-  const renderDonutLabel = (props: any) => {
-    const { cx, cy, midAngle, outerRadius, percent, value, index } = props;
-    if (!percent || percent <= 0) return null;
-    const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 16;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    const align = Math.abs(x - cx) < 10 ? 'middle' : (x > cx ? 'start' : 'end');
-    return (
-      <text
-        x={x}
-        y={y}
-        textAnchor={align}
-        dominantBaseline="central"
-        fontSize={11}
-        fontWeight={700}
-        fill={COLORS_PIE[index % COLORS_PIE.length]}
-      >
-        {`${value} (${Math.round(percent * 100)}%)`}
-      </text>
-    );
-  };
 
   useEscapeClose(showAddModal, () => setShowAddModal(false));
   useEscapeClose(showImport, () => setShowImport(false));
@@ -542,7 +519,7 @@ export default function TracerTab({
                         innerRadius={58} outerRadius={72}
                         paddingAngle={2}
                         dataKey="value"
-                        label={renderDonutLabel}
+                        label={renderDonutLabel(COLORS_PIE)}
                       >
                         {statusChartData.map((_entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS_PIE[index % COLORS_PIE.length]} />
