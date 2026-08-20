@@ -67,7 +67,7 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
                 Sistem Informasi Akademik Geofisika
               </div>
               <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight mb-3">
-                GEO INFO UNPAD
+                Geofisika UNPAD
               </h1>
               <p className="text-sm sm:text-base text-[var(--color-base)]/80 font-normal leading-relaxed max-w-xl">
                 Portal data akademik Program Studi Geofisika — dari Bumi untuk Negeri.

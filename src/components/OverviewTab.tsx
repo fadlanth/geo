@@ -205,7 +205,7 @@ export default function OverviewTab({
               Sistem Informasi Akademik Geofisika
             </div>
             <h2 className="font-display text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">
-              Dashboard GEO INFO UNPAD
+              Dashboard Geofisika
             </h2>
             <p className="text-sm sm:text-base text-[var(--color-base)]/80 font-normal leading-relaxed">
               Geofisika UNPAD: Dari Bumi untuk Negeri

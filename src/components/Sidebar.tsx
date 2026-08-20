@@ -113,11 +113,8 @@ export default function Sidebar({
               {!collapsed && (
                 <div>
                   <h1 className="font-display font-bold text-lg leading-tight tracking-tight text-[var(--color-base)]">
-                    GEO INFO
+                    GEOFISIKA
                   </h1>
-                  <p className="text-[10px] text-[var(--color-on-primary)]/85 font-medium tracking-widest uppercase">
-                    Sistem Akademik
-                  </p>
                 </div>
               )}
             </div>

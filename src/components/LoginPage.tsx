@@ -46,7 +46,7 @@ export default function LoginPage({ onBack }: LoginPageProps) {
             <img src="/LOGO-01.png" alt="Logo UNPAD" className="w-16 h-16 rounded-2xl object-contain" />
           </div>
           <h1 className="font-display font-extrabold text-3xl text-[var(--color-text-main)] tracking-tight">
-            GEO INFO UNPAD
+            Geofisika UNPAD
           </h1>
           <p className="text-[var(--color-text-main)]/60 font-medium mt-2">
             Portal Sistem Informasi Akademik
