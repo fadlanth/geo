@@ -19,7 +19,6 @@ import {
   ChevronDown,
   ChevronUp,
   Calendar,
-  Users,
   TrendingUp,
   Download,
   X
@@ -40,6 +39,7 @@ import {
 import { TracerStudy, Mahasiswa, getMasaTungguKategori, getGajiKategori } from '../types';
 import { useDebounce, useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
+import { downloadChartAsPng } from '../lib/chartExport';
 import StatCard from './StatCard';
 import { academicService } from '../lib/academicService';
 import { exportToExcel, exportRekapMultiSheetToExcel } from '../lib/exportUtils';
@@ -86,6 +86,34 @@ export default function TracerTab({
   const [showImport, setShowImport] = useState(false);
   const [editingAlumni, setEditingAlumni] = useState<TracerStudy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Ref untuk unduh grafik sebagai PNG
+  const chartStatusRef = useRef<HTMLDivElement | null>(null);
+  const chartTingkatRef = useRef<HTMLDivElement | null>(null);
+
+  // Label donat: angka & persentase selalu tampil (tanpa harus hover)
+  const renderDonutLabel = (props: any) => {
+    const { cx, cy, midAngle, outerRadius, percent, value, index } = props;
+    if (!percent || percent <= 0) return null;
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 16;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const align = Math.abs(x - cx) < 10 ? 'middle' : (x > cx ? 'start' : 'end');
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor={align}
+        dominantBaseline="central"
+        fontSize={11}
+        fontWeight={700}
+        fill={COLORS_PIE[index % COLORS_PIE.length]}
+      >
+        {`${value} (${Math.round(percent * 100)}%)`}
+      </text>
+    );
+  };
 
   useEscapeClose(showAddModal, () => setShowAddModal(false));
   useEscapeClose(showImport, () => setShowImport(false));
@@ -141,11 +169,12 @@ export default function TracerTab({
      .filter(k => (tungguKategoriMap[k] || 0) > 0)
      .map(k => ({ label: k, count: tungguKategoriMap[k] || 0 }));
 
-   // === Rekap Gaji per Tahun Lulus (hanya alumni Bekerja) ===
+   // === Rekap Gaji per Tahun Lulus (alumni Bekerja & Wiraswasta) ===
+   const berpenghasilan = alumni.filter(a => a.status_lulusan === 'Bekerja' || a.status_lulusan === 'Wiraswasta');
    const GAJI_KATEGORI = ['0-5jt', '>5-10jt', '>10jt'] as const;
    const sortedTahun = Array.from(new Set(alumni.map(a => a.tahun_lulus))).sort((a, b) => b - a);
    const gajiPerTahun = sortedTahun.map(th => {
-     const bekerjaTahun = bekerja.filter(a => a.tahun_lulus === th);
+     const bekerjaTahun = berpenghasilan.filter(a => a.tahun_lulus === th);
      const counts: Record<typeof GAJI_KATEGORI[number], number> = { '0-5jt': 0, '>5-10jt': 0, '>10jt': 0 };
      bekerjaTahun.forEach(a => {
        const kategori = getGajiKategori(a.gaji_pekerjaan);
@@ -504,18 +533,26 @@ export default function TracerTab({
             <div className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 flex flex-col">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-bold text-sm flex items-center gap-2"><GraduationCap className="w-4 h-4"/> Status Lulusan</h3>
-                <span className="text-xs font-bold text-gray-500">{fmt(totalAlumni)} Alumni</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-gray-500">{fmt(totalAlumni)} Alumni</span>
+                  <IconButton
+                    label="Unduh grafik sebagai PNG"
+                    onClick={() => downloadChartAsPng(chartStatusRef.current, 'tracer_status_lulusan')}
+                    icon={<Download className="w-3.5 h-3.5" />}
+                  />
+                </div>
               </div>
               <div className="flex-1 h-56">
                 {statusChartData.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
+                    <PieChart margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
                       <Pie
                         data={statusChartData}
                         cx="50%" cy="50%"
-                        innerRadius={60} outerRadius={80}
+                        innerRadius={58} outerRadius={72}
                         paddingAngle={2}
                         dataKey="value"
+                        label={renderDonutLabel}
                       >
                         {statusChartData.map((_entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS_PIE[index % COLORS_PIE.length]} />
@@ -554,9 +591,16 @@ export default function TracerTab({
 
               {/* Distribusi Tingkat Perusahaan (bar chart mini) */}
               <div className="col-span-2 bg-white p-4 rounded-2xl border border-[var(--color-primary)]/10">
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Distribusi Tingkat Perusahaan</p>
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Distribusi Tingkat Perusahaan</p>
+                  <IconButton
+                    label="Unduh grafik sebagai PNG"
+                    onClick={() => downloadChartAsPng(chartTingkatRef.current, 'tracer_tingkat_perusahaan')}
+                    icon={<Download className="w-3.5 h-3.5" />}
+                  />
+                </div>
                 {tingkatChartData.length > 0 ? (
-                  <div className="h-28">
+                  <div className="h-28" ref={chartTingkatRef}>
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={tingkatChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                         <XAxis dataKey="name" tick={{ fontSize: 9 }} />
@@ -596,11 +640,12 @@ export default function TracerTab({
             </div>
           )}
 
-          {/* Rekap Gaji Alumni per Tahun Lulus (hanya alumni Bekerja) */}
+          {/* Rekap Gaji Alumni per Tahun Lulus (Bekerja & Wiraswasta) */}
           {gajiPerTahun.length > 0 && (
             <div className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 shadow-xs">
               <div className="flex items-center mb-3 pb-2 border-b border-gray-100">
                 <h3 className="font-display font-bold text-sm text-[var(--color-text-main)]">Rekap Gaji Alumni per Tahun Lulus</h3>
+                <span className="ml-2 text-[10px] font-semibold text-gray-400">Bekerja & Wiraswasta</span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs md:text-sm">

@@ -189,7 +189,6 @@ export default function MahasiswaTab({
   const totalMahasiswa = mahasiswa.length;
   const aktifMahasiswa = mahasiswa.filter(m => m.status === 'Regulasi Akademik').length;
   const lulusMahasiswa = mahasiswa.filter(m => m.status === 'Lulus').length;
-  const dosenWaliCount = mahasiswa.filter(m => !!m.nip_dosen_wali).length;
 
   return (
     <div className="space-y-6">
@@ -238,11 +237,10 @@ export default function MahasiswaTab({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard label="Total Mahasiswa" value={fmt(totalMahasiswa)} />
             <StatCard label="Aktif" value={fmt(aktifMahasiswa)} accent />
             <StatCard label="Lulus" value={fmt(lulusMahasiswa)} />
-            <StatCard label="Dosen Wali" value={fmt(dosenWaliCount)} />
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">

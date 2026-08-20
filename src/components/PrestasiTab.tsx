@@ -11,6 +11,7 @@ import {
   Trash2,
   Trophy,
   Medal,
+  Award,
   Star,
   Edit2,
   ChevronDown,
@@ -25,7 +26,6 @@ import {
 import { Prestasi, Mahasiswa, AnggotaPrestasi, getPrestasiNamaMahasiswa } from '../types';
 import { useDebounce, useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
-import StatCard from './StatCard';
 import { exportToExcel, exportPrestasiRekapToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard } from './Skeleton';
@@ -114,6 +114,16 @@ export default function PrestasiTab({
   const juara1 = prestasi.filter(p => p.juara_ke === 1).length;
   const juara2 = prestasi.filter(p => p.juara_ke === 2).length;
   const juara3 = prestasi.filter(p => p.juara_ke === 3).length;
+
+  // Rekap tambahan untuk kartu ringkasan
+  const mahasiswaBerprestasi = new Set(prestasi.map(p => p.npm_mahasiswa || p.nama_mahasiswa).filter(Boolean)).size;
+  const individuCount = prestasi.filter(p => p.jenis_peserta === 'Individu').length;
+  const kelompokCount = prestasi.filter(p => p.jenis_peserta === 'Kelompok').length;
+  const tingkatCounts = prestasi.reduce<Record<string, number>>((acc, p) => {
+    acc[p.tingkat] = (acc[p.tingkat] || 0) + 1;
+    return acc;
+  }, {});
+  const TINGKAT_LABELS = ['Internasional', 'Nasional', 'Wilayah', 'Universitas'] as const;
 
   const filteredPrestasi = prestasi.filter(p => {
     const namaMhs = getPrestasiNamaMahasiswa(p, mahasiswa);
@@ -354,32 +364,68 @@ export default function PrestasiTab({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-            <StatCard label="Total Record" value={fmt(prestasi.length)} />
-            <StatCard label="Nasional & Int'l" value={fmt(totalNasionalIntl)} accent />
-            <StatCard
-              header={
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <StatusChip status="Juara 1" />
-                  <Trophy className="w-4 h-4 text-[var(--color-warning)] shrink-0" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Total Raihan */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="p-2 bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)] rounded-lg">
+                  <Award className="w-4 h-4" />
+                </span>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Raihan</p>
+              </div>
+              <p className="text-3xl font-bold font-display text-[var(--color-text-main)]">{fmt(prestasi.length)}</p>
+              <p className="text-xs text-gray-500 mt-1.5">
+                {fmt(mahasiswaBerprestasi)} mahasiswa berprestasi · {fmt(individuCount)} individu / {fmt(kelompokCount)} kelompok
+              </p>
+            </div>
+
+            {/* Peringkat Juara */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                  <Trophy className="w-4 h-4" />
+                </span>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Peringkat Juara</p>
+              </div>
+              <div className="grid grid-cols-3 divide-x divide-gray-100">
+                <div className="pr-3">
+                  <Trophy className="w-4 h-4 text-[var(--color-warning)] mb-1" />
+                  <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{fmt(juara1)}</p>
+                  <p className="text-[10px] text-gray-400 font-semibold">Juara 1</p>
                 </div>
-              }
-              value={<span className="flex items-center justify-between gap-2">{fmt(juara1)}<span /></span>}
-            />
-            <StatCard
-              header={
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <StatusChip status="Juara 2" />
-                  <StatusChip status="Juara 3" />
+                <div className="px-3">
+                  <Medal className="w-4 h-4 text-gray-400 mb-1" />
+                  <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{fmt(juara2)}</p>
+                  <p className="text-[10px] text-gray-400 font-semibold">Juara 2</p>
                 </div>
-              }
-              value={
-                <div className="flex items-center justify-between gap-2">
-                  <span>{fmt(juara2)}</span>
-                  <span>{fmt(juara3)}</span>
+                <div className="pl-3">
+                  <Medal className="w-4 h-4 text-orange-400 mb-1" />
+                  <p className="text-2xl font-bold font-display text-[var(--color-text-main)]">{fmt(juara3)}</p>
+                  <p className="text-[10px] text-gray-400 font-semibold">Juara 3</p>
                 </div>
-              }
-            />
+              </div>
+            </div>
+
+            {/* Tingkat Kompetisi */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="p-2 bg-violet-50 text-violet-600 rounded-lg">
+                  <Star className="w-4 h-4" />
+                </span>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Tingkat Kompetisi</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {TINGKAT_LABELS.map((t) => (
+                  <div key={t} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
+                    <span className="text-xs font-medium text-gray-600">{t}</span>
+                    <b className="text-sm text-[var(--color-text-main)]">{fmt(tingkatCounts[t] || 0)}</b>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2">
+                {fmt(totalNasionalIntl)} di tingkat Nasional/Internasional
+              </p>
+            </div>
           </div>
 
           </>

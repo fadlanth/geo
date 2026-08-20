@@ -1,21 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Plus, 
-  Trash2, 
-  Search, 
+import {
+  Plus,
+  Trash2,
+  Search,
   SlidersHorizontal,
   Edit2,
-  Users,
   BookOpen,
-  Eye,
-  X,
-  EyeOff
+  X
 } from 'lucide-react';
 import { Dosen, Mahasiswa } from '../types';
 import { validators, val } from '../lib/validators';
 import { useDebounce, useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
-import StatCard from './StatCard';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import CsvImporter from './CsvImporter';
@@ -76,9 +72,6 @@ export default function DosenTab({
     jabatan: 'Asisten Ahli',
     is_dosen_wali: false
   });
-
-  // Sandi yang sedang diperlihatkan di tabel (per NIP)
-  const [revealSandi, setRevealSandi] = useState<Record<string, boolean>>({});
 
   // Error validasi per-field
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -185,6 +178,17 @@ export default function DosenTab({
   const totalDosen = dosen.length;
   const totalWali = dosen.filter(d => d.is_dosen_wali).length;
   const totalBiasa = totalDosen - totalWali;
+  const rasioBimbingan = totalWali > 0 ? (mahasiswa.length / totalWali).toFixed(1) : '0';
+  const totalBimbingan = mahasiswa.filter(m => !!m.nip_dosen_wali).length;
+
+  // Distribusi jabatan fungsional
+  const jabatanCounts = dosen.reduce<Record<string, number>>((acc, d) => {
+    const j = d.jabatan || 'Asisten Ahli';
+    acc[j] = (acc[j] || 0) + 1;
+    return acc;
+  }, {});
+  const jabatanDistribution = Object.entries(jabatanCounts).sort((a, b) => b[1] - a[1]);
+  const JABATAN_DOT_COLORS = ['bg-[var(--color-primary)]', 'bg-violet-500', 'bg-amber-500', 'bg-emerald-500', 'bg-slate-400', 'bg-rose-400'];
 
   return (
     <div className="space-y-6">
@@ -238,10 +242,37 @@ export default function DosenTab({
           <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Registrasi Dosen" untuk menambahkan data pertama</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard label="Total Dosen" value={fmt(totalDosen)} />
-          <StatCard label="Dosen Wali" value={fmt(totalWali)} accent />
-          <StatCard label="Rasio Bimbingan" value={totalWali > 0 ? (mahasiswa.length / totalWali).toFixed(1) : 0} />
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-gray-100">
+            <div className="bg-white p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Dosen</p>
+              <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">{fmt(totalDosen)}</p>
+            </div>
+            <div className="bg-white p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Dosen Wali</p>
+              <p className="text-2xl font-bold font-display mt-1 text-[var(--color-primary)]">{fmt(totalWali)}</p>
+            </div>
+            <div className="bg-white p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Bukan Wali</p>
+              <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">{fmt(totalBiasa)}</p>
+            </div>
+            <div className="bg-white p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Bimbingan</p>
+              <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">
+                {rasioBimbingan}<span className="text-xs font-semibold text-gray-400"> /wali</span>
+              </p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{fmt(totalBimbingan)} mahasiswa terplot</p>
+            </div>
+          </div>
+          <div className="px-4 py-2.5 border-t border-gray-100 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+            <span className="font-bold uppercase tracking-wider text-gray-400">Jabatan:</span>
+            {jabatanDistribution.map(([jab, count], i) => (
+              <span key={jab} className="inline-flex items-center gap-1.5 font-medium text-gray-600">
+                <span className={`w-2 h-2 rounded-full ${JABATAN_DOT_COLORS[i % JABATAN_DOT_COLORS.length]}`} />
+                {jab} <b className="text-[var(--color-text-main)]">{count}</b>
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
@@ -254,7 +285,7 @@ export default function DosenTab({
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Cari dosen berdasarkan Nama, NIP, atau Kode Dosen..."
+                placeholder="Cari dosen berdasarkan Nama, NIP, atau Sandi..."
                 aria-label="Cari dosen"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
@@ -315,12 +346,11 @@ export default function DosenTab({
             <table className="w-full text-left border-collapse whitespace-nowrap text-xs md:text-sm">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  <th className="p-4 font-bold text-gray-500 text-xs">NIP / Kode</th>
+                  <th className="p-4 font-bold text-gray-500 text-xs">NIP / Sandi</th>
                   <th className="p-4 font-bold text-gray-500 text-xs">Nama Lengkap</th>
                   <th className="p-4 font-bold text-gray-500 text-xs">Pangkat / Golongan</th>
                   <th className="p-4 font-bold text-gray-500 text-xs">Jabatan Fungsional</th>
                   <th className="p-4 font-bold text-gray-500 text-xs">Status Pembimbing</th>
-                  <th className="p-4 font-bold text-gray-500 text-xs">Sandi</th>
                   <th className="p-4 font-bold text-gray-500 text-xs text-center w-28">Aksi</th>
                 </tr>
               </thead>
@@ -332,9 +362,9 @@ export default function DosenTab({
                       <tr key={d.nip} className="hover:bg-gray-50/50 transition">
                         <td className="p-4">
                           <p className="font-semibold font-mono text-[var(--color-text-main)]">{d.nip}</p>
-                          {d.kode_dosen && (
-                            <span className="inline-block mt-1 font-semibold text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-mono">
-                              Kode: {d.kode_dosen}
+                          {d.sandi_dosen && (
+                            <span className="inline-block mt-1 font-semibold text-[9px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded-md font-mono" dir="auto">
+                              Sandi: {d.sandi_dosen}
                             </span>
                           )}
                         </td>
@@ -358,22 +388,6 @@ export default function DosenTab({
                             </div>
                           ) : (
                             <StatusChip status="Bukan Dosen Wali" tone="neutral" />
-                          )}
-                        </td>
-                        <td className="p-4">
-                          {d.sandi_dosen ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-xs text-gray-600" dir="auto">
-                                {revealSandi[d.nip] ? d.sandi_dosen : '••••••••'}
-                              </span>
-                              <IconButton
-                                label={revealSandi[d.nip] ? 'Sembunyikan sandi' : 'Lihat sandi'}
-                                onClick={() => setRevealSandi(prev => ({ ...prev, [d.nip]: !prev[d.nip] }))}
-                                icon={revealSandi[d.nip] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-gray-300">—</span>
                           )}
                         </td>
                         <td className="p-4 text-center">

@@ -17,6 +17,7 @@ import {
   UserCheck,
   Calendar,
   BarChart3,
+  Download,
   X
 } from 'lucide-react';
 import {
@@ -31,7 +32,7 @@ import {
 import { RiwayatMBKM, Mahasiswa, Dosen } from '../types';
 import { useDebounce, useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
-import StatCard from './StatCard';
+import { downloadChartAsPng } from '../lib/chartExport';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
@@ -92,6 +93,16 @@ export default function MagangTab({
   });
 
   const totalMbkm = mbkm.length;
+  const mahasiswaMagang = new Set(mbkm.filter(m => m.npm_mahasiswa).map(m => m.npm_mahasiswa)).size;
+  const instansiMitra = new Set(mbkm.map(m => m.tempat_instansi)).size;
+  const instansiCounts = mbkm.reduce<Record<string, number>>((acc, m) => {
+    acc[m.tempat_instansi] = (acc[m.tempat_instansi] || 0) + 1;
+    return acc;
+  }, {});
+  const topInstansi = Object.entries(instansiCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+  // Ref untuk unduh grafik sebagai PNG
+  const chartSemesterRef = useRef<HTMLDivElement | null>(null);
 
   const filteredMbkm = mbkm.filter(m => {
     const mhs = mahasiswa.find(s => s.npm === m.npm_mahasiswa);
@@ -301,19 +312,48 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <StatCard variant="primary-border" label="Total Magang" value={fmt(totalMbkm)} />
-            <StatCard variant="primary-border" label="Mahasiswa Magang" value={fmt(new Set(mbkm.filter(m => m.npm_mahasiswa).map(m => m.npm_mahasiswa)).size)} accent />
-            <StatCard variant="primary-border" label="Instansi Mitra" value={fmt(new Set(mbkm.map(m => m.tempat_instansi)).size)} accent />
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="grid grid-cols-3 gap-px bg-gray-100">
+              <div className="bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Magang</p>
+                <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">{fmt(totalMbkm)}</p>
+              </div>
+              <div className="bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mahasiswa Peserta</p>
+                <p className="text-2xl font-bold font-display mt-1 text-[var(--color-primary)]">{fmt(mahasiswaMagang)}</p>
+              </div>
+              <div className="bg-white p-4">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Instansi Mitra</p>
+                <p className="text-2xl font-bold font-display mt-1 text-[var(--color-primary)]">{fmt(instansiMitra)}</p>
+              </div>
+            </div>
+            {topInstansi.length > 0 && (
+              <div className="px-4 py-2.5 border-t border-gray-100 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+                <span className="font-bold uppercase tracking-wider text-gray-400">Top Instansi:</span>
+                {topInstansi.map(([instansi, count]) => (
+                  <span key={instansi} className="inline-flex items-center gap-1.5 font-medium text-gray-600">
+                    <span className="w-2 h-2 rounded-full bg-[var(--color-primary)]" />
+                    {instansi} <b className="text-[var(--color-text-main)]">{count}</b>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {semesterChartData.length > 0 && (
             <div className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10">
-              <div className="flex items-center gap-2 mb-4">
-                <BarChart3 className="w-5 h-5 text-[var(--color-primary)]" />
-                <h3 className="font-bold text-sm text-[var(--color-text-main)]">Rekap Magang per Semester</h3>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-[var(--color-primary)]" />
+                  <h3 className="font-bold text-sm text-[var(--color-text-main)]">Rekap Magang per Semester</h3>
+                </div>
+                <IconButton
+                  label="Unduh grafik sebagai PNG"
+                  onClick={() => downloadChartAsPng(chartSemesterRef.current, 'rekap_magang_per_semester')}
+                  icon={<Download className="w-4 h-4" />}
+                />
               </div>
-              <div className="h-44">
+              <div className="h-44" ref={chartSemesterRef}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={semesterChartData} barSize={32} margin={{ top: 5, right: 20, left: -15, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--color-primary)" strokeOpacity={0.08} />
