@@ -39,7 +39,7 @@ import {
 import { TracerStudy, Mahasiswa, getMasaTungguKategori, getGajiKategori } from '../types';
 import { useDebounce, useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
-import { downloadChartAsPng } from '../lib/chartExport';
+import { downloadChartAsSvg } from '../lib/chartExport';
 import StatCard from './StatCard';
 import { academicService } from '../lib/academicService';
 import { exportToExcel, exportRekapMultiSheetToExcel } from '../lib/exportUtils';
@@ -87,7 +87,7 @@ export default function TracerTab({
   const [editingAlumni, setEditingAlumni] = useState<TracerStudy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Ref untuk unduh grafik sebagai PNG
+  // Ref untuk unduh grafik sebagai SVG
   const chartStatusRef = useRef<HTMLDivElement | null>(null);
   const chartTingkatRef = useRef<HTMLDivElement | null>(null);
 
@@ -536,8 +536,8 @@ export default function TracerTab({
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-bold text-gray-500">{fmt(totalAlumni)} Alumni</span>
                   <IconButton
-                    label="Unduh grafik sebagai PNG"
-                    onClick={() => downloadChartAsPng(chartStatusRef.current, 'tracer_status_lulusan')}
+                    label="Unduh grafik (SVG)"
+                    onClick={() => downloadChartAsSvg(chartStatusRef.current, 'tracer_status_lulusan')}
                     icon={<Download className="w-3.5 h-3.5" />}
                   />
                 </div>
@@ -594,8 +594,8 @@ export default function TracerTab({
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Distribusi Tingkat Perusahaan</p>
                   <IconButton
-                    label="Unduh grafik sebagai PNG"
-                    onClick={() => downloadChartAsPng(chartTingkatRef.current, 'tracer_tingkat_perusahaan')}
+                    label="Unduh grafik (SVG)"
+                    onClick={() => downloadChartAsSvg(chartTingkatRef.current, 'tracer_tingkat_perusahaan')}
                     icon={<Download className="w-3.5 h-3.5" />}
                   />
                 </div>

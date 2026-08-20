@@ -26,7 +26,7 @@ import {
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM } from '../types';
 import { useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
-import { downloadChartAsPng } from '../lib/chartExport';
+import { downloadChartAsSvg } from '../lib/chartExport';
 import { SkeletonCard, SkeletonChart } from './Skeleton';
 import StatusChip from './StatusChip';
 import IconButton from './IconButton';
@@ -100,7 +100,7 @@ export default function OverviewTab({
   // Drill-down: klik sel angka -> tampilkan daftar mahasiswa per angkatan / status
   const [drillFilter, setDrillFilter] = useState<{ angkatan?: number; status?: string } | null>(null);
 
-  // Ref untuk unduh grafik sebagai PNG
+  // Ref untuk unduh grafik sebagai SVG
   const chartAngkatanRef = useRef<HTMLDivElement | null>(null);
   const chartStatusRef = useRef<HTMLDivElement | null>(null);
 
@@ -326,8 +326,8 @@ export default function OverviewTab({
               </div>
               <div className="flex items-center gap-1">
                 <IconButton
-                  label="Unduh grafik sebagai PNG"
-                  onClick={() => downloadChartAsPng(chartAngkatanRef.current, 'rekap_mahasiswa_per_angkatan')}
+                  label="Unduh grafik (SVG)"
+                  onClick={() => downloadChartAsSvg(chartAngkatanRef.current, 'rekap_mahasiswa_per_angkatan')}
                   icon={<Download className="w-4 h-4" />}
                 />
                 <button onClick={() => setActiveTab('mahasiswa')} className="p-2 bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 rounded-lg text-[var(--color-primary)] transition">
@@ -369,8 +369,8 @@ export default function OverviewTab({
               </div>
               <div className="flex items-center gap-1">
                 <IconButton
-                  label="Unduh grafik sebagai PNG"
-                  onClick={() => downloadChartAsPng(chartStatusRef.current, 'status_kelulusan_alumni')}
+                  label="Unduh grafik (SVG)"
+                  onClick={() => downloadChartAsSvg(chartStatusRef.current, 'status_kelulusan_alumni')}
                   icon={<Download className="w-4 h-4" />}
                 />
                 <button onClick={() => setActiveTab('tracer')} className="p-2 bg-[var(--color-primary)]/5 hover:bg-[var(--color-primary)]/10 rounded-lg text-[var(--color-primary)] transition">
