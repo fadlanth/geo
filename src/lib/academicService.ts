@@ -222,6 +222,14 @@ export const academicService = {
     await this.logAuditChange('prestasi', pres.id_prestasi ? 'update' : 'insert', pres.id_prestasi || `${pres.npm_mahasiswa || ''}|${pres.nama_kompetisi}`, pres);
   },
 
+  async bulkInsertPrestasi(data: Prestasi[]): Promise<void> {
+    const { error } = await supabase
+      .from('prestasi')
+      .upsert(data, { onConflict: 'npm_mahasiswa, nama_kompetisi, juara_ke' });
+    if (error) throw new Error(error.message);
+    await this.logAuditChange('prestasi', 'insert', `bulk_${data.length}`, { count: data.length });
+  },
+
   async deletePrestasi(id_prestasi: string): Promise<void> {
     const { error } = await supabase.from('prestasi').delete().eq('id_prestasi', id_prestasi);
     if (error) throw new Error(error.message);
@@ -272,6 +280,14 @@ export const academicService = {
       .upsert(mbkm, { onConflict: 'npm_mahasiswa, tempat_instansi, semester' });
     if (error) throw new Error(error.message);
     await this.logAuditChange('riwayat_mbkm', mbkm.id_mbkm ? 'update' : 'insert', mbkm.id_mbkm || `${mbkm.npm_mahasiswa}|${mbkm.tempat_instansi}|${mbkm.semester}`, mbkm);
+  },
+
+  async bulkInsertMBKM(data: RiwayatMBKM[]): Promise<void> {
+    const { error } = await supabase
+      .from('riwayat_mbkm')
+      .upsert(data, { onConflict: 'npm_mahasiswa, tempat_instansi, semester' });
+    if (error) throw new Error(error.message);
+    await this.logAuditChange('riwayat_mbkm', 'insert', `bulk_${data.length}`, { count: data.length });
   },
 
   async deleteMBKM(id_mbkm: string): Promise<void> {

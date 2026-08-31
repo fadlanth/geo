@@ -1,9 +1,10 @@
 import * as XLSX from 'xlsx';
+import { Prestasi } from '../types';
 
 /**
  * Export array objek ke Excel (.xlsx) dan picu download di browser.
  */
-export function exportToExcel(data: any[], fileName: string, sheetName: string = 'Data') {
+export function exportToExcel(data: Record<string, unknown>[], fileName: string, sheetName: string = 'Data') {
   if (!data || data.length === 0 || data.every((row) => Object.keys(row).length === 0)) {
     alert('Tidak ada data untuk diekspor.');
     return;
@@ -25,7 +26,7 @@ export function exportToExcel(data: any[], fileName: string, sheetName: string =
  * @param fileName  tanpa ekstensi
  */
 export function exportRekapMultiSheetToExcel(
-  sheets: Record<string, any[]>,
+  sheets: Record<string, Record<string, unknown>[]>,
   fileName: string = 'Rekap'
 ) {
   const wb = XLSX.utils.book_new();
@@ -44,7 +45,7 @@ export function exportRekapMultiSheetToExcel(
 /**
  * Export data tabel aktif (filtered) ke CSV — ringan & universal.
  */
-export function exportToCsv(data: any[], fileName: string) {
+export function exportToCsv(data: Record<string, unknown>[], fileName: string) {
   if (!data || data.length === 0) {
     alert('Tidak ada data untuk diekspor.');
     return;
@@ -71,7 +72,7 @@ export function exportToCsv(data: any[], fileName: string) {
 /**
  * Export rekap statistik Dashboard (ringkasan) ke Excel ganda sheet.
  */
-export function exportRekapToExcel(rekap: Record<string, any>, fileName: string = 'Rekap_GEO_INFO') {
+export function exportRekapToExcel(rekap: Record<string, unknown>, fileName: string = 'Rekap_GEO_INFO') {
   try {
     const wb = XLSX.utils.book_new();
 
@@ -93,7 +94,7 @@ export function exportRekapToExcel(rekap: Record<string, any>, fileName: string 
   }
 }
 
-export function getPrestasiRekapByYear(prestasi: any[]) {
+export function getPrestasiRekapByYear(prestasi: Prestasi[]) {
   const individualPrestasi = (prestasi || []).filter((p) =>
     p &&
     typeof p.npm_mahasiswa === 'string' &&
@@ -225,7 +226,7 @@ function buildPrestasiRekapSvg(tingkatRows: any[], juaraRows: any[]) {
  * Download rekap prestasi mahasiswa dalam 1 file Excel + 1 file SVG grafik.
  * Data dihitung per individu mahasiswa, bukan berdasarkan jumlah event/kelompok.
  */
-export function exportPrestasiRekapToExcel(prestasi: any[], fileName: string = 'rekap_prestasi_mahasiswa') {
+export function exportPrestasiRekapToExcel(prestasi: Prestasi[], fileName: string = 'rekap_prestasi_mahasiswa') {
   const individualPrestasi = (prestasi || []).filter((p) =>
     p &&
     typeof p.npm_mahasiswa === 'string' &&

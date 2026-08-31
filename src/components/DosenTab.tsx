@@ -26,8 +26,8 @@ interface DosenTabProps {
   dosen: Dosen[];
   mahasiswa: Mahasiswa[];
   loading?: boolean;
-  onSaveDosen: (d: Dosen) => Promise<void>;
-  onDeleteDosen: (nip: string) => Promise<void>;
+  onSaveDosen: (d: Dosen) => void | Promise<void>;
+  onDeleteDosen: (nip: string) => void | Promise<void>;
   onBulkImportDosen: (data: Record<string, unknown>[]) => Promise<void>;
   triggerToast?: (options: ToastOptions) => void;
 }
@@ -50,7 +50,6 @@ export default function DosenTab({
 
   const searchQuery = useDebounce(query, 350); // debounced; pakai untuk filter
 
-  // Modals & form states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingDosen, setEditingDosen] = useState<Dosen | null>(null);
