@@ -113,7 +113,7 @@ async function chunkedUpsert<T extends Record<string, any>>(
 ): Promise<void> {
   for (let i = 0; i < items.length; i += chunkSize) {
     const chunk = items.slice(i, i + chunkSize);
-    const { error } = await supabase.from(table).upsert(chunk, { onConflict });
+    const { error } = await supabase.from(table).upsert(chunk as any, { onConflict });
     if (error) throw new Error(error.message);
   }
 }
