@@ -21,7 +21,9 @@ import {
   Calendar,
   TrendingUp,
   Download,
-  X
+  X,
+  AlertTriangle,
+  DollarSign
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -46,6 +48,7 @@ import { exportToExcel, exportRekapMultiSheetToExcel } from '../lib/exportUtils'
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
 import ComboboxMahasiswa from './ComboboxMahasiswa';
+import { autoMapColumns, validateAndNormalizeRows, getImportSummary } from '../lib/tracerImportUtils';
 
 interface TracerTabProps {
   alumni: TracerStudy[];
@@ -369,6 +372,24 @@ export default function TracerTab({
     setExpandedId(prev => prev === id ? null : id);
   };
 
+  // === Category badge helper ===
+  const masaTungguBadge = (bulan: number) => {
+    const kategori = getMasaTungguKategori(bulan);
+    const cls = bulan <= 6 ? 'bg-green-100 text-green-700' :
+                bulan <= 12 ? 'bg-yellow-100 text-yellow-700' :
+                'bg-red-100 text-red-700';
+    return <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${cls}`}>{kategori}</span>;
+  };
+
+  const gajiBadge = (gaji: number | undefined | null) => {
+    const kategori = getGajiKategori(gaji);
+    if (kategori === '-') return <span className="text-xs text-gray-400">-</span>;
+    const cls = kategori === '0-5jt' ? 'bg-sky-100 text-sky-700' :
+                kategori === '>5-10jt' ? 'bg-violet-100 text-violet-700' :
+                'bg-emerald-100 text-emerald-700';
+    return <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${cls}`}>{kategori}</span>;
+  };
+
   // === Detail items helper ===
   const detailItems = (a: TracerStudy) => {
     const items: { icon: React.ReactNode; label: string; value: React.ReactNode }[] = [];
@@ -377,37 +398,24 @@ export default function TracerTab({
       if (a.instansi_pekerjaan) items.push({ icon: <Building2 className="w-3.5 h-3.5 shrink-0" />, label: 'Instansi', value: a.instansi_pekerjaan });
       if (a.jabatan) items.push({ icon: <Briefcase className="w-3.5 h-3.5 shrink-0" />, label: 'Jabatan', value: a.jabatan });
       if (a.tingkat_perusahaan) items.push({ icon: <TrendingUp className="w-3.5 h-3.5 shrink-0" />, label: 'Tingkat Perusahaan', value: a.tingkat_perusahaan });
-      items.push({
-        icon: <Clock className="w-3.5 h-3.5 shrink-0" />,
-        label: 'Masa Tunggu',
-        value: (
-          <span className="inline-flex items-center gap-1.5">
-            {a.masa_tunggu_bulan} bulan
-            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-              a.masa_tunggu_bulan <= 6 ? 'bg-green-100 text-green-700' :
-              a.masa_tunggu_bulan <= 12 ? 'bg-yellow-100 text-yellow-700' :
-              'bg-red-100 text-red-700'
-            }`}>
-              {getMasaTungguKategori(a.masa_tunggu_bulan)}
-            </span>
-          </span>
-        )
-      });
+      items.push({ icon: <DollarSign className="w-3.5 h-3.5 shrink-0" />, label: 'Gaji', value: gajiBadge(a.gaji_pekerjaan) });
+      items.push({ icon: <Clock className="w-3.5 h-3.5 shrink-0" />, label: 'Masa Tunggu', value: masaTungguBadge(a.masa_tunggu_bulan) });
     }
 
     if (a.status_lulusan === 'Studi Lanjut') {
       if (a.universitas_tujuan) items.push({ icon: <GraduationCap className="w-3.5 h-3.5 shrink-0" />, label: 'Universitas', value: a.universitas_tujuan });
       if (a.program_studi) items.push({ icon: <BookOpen className="w-3.5 h-3.5 shrink-0" />, label: 'Program Studi', value: a.program_studi });
-      items.push({ icon: <Clock className="w-3.5 h-3.5 shrink-0" />, label: 'Masa Tunggu', value: `${a.masa_tunggu_bulan} bulan` });
+      items.push({ icon: <Clock className="w-3.5 h-3.5 shrink-0" />, label: 'Masa Tunggu', value: masaTungguBadge(a.masa_tunggu_bulan) });
     }
 
     if (a.status_lulusan === 'Wiraswasta') {
       if (a.bidang_usaha) items.push({ icon: <Store className="w-3.5 h-3.5 shrink-0" />, label: 'Bidang Usaha', value: a.bidang_usaha });
-      items.push({ icon: <Clock className="w-3.5 h-3.5 shrink-0" />, label: 'Masa Tunggu', value: `${a.masa_tunggu_bulan} bulan` });
+      items.push({ icon: <DollarSign className="w-3.5 h-3.5 shrink-0" />, label: 'Gaji', value: gajiBadge(a.gaji_pekerjaan) });
+      items.push({ icon: <Clock className="w-3.5 h-3.5 shrink-0" />, label: 'Masa Tunggu', value: masaTungguBadge(a.masa_tunggu_bulan) });
     }
 
     if (a.status_lulusan === 'Belum Bekerja') {
-      items.push({ icon: <Clock className="w-3.5 h-3.5 shrink-0" />, label: 'Masa Tunggu', value: `${a.masa_tunggu_bulan} bulan` });
+      items.push({ icon: <Clock className="w-3.5 h-3.5 shrink-0" />, label: 'Masa Tunggu', value: masaTungguBadge(a.masa_tunggu_bulan) });
     }
 
     return items;
@@ -774,68 +782,81 @@ export default function TracerTab({
         <CsvImporter
           title="Tracer Study Alumni"
           expectedHeaders={[
-            'npm_mahasiswa', 'tahun_lulus', 'status_lulusan', 'masa_tunggu_bulan',
-            'instansi_pekerjaan', 'jabatan', 'tingkat_perusahaan', 'gaji_pekerjaan',
-            'universitas_tujuan', 'program_studi', 'bidang_usaha'
+            'NPM', 'Tahun Lulus', 'Status', 'Masa Tunggu (bln)',
+            'Instansi', 'Jabatan', 'Tingkat Perusahaan', 'Gaji',
+            'Universitas Tujuan', 'Program Studi', 'Bidang Usaha'
           ]}
           optionalHeaders={[
-            'instansi_pekerjaan', 'jabatan', 'tingkat_perusahaan', 'gaji_pekerjaan',
-            'universitas_tujuan', 'program_studi', 'bidang_usaha'
+            'Instansi', 'Jabatan', 'Tingkat Perusahaan', 'Gaji',
+            'Universitas Tujuan', 'Program Studi', 'Bidang Usaha'
           ]}
-          templateCsv={`npm_mahasiswa,tahun_lulus,status_lulusan,masa_tunggu_bulan,instansi_pekerjaan,jabatan,tingkat_perusahaan,gaji_pekerjaan,universitas_tujuan,program_studi,bidang_usaha
-12318001,2022,Bekerja,3,Pertamina Geothermal Energy,Geophysicist,Multinasional,8500000,,,
-12319012,2023,Studi Lanjut,2,,,,"","","Kyushu University","Earth Resources Engineering",
-12320011,2024,Wiraswasta,5,,,,,,,,Jasa Konsultasi Geofisika`}
           templateData={[
-            { npm_mahasiswa: '12318001', tahun_lulus: 2022, status_lulusan: 'Bekerja', masa_tunggu_bulan: 3, instansi_pekerjaan: 'Pertamina Geothermal Energy', jabatan: 'Geophysicist', tingkat_perusahaan: 'Multinasional', gaji_pekerjaan: 8500000, universitas_tujuan: '', program_studi: '', bidang_usaha: '' },
-            { npm_mahasiswa: '12319012', tahun_lulus: 2023, status_lulusan: 'Studi Lanjut', masa_tunggu_bulan: 2, instansi_pekerjaan: '', jabatan: '', tingkat_perusahaan: '', gaji_pekerjaan: '', universitas_tujuan: 'Kyushu University', program_studi: 'Earth Resources Engineering', bidang_usaha: '' },
-            { npm_mahasiswa: '12320011', tahun_lulus: 2024, status_lulusan: 'Wiraswasta', masa_tunggu_bulan: 5, instansi_pekerjaan: '', jabatan: '', tingkat_perusahaan: '', gaji_pekerjaan: '', universitas_tujuan: '', program_studi: '', bidang_usaha: 'Jasa Konsultasi Geofisika' }
+            { NPM: '12318001', 'Tahun Lulus': 2022, Status: 'Bekerja', 'Masa Tunggu (bln)': 3, Instansi: 'Pertamina Geothermal Energy', Jabatan: 'Geophysicist', 'Tingkat Perusahaan': 'Multinasional', Gaji: 8500000, 'Universitas Tujuan': '', 'Program Studi': '', 'Bidang Usaha': '' },
+            { NPM: '12319012', 'Tahun Lulus': 2023, Status: 'Studi Lanjut', 'Masa Tunggu (bln)': 2, Instansi: '', Jabatan: '', 'Tingkat Perusahaan': '', Gaji: '', 'Universitas Tujuan': 'Kyushu University', 'Program Studi': 'Earth Resources Engineering', 'Bidang Usaha': '' },
+            { NPM: '12320011', 'Tahun Lulus': 2024, Status: 'Wiraswasta', 'Masa Tunggu (bln)': 5, Instansi: '', Jabatan: '', 'Tingkat Perusahaan': '', Gaji: '', 'Universitas Tujuan': '', 'Program Studi': '', 'Bidang Usaha': 'Jasa Konsultasi Geofisika' }
           ]}
+          templateCsv="NPM,Tahun Lulus,Status,Masa Tunggu (bln),Instansi,Jabatan,Tingkat Perusahaan,Gaji,Universitas Tujuan,Program Studi,Bidang Usaha"
           onImport={async (data) => {
+            // Step 1: Auto-detect column mapping
+            if (data.length === 0) {
+              triggerToast?.({ kind: 'error', title: 'Import Gagal', message: 'File tidak memiliki data baris.' });
+              return;
+            }
+            const fileHeaders = Object.keys(data[0]);
+            const { mapped, missingRequired } = autoMapColumns(fileHeaders);
+
+            if (missingRequired.length > 0) {
+              triggerToast?.({ kind: 'error', title: 'Kolom Wajib Hilang', message: `Kolom tidak ditemukan: ${missingRequired.join(', ')}. Pastikan file memiliki kolom NPM, Tahun Lulus, Status, dan Masa Tunggu.` });
+              return;
+            }
+
+            // Step 2: Validate & normalize all rows
+            const validated = validateAndNormalizeRows(data, mapped);
+            const summary = getImportSummary(validated);
+
+            // Step 3: Show validation warnings if any
+            const warningRows = validated.filter(v => v.warnings.length > 0);
+            if (warningRows.length > 0) {
+              const warningPreview = warningRows.slice(0, 5)
+                .map(v => `Baris ${v.rowIndex}: ${v.warnings.join('; ')}`)
+                .join('\n');
+              console.warn('[Smart Import] Warnings:\n' + warningPreview);
+            }
+
+            // Step 4: Import valid rows
+            const validRows = validated.filter(v => v.isValid);
             let count = 0;
             let errors = 0;
-            for (const row of data) {
-              const nr = Object.fromEntries(
-                Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), v])
-              );
-              const npmVal = String(nr['npm_mahasiswa'] || nr['npm'] || '').trim();
-              if (!npmVal) { errors++; continue; }
-              const a: TracerStudy = {
-                npm_mahasiswa: npmVal,
-                tahun_lulus: Number(nr['tahun_lulus'] || new Date().getFullYear()) || new Date().getFullYear(),
-                status_lulusan: (nr['status_lulusan'] || 'Bekerja') as TracerStudy['status_lulusan'],
-                masa_tunggu_bulan: Number(nr['masa_tunggu_bulan'] || 0) || 0,
-                instansi_pekerjaan: String(nr['instansi_pekerjaan'] || '').trim() || undefined,
-                jabatan: String(nr['jabatan'] || '').trim() || undefined,
-                tingkat_perusahaan: (['Lokal', 'Nasional', 'Multinasional', 'Internasional'].includes(String(nr['tingkat_perusahaan'] || '').trim())
-                  ? String(nr['tingkat_perusahaan']).trim() as TracerStudy['tingkat_perusahaan'] : undefined),
-                gaji_pekerjaan: nr['gaji_pekerjaan'] ? Number(nr['gaji_pekerjaan']) || undefined : undefined,
-                universitas_tujuan: String(nr['universitas_tujuan'] || '').trim() || undefined,
-                program_studi: String(nr['program_studi'] || '').trim() || undefined,
-                bidang_usaha: String(nr['bidang_usaha'] || '').trim() || undefined
-              };
+            for (const v of validRows) {
               try {
-                await academicService.saveTracerAlumni(a);
+                await academicService.saveTracerAlumni(v.row);
                 count++;
               } catch {
                 errors++;
               }
             }
             await onRefresh();
+
+            // Step 5: Report results
             if (triggerToast) {
               if (count > 0) {
+                const parts: string[] = [`${count} data berhasil diimport.`];
+                if (errors > 0) parts.push(`${errors} gagal simpan.`);
+                if (summary.errorRows > 0) parts.push(`${summary.errorRows} baris dilewati karena data tidak valid.`);
+                if (summary.warningRows > 0) parts.push(`${summary.warningRows} baris memiliki peringatan.`);
                 triggerToast({
-                  kind: 'success',
-                  title: 'Import Tracer Berhasil',
-                  message: errors > 0
-                    ? `${count} data berhasil diimport, ${errors} gagal.`
-                    : `Berhasil menambahkan/memperbarui ${count} data tracer alumni.`
+                  kind: summary.errorRows > 0 || errors > 0 ? 'warning' : 'success',
+                  title: 'Import Tracer Selesai',
+                  message: parts.join(' ')
                 });
               } else {
+                const errorDetail = validated.filter(v => !v.isValid).slice(0, 3)
+                  .map(v => `Baris ${v.rowIndex}: ${v.errors.join(', ')}`)
+                  .join(' | ');
                 triggerToast({
                   kind: 'error',
                   title: 'Import Gagal',
-                  message: 'Tidak ada data tracer alumni valid yang dapat diimport.'
+                  message: `Tidak ada data valid. ${errorDetail}`
                 });
               }
             }
