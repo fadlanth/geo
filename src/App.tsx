@@ -10,7 +10,7 @@ import PublicLanding from './components/PublicLanding';
 import Toast, { ToastOptions } from './components/Toast';
 import ConfirmDialog from './components/ConfirmDialog';
 import ErrorBoundary from './components/ErrorBoundary';
-import { useAuth } from './lib/AuthContext';
+import { useAuth, UserRole } from './lib/AuthContext';
 
 // Hooks
 import { useMahasiswaActions } from './hooks/useMahasiswaActions';
@@ -30,6 +30,21 @@ const AuditTab = lazy(() => import('./components/AuditTab'));
 
 const VALID_TABS = ['ringkasan', 'mahasiswa', 'dosen', 'prestasi', 'mbkm', 'tracer', 'audit'];
 
+const TAB_PERMISSIONS: Record<string, UserRole[]> = {
+  ringkasan: ['admin', 'operator', 'dosen', 'guest'],
+  mahasiswa: ['admin', 'operator'],
+  dosen: ['admin', 'operator'],
+  prestasi: ['admin', 'operator'],
+  mbkm: ['admin', 'operator'],
+  tracer: ['admin', 'operator'],
+  audit: ['admin'],
+};
+
+const isTabAuthorized = (tab: string, userRole: UserRole): boolean => {
+  const allowed = TAB_PERMISSIONS[tab];
+  return allowed ? allowed.includes(userRole) : false;
+};
+
 export default function App() {
   const { isAuthenticated, isLoading: authLoading, logout, username, role } = useAuth();
   
@@ -44,20 +59,38 @@ export default function App() {
   const [showLogin, setShowLogin] = useState(false);
 
   const setActiveTab = useCallback((tab: string) => {
-    setActiveTabState(tab);
-    window.location.hash = `#${tab}`;
-  }, []);
+    if (isTabAuthorized(tab, role)) {
+      setActiveTabState(tab);
+      window.location.hash = `#${tab}`;
+    } else {
+      setActiveTabState('ringkasan');
+      window.location.hash = '#ringkasan';
+    }
+  }, [role]);
+
+  // Validasi tab saat role teridentifikasi
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      if (!isTabAuthorized(activeTab, role)) {
+        setActiveTab('ringkasan');
+      }
+    }
+  }, [authLoading, isAuthenticated, activeTab, role, setActiveTab]);
 
   useEffect(() => {
     const handleHashChange = () => {
       const hash = window.location.hash.replace(/^#\/?/, '').trim();
       if (VALID_TABS.includes(hash)) {
-        setActiveTabState(hash);
+        if (isTabAuthorized(hash, role)) {
+          setActiveTabState(hash);
+        } else {
+          setActiveTab('ringkasan');
+        }
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  }, [role, setActiveTab]);
 
   // Toast notifications state
   const [toast, setToast] = useState<(ToastOptions & { id: string }) | null>(null);
@@ -225,90 +258,110 @@ export default function App() {
                 <div className="w-8 h-8 border-4 border-[var(--color-primary)]/20 border-t-[var(--color-primary)] rounded-full animate-spin" />
               </div>
             }>
-              {activeTab === 'ringkasan' && (
-                <OverviewTab 
-                  mahasiswa={mahasiswa} 
-                  dosen={dosen} 
-                  prestasi={prestasi} 
-                  alumni={alumni} 
-                  mbkm={mbkm}
-                  loading={initialLoading || isRefreshing}
-                  setActiveTab={setActiveTab}
-                />
-              )}
+              {!isTabAuthorized(activeTab, role) ? (
+                <div className="bg-white rounded-2xl p-8 border border-red-100 text-center max-w-lg mx-auto my-12 shadow-sm">
+                  <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4 font-bold text-xl">
+                    !
+                  </div>
+                  <h3 className="font-display font-bold text-lg text-[var(--color-text-main)]">Akses Terbatas</h3>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Peran Anda saat ini (<strong className="capitalize">{role}</strong>) tidak memiliki hak akses untuk membuka halaman ini.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('ringkasan')}
+                    className="mt-6 px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-xs font-bold hover:bg-[var(--color-primary-dark)] transition"
+                  >
+                    Kembali ke Dashboard
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {activeTab === 'ringkasan' && (
+                    <OverviewTab 
+                      mahasiswa={mahasiswa} 
+                      dosen={dosen} 
+                      prestasi={prestasi} 
+                      alumni={alumni} 
+                      mbkm={mbkm}
+                      loading={initialLoading || isRefreshing}
+                      setActiveTab={setActiveTab}
+                    />
+                  )}
 
-              {activeTab === 'mahasiswa' && (
-                <MahasiswaTab
-                  mahasiswa={mahasiswa}
-                  dosen={dosen}
-                  loading={initialLoading || isRefreshing}
-                  onSaveMahasiswa={handleSaveMahasiswa}
-                  onDeleteMahasiswa={handleDeleteMahasiswa}
-                  onBulkImportMahasiswa={handleBulkImportMahasiswa}
-                  triggerToast={triggerToast}
-                />
-              )}
+                  {activeTab === 'mahasiswa' && (
+                    <MahasiswaTab
+                      mahasiswa={mahasiswa}
+                      dosen={dosen}
+                      loading={initialLoading || isRefreshing}
+                      onSaveMahasiswa={handleSaveMahasiswa}
+                      onDeleteMahasiswa={handleDeleteMahasiswa}
+                      onBulkImportMahasiswa={handleBulkImportMahasiswa}
+                      triggerToast={triggerToast}
+                    />
+                  )}
 
-              {activeTab === 'dosen' && (
-                <DosenTab
-                  dosen={dosen}
-                  mahasiswa={mahasiswa}
-                  loading={initialLoading || isRefreshing}
-                  onSaveDosen={handleSaveDosen}
-                  onDeleteDosen={handleDeleteDosen}
-                  onBulkImportDosen={handleBulkImportDosen}
-                  triggerToast={triggerToast}
-                />
-              )}
+                  {activeTab === 'dosen' && (
+                    <DosenTab
+                      dosen={dosen}
+                      mahasiswa={mahasiswa}
+                      loading={initialLoading || isRefreshing}
+                      onSaveDosen={handleSaveDosen}
+                      onDeleteDosen={handleDeleteDosen}
+                      onBulkImportDosen={handleBulkImportDosen}
+                      triggerToast={triggerToast}
+                    />
+                  )}
 
-              {activeTab === 'prestasi' && (
-                <PrestasiTab
-                  prestasi={prestasi}
-                  mahasiswa={mahasiswa}
-                  anggotaPrestasi={anggotaPrestasi}
-                  loading={initialLoading || isRefreshing}
-                  onSavePrestasi={handleSavePrestasi}
-                  onDeletePrestasi={handleDeletePrestasi}
-                  onSaveAnggota={handleSaveAnggota}
-                  onDeleteAnggota={handleDeleteAnggota}
-                  onBulkReplaceAnggota={handleBulkReplaceAnggota}
-                  onBulkImportPrestasi={handleBulkImportPrestasi}
-                  onRefresh={fetchAllData}
-                  triggerToast={triggerToast}
-                />
-              )}
+                  {activeTab === 'prestasi' && (
+                    <PrestasiTab
+                      prestasi={prestasi}
+                      mahasiswa={mahasiswa}
+                      anggotaPrestasi={anggotaPrestasi}
+                      loading={initialLoading || isRefreshing}
+                      onSavePrestasi={handleSavePrestasi}
+                      onDeletePrestasi={handleDeletePrestasi}
+                      onSaveAnggota={handleSaveAnggota}
+                      onDeleteAnggota={handleDeleteAnggota}
+                      onBulkReplaceAnggota={handleBulkReplaceAnggota}
+                      onBulkImportPrestasi={handleBulkImportPrestasi}
+                      onRefresh={fetchAllData}
+                      triggerToast={triggerToast}
+                    />
+                  )}
 
-              {activeTab === 'mbkm' && (
-                <MagangTab
-                  mbkm={mbkm}
-                  mahasiswa={mahasiswa}
-                  dosen={dosen}
-                  loading={initialLoading || isRefreshing}
-                  onSaveMbkm={handleSaveMbkm}
-                  onDeleteMbkm={handleDeleteMbkm}
-                  onBulkImportMagang={handleBulkImportMagang}
-                  onRefresh={fetchAllData}
-                  triggerToast={triggerToast}
-                />
-              )}
+                  {activeTab === 'mbkm' && (
+                    <MagangTab
+                      mbkm={mbkm}
+                      mahasiswa={mahasiswa}
+                      dosen={dosen}
+                      loading={initialLoading || isRefreshing}
+                      onSaveMbkm={handleSaveMbkm}
+                      onDeleteMbkm={handleDeleteMbkm}
+                      onBulkImportMagang={handleBulkImportMagang}
+                      onRefresh={fetchAllData}
+                      triggerToast={triggerToast}
+                    />
+                  )}
 
-              {activeTab === 'tracer' && (
-                <TracerTab
-                  alumni={alumni}
-                  mahasiswa={mahasiswa}
-                  loading={initialLoading || isRefreshing}
-                  onSaveAlumni={handleSaveAlumni}
-                  onDeleteAlumni={handleDeleteAlumni}
-                  onRefresh={fetchAllData}
-                  triggerToast={triggerToast}
-                />
-              )}
+                  {activeTab === 'tracer' && (
+                    <TracerTab
+                      alumni={alumni}
+                      mahasiswa={mahasiswa}
+                      loading={initialLoading || isRefreshing}
+                      onSaveAlumni={handleSaveAlumni}
+                      onDeleteAlumni={handleDeleteAlumni}
+                      onRefresh={fetchAllData}
+                      triggerToast={triggerToast}
+                    />
+                  )}
 
-              {activeTab === 'audit' && (
-                <AuditTab
-                  loading={initialLoading || isRefreshing}
-                  triggerToast={triggerToast}
-                />
+                  {activeTab === 'audit' && (
+                    <AuditTab
+                      loading={initialLoading || isRefreshing}
+                      triggerToast={triggerToast}
+                    />
+                  )}
+                </>
               )}
             </Suspense>
           </ErrorBoundary>

@@ -1,8 +1,9 @@
-import * as XLSX from 'xlsx';
 import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle2, AlertCircle, FileText, X } from 'lucide-react';
 import Button from './Button';
 import { errMsg } from '../lib/format';
+
+const getXLSX = async () => import('xlsx');
 
 interface CsvImporterProps {
   title: string;
@@ -74,12 +75,14 @@ export default function CsvImporter({
     }
   };
 
-  const processExcelFile = (selectedFile: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result as ArrayBuffer;
-        const workbook = XLSX.read(data, { type: 'array' });
+  const processExcelFile = async (selectedFile: File) => {
+    try {
+      const XLSX = await getXLSX();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result as ArrayBuffer;
+          const workbook = XLSX.read(data, { type: 'array' });
         const sheetNames = workbook.SheetNames;
 
         if (sheetNames.length === 0) {
@@ -110,6 +113,10 @@ export default function CsvImporter({
       }
     };
     reader.readAsArrayBuffer(selectedFile);
+    } catch (err) {
+      setErrorMsg(errMsg(err, 'Gagal memuat modul pengolah Excel.'));
+      setStatus('error');
+    }
   };
 
   const processCsvFile = (selectedFile: File) => {
@@ -207,16 +214,21 @@ export default function CsvImporter({
     }
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = async () => {
     if (!templateCsv && !templateData) return;
 
     // If we have templateData, create Excel file
     if (templateData && templateData.length > 0) {
-      const ws = XLSX.utils.json_to_sheet(templateData);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Template');
-      XLSX.writeFile(wb, `template_${title.toLowerCase().replace(/\s+/g, '_')}.xlsx`);
-      return;
+      try {
+        const XLSX = await getXLSX();
+        const ws = XLSX.utils.json_to_sheet(templateData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Template');
+        XLSX.writeFile(wb, `template_${title.toLowerCase().replace(/\s+/g, '_')}.xlsx`);
+        return;
+      } catch (err) {
+        console.error('Failed to generate template Excel:', err);
+      }
     }
 
     // Fallback: create CSV file

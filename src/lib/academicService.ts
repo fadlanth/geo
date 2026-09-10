@@ -105,6 +105,19 @@ ALTER TABLE public.prestasi ADD CONSTRAINT prestasi_unique UNIQUE (npm_mahasiswa
 ALTER TABLE public.tracer_study ADD CONSTRAINT tracer_unique UNIQUE (npm_mahasiswa, tahun_lulus);
 `;
 
+async function chunkedUpsert<T extends Record<string, any>>(
+  table: string,
+  items: T[],
+  onConflict: string,
+  chunkSize: number = 100
+): Promise<void> {
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    const { error } = await supabase.from(table).upsert(chunk, { onConflict });
+    if (error) throw new Error(error.message);
+  }
+}
+
 export const academicService = {
   // --- AUDIT LOG (best-effort) ---
   async logAuditChange(
@@ -166,8 +179,7 @@ export const academicService = {
   },
 
   async bulkInsertDosen(data: Dosen[]): Promise<void> {
-    const { error } = await supabase.from('dosen').upsert(data, { onConflict: 'nip' });
-    if (error) throw new Error(error.message);
+    await chunkedUpsert('dosen', data, 'nip', 100);
     await this.logAuditChange('dosen', 'insert', `bulk_${data.length}`, { count: data.length });
   },
 
@@ -186,8 +198,7 @@ export const academicService = {
   },
 
   async bulkInsertMahasiswa(data: Mahasiswa[]): Promise<void> {
-    const { error } = await supabase.from('mahasiswa').upsert(data, { onConflict: 'npm' });
-    if (error) throw new Error(error.message);
+    await chunkedUpsert('mahasiswa', data, 'npm', 100);
     await this.logAuditChange('mahasiswa', 'insert', `bulk_${data.length}`, { count: data.length });
   },
 
@@ -223,10 +234,7 @@ export const academicService = {
   },
 
   async bulkInsertPrestasi(data: Prestasi[]): Promise<void> {
-    const { error } = await supabase
-      .from('prestasi')
-      .upsert(data, { onConflict: 'npm_mahasiswa, nama_kompetisi, juara_ke' });
-    if (error) throw new Error(error.message);
+    await chunkedUpsert('prestasi', data, 'npm_mahasiswa, nama_kompetisi, juara_ke', 100);
     await this.logAuditChange('prestasi', 'insert', `bulk_${data.length}`, { count: data.length });
   },
 
@@ -283,10 +291,7 @@ export const academicService = {
   },
 
   async bulkInsertMBKM(data: RiwayatMBKM[]): Promise<void> {
-    const { error } = await supabase
-      .from('riwayat_mbkm')
-      .upsert(data, { onConflict: 'npm_mahasiswa, tempat_instansi, semester' });
-    if (error) throw new Error(error.message);
+    await chunkedUpsert('riwayat_mbkm', data, 'npm_mahasiswa, tempat_instansi, semester', 100);
     await this.logAuditChange('riwayat_mbkm', 'insert', `bulk_${data.length}`, { count: data.length });
   },
 

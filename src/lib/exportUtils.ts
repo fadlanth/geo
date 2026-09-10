@@ -1,22 +1,28 @@
-import * as XLSX from 'xlsx';
 import { Prestasi } from '../types';
+
+/**
+ * Helper loader on-demand untuk library XLSX (mengurangi bundle awal ~445 KB).
+ */
+async function getXLSX() {
+  return await import('xlsx');
+}
 
 /**
  * Export array objek ke Excel (.xlsx) dan picu download di browser.
  */
-export function exportToExcel(data: Record<string, unknown>[], fileName: string, sheetName: string = 'Data') {
+export async function exportToExcel(data: Record<string, unknown>[], fileName: string, sheetName: string = 'Data') {
   if (!data || data.length === 0 || data.every((row) => Object.keys(row).length === 0)) {
-    alert('Tidak ada data untuk diekspor.');
+    console.warn('Tidak ada data untuk diekspor.');
     return;
   }
   try {
+    const XLSX = await getXLSX();
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
     XLSX.writeFile(wb, `${fileName}.xlsx`);
   } catch (error) {
     console.error('Failed to export data to Excel:', error);
-    alert('Gagal mengekspor data ke Excel.');
   }
 }
 
@@ -25,32 +31,38 @@ export function exportToExcel(data: Record<string, unknown>[], fileName: string,
  * @param sheets  object { "Nama Sheet": arrayOfObjects, ... }
  * @param fileName  tanpa ekstensi
  */
-export function exportRekapMultiSheetToExcel(
+export async function exportRekapMultiSheetToExcel(
   sheets: Record<string, Record<string, unknown>[]>,
   fileName: string = 'Rekap'
 ) {
-  const wb = XLSX.utils.book_new();
-  Object.entries(sheets).forEach(([sheetName, rows]) => {
-    if (rows && rows.length > 0) {
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName);
+  try {
+    const XLSX = await getXLSX();
+    const wb = XLSX.utils.book_new();
+    Object.entries(sheets).forEach(([sheetName, rows]) => {
+      if (rows && rows.length > 0) {
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName);
+      }
+    });
+    if (Object.keys(wb.SheetNames).length === 0) {
+      console.warn('Tidak ada data rekap untuk diekspor.');
+      return;
     }
-  });
-  if (Object.keys(wb.SheetNames).length === 0) {
-    alert('Tidak ada data rekap untuk diekspor.');
-    return;
+    XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  } catch (error) {
+    console.error('Failed to export multi-sheet Excel:', error);
   }
-  XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 /**
  * Export data tabel aktif (filtered) ke CSV — ringan & universal.
  */
-export function exportToCsv(data: Record<string, unknown>[], fileName: string) {
+export async function exportToCsv(data: Record<string, unknown>[], fileName: string) {
   if (!data || data.length === 0) {
-    alert('Tidak ada data untuk diekspor.');
+    console.warn('Tidak ada data untuk diekspor.');
     return;
   }
   try {
+    const XLSX = await getXLSX();
     const csv = XLSX.utils
       .sheet_to_csv(XLSX.utils.json_to_sheet(data))
       .replace(/\r?\n/g, '\r\n');
@@ -65,15 +77,15 @@ export function exportToCsv(data: Record<string, unknown>[], fileName: string) {
     URL.revokeObjectURL(url);
   } catch (error) {
     console.error('Failed to export CSV:', error);
-    alert('Gagal mengekspor CSV.');
   }
 }
 
 /**
  * Export rekap statistik Dashboard (ringkasan) ke Excel ganda sheet.
  */
-export function exportRekapToExcel(rekap: Record<string, unknown>, fileName: string = 'Rekap_GEO_INFO') {
+export async function exportRekapToExcel(rekap: Record<string, unknown>, fileName: string = 'Rekap_GEO_INFO') {
   try {
+    const XLSX = await getXLSX();
     const wb = XLSX.utils.book_new();
 
     // Sheet 1: ringkasan angka
@@ -90,7 +102,6 @@ export function exportRekapToExcel(rekap: Record<string, unknown>, fileName: str
     XLSX.writeFile(wb, `${fileName}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   } catch (error) {
     console.error('Failed to export rekap:', error);
-    alert('Gagal mengekspor rekap ke Excel.');
   }
 }
 
@@ -226,7 +237,7 @@ function buildPrestasiRekapSvg(tingkatRows: any[], juaraRows: any[]) {
  * Download rekap prestasi mahasiswa dalam 1 file Excel + 1 file SVG grafik.
  * Data dihitung per individu mahasiswa, bukan berdasarkan jumlah event/kelompok.
  */
-export function exportPrestasiRekapToExcel(prestasi: Prestasi[], fileName: string = 'rekap_prestasi_mahasiswa') {
+export async function exportPrestasiRekapToExcel(prestasi: Prestasi[], fileName: string = 'rekap_prestasi_mahasiswa') {
   const individualPrestasi = (prestasi || []).filter((p) =>
     p &&
     typeof p.npm_mahasiswa === 'string' &&
@@ -236,13 +247,15 @@ export function exportPrestasiRekapToExcel(prestasi: Prestasi[], fileName: strin
   );
 
   if (individualPrestasi.length === 0) {
-    alert('Tidak ada data prestasi per individu mahasiswa untuk diunduh.');
+    console.warn('Tidak ada data prestasi per individu mahasiswa untuk diunduh.');
     return;
   }
 
   const { tingkatRows, juaraRows } = getPrestasiRekapByYear(individualPrestasi);
 
-  const wb = XLSX.utils.book_new();
+  try {
+    const XLSX = await getXLSX();
+    const wb = XLSX.utils.book_new();
 
   const tingkatHeader = ['TAHUN', 'TINGKAT INTERNASIONAL', 'TINGKAT NASIONAL', 'JUMLAH'];
   const tingkatBody = tingkatRows.map((row) => [row.Tahun, row.Internasional, row.Nasional, row.Jumlah]);
@@ -280,4 +293,8 @@ export function exportPrestasiRekapToExcel(prestasi: Prestasi[], fileName: strin
 
   const svgContent = buildPrestasiRekapSvg(tingkatRows, juaraRows);
   downloadBlob(new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' }), `${fileName}_grafik.svg`);
+  } catch (err) {
+    console.error('Failed to export prestasi rekap:', err);
+  }
 }
+

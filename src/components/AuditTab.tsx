@@ -38,9 +38,11 @@ export default function AuditTab({ loading, triggerToast }: AuditTabProps) {
         .order('created_at', { ascending: false })
         .limit(ROWS_PER_PAGE);
 
-      if (search.trim()) {
-        const q = search.trim();
-        query = query.or(`entitas.ilike.${q},aksi.ilike.${q},entitas_id.ilike.${q},actor_email.ilike.${q}`);
+      const cleanSearch = search.trim().replace(/[%_(),]/g, '');
+      if (cleanSearch) {
+        query = query.or(
+          `entitas.ilike.%${cleanSearch}%,aksi.ilike.%${cleanSearch}%,entitas_id.ilike.%${cleanSearch}%,actor_email.ilike.%${cleanSearch}%`
+        );
       }
       const { data, error } = await query;
       if (error) throw error;
