@@ -84,7 +84,7 @@ export default function OverviewTab({
 
   const totalAlumni = alumni.length;
   const alumniBekerja = alumni.filter(a => a.status_lulusan === 'Bekerja').length;
-  const alumniKerjaCepat = alumni.filter(a => a.status_lulusan === 'Bekerja' && a.masa_tunggu_bulan < 6).length;
+  const alumniKerjaCepat = alumni.filter(a => a.status_lulusan === 'Bekerja' && a.masa_tunggu_bulan <= 6).length;
   const pctBekerja = totalAlumni > 0 ? Math.round((alumniBekerja / totalAlumni) * 100) : 0;
   const avgWaktuTunggu = alumniBekerja > 0
     ? (alumni.filter(a => a.status_lulusan === 'Bekerja').reduce((acc, a) => acc + a.masa_tunggu_bulan, 0) / alumniBekerja).toFixed(1)
@@ -298,7 +298,7 @@ export default function OverviewTab({
               <span className="text-[var(--color-text-main)]/50">rata-rata {avgWaktuTunggu} bln tunggu</span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-text-main)]/50 border-t border-gray-100 pt-3">
-              <span>Kerja &lt; 6 Bln: <b className="text-[var(--color-success)]">{alumniKerjaCepat} org</b></span>
+              <span>Kerja 0–6 Bln: <b className="text-[var(--color-success)]">{alumniKerjaCepat} org</b></span>
             </div>
           </div>
         </div>
