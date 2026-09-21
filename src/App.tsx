@@ -152,7 +152,8 @@ export default function App() {
     alumni,
     refreshAlumni,
     handleSaveAlumni,
-    handleDeleteAlumni
+    handleDeleteAlumni,
+    handleBulkImportAlumni
   } = useTracerActions(triggerToast, setConfirmAction);
 
   // Loading State
@@ -350,6 +351,7 @@ export default function App() {
                       loading={initialLoading || isRefreshing}
                       onSaveAlumni={handleSaveAlumni}
                       onDeleteAlumni={handleDeleteAlumni}
+                      onBulkImportAlumni={handleBulkImportAlumni}
                       onRefresh={fetchAllData}
                       triggerToast={triggerToast}
                     />

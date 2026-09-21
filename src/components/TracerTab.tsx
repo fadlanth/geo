@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import CsvImporter from './CsvImporter';
+import TracerImporterModal from './TracerImporterModal';
 import Pagination from './Pagination';
 import DataActions from './DataActions';
 import Button from './Button';
@@ -22,6 +23,8 @@ import {
   TrendingUp,
   Download,
   X,
+  Sparkles,
+  UploadCloud,
   AlertTriangle,
   DollarSign
 } from 'lucide-react';
@@ -48,6 +51,7 @@ import { exportToExcel, exportRekapMultiSheetToExcel } from '../lib/exportUtils'
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
 import ComboboxMahasiswa from './ComboboxMahasiswa';
+import ExportTracerButton from './ExportTracerButton';
 import { autoMapColumns, validateAndNormalizeRows, getImportSummary } from '../lib/tracerImportUtils';
 
 interface TracerTabProps {
@@ -56,6 +60,7 @@ interface TracerTabProps {
   loading?: boolean;
   onSaveAlumni: (a: TracerStudy) => void;
   onDeleteAlumni: (id: string) => void;
+  onBulkImportAlumni?: (records: TracerStudy[]) => Promise<void>;
   onRefresh: () => Promise<void>;
   activeSubTab?: string;
   triggerToast?: (options: ToastOptions) => void;
@@ -73,6 +78,7 @@ export default function TracerTab({
   loading,
   onSaveAlumni,
   onDeleteAlumni,
+  onBulkImportAlumni,
   onRefresh,
   triggerToast
 }: TracerTabProps) {
@@ -87,6 +93,7 @@ export default function TracerTab({
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showDiktiImporter, setShowDiktiImporter] = useState(false);
   const [editingAlumni, setEditingAlumni] = useState<TracerStudy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -274,6 +281,26 @@ export default function TracerTab({
     setEditingAlumni(null);
   };
 
+  const handleBulkImport = async (rawData: Record<string, unknown>[]) => {
+    if (!onBulkImportAlumni) return;
+    if (rawData.length === 0) return;
+
+    const headers = Object.keys(rawData[0]);
+    const { mapped } = autoMapColumns(headers);
+    const validated = validateAndNormalizeRows(rawData, mapped);
+
+    const validRows = validated
+      .filter((v) => v.isValid && v.row.npm_mahasiswa)
+      .map((v) => v.row);
+
+    if (validRows.length === 0) {
+      throw new Error('Tidak ada baris data valid yang memiliki NPM dan status lulusan.');
+    }
+
+    await onBulkImportAlumni(validRows);
+    setShowImport(false);
+  };
+
   const handleExportAlumni = () => {
     const dataToExport = alumni.map(a => {
       const mhs = mahasiswa.find(m => m.npm === a.npm_mahasiswa);
@@ -445,10 +472,26 @@ export default function TracerTab({
           >
             Tambah Data Tracer
           </Button>
+          <button
+            onClick={() => setShowDiktiImporter(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-[#134e53] hover:bg-[#0e3b3f] rounded-xl shadow-sm transition cursor-pointer"
+          >
+            <Sparkles className="w-4 h-4" />
+            Import Tracer Pusat
+          </button>
           <DataActions
             onImportCsv={() => setShowImport(true)}
             onImportExcel={() => setShowImport(true)}
             onExportExcel={handleExportAlumni}
+          />
+          <ExportTracerButton
+            onSuccess={(total) => {
+              triggerToast?.({
+                kind: 'success',
+                title: 'Ekspor Multi-Sheet Berhasil',
+                message: `Berhasil mengunduh ${total} data alumni ke Laporan_Tracer_Study_GEO.xlsx`
+              });
+            }}
           />
         </div>
       </div>
@@ -1064,6 +1107,36 @@ export default function TracerTab({
           </div>
         </div>
       )}
+
+      {/* MODAL: IMPORT CSV / EXCEL TRACER STUDY */}
+      {showImport && (
+        <CsvImporter
+          title="Data Tracer Study Alumni"
+          expectedHeaders={['NPM', 'Tahun Lulus', 'Status', 'Masa Tunggu']}
+          optionalHeaders={['Instansi', 'Jabatan', 'Tingkat Perusahaan', 'Gaji', 'Universitas Tujuan', 'Program Studi', 'Bidang Usaha']}
+          templateCsv={`NPM,Tahun Lulus,Status,Masa Tunggu,Instansi,Jabatan,Tingkat Perusahaan,Gaji,Universitas Tujuan,Program Studi,Bidang Usaha
+140710200001,2024,Bekerja,3,PT Pertamina Hulu Energi,Junior Geophysicist,Nasional,8500000,,,
+140710200002,2024,Studi Lanjut,0,,,,,,ITB,Magister Teknik Geofisika,
+140710200003,2024,Wiraswasta,2,,,,,,,Konsultan Geofisika Mandiri
+140710200004,2024,Belum Bekerja,0,,,,,,,,`}
+          templateData={[
+            { NPM: '140710200001', 'Tahun Lulus': 2024, Status: 'Bekerja', 'Masa Tunggu': 3, Instansi: 'PT Pertamina Hulu Energi', Jabatan: 'Junior Geophysicist', 'Tingkat Perusahaan': 'Nasional', Gaji: 8500000, 'Universitas Tujuan': '', 'Program Studi': '', 'Bidang Usaha': '' },
+            { NPM: '140710200002', 'Tahun Lulus': 2024, Status: 'Studi Lanjut', 'Masa Tunggu': 0, Instansi: '', Jabatan: '', 'Tingkat Perusahaan': '', Gaji: '', 'Universitas Tujuan': 'ITB', 'Program Studi': 'Magister Teknik Geofisika', 'Bidang Usaha': '' },
+            { NPM: '140710200003', 'Tahun Lulus': 2024, Status: 'Wiraswasta', 'Masa Tunggu': 2, Instansi: '', Jabatan: '', 'Tingkat Perusahaan': '', Gaji: '', 'Universitas Tujuan': '', 'Program Studi': '', 'Bidang Usaha': 'Konsultan Geofisika Mandiri' },
+            { NPM: '140710200004', 'Tahun Lulus': 2024, Status: 'Belum Bekerja', 'Masa Tunggu': 0, Instansi: '', Jabatan: '', 'Tingkat Perusahaan': '', Gaji: '', 'Universitas Tujuan': '', 'Program Studi': '', 'Bidang Usaha': '' }
+          ]}
+          onImport={handleBulkImport}
+          onClose={() => setShowImport(false)}
+        />
+      )}
+
+      {/* MODAL: IMPORT TRACER STUDY PUSAT (Auto-Pilot) */}
+      <TracerImporterModal
+        isOpen={showDiktiImporter}
+        onClose={() => setShowDiktiImporter(false)}
+        onSuccess={async () => { await onRefresh(); }}
+        triggerToast={triggerToast}
+      />
     </div>
   );
 }

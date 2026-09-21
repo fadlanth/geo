@@ -61,11 +61,31 @@ export function useTracerActions(
     });
   };
 
+  const handleBulkImportAlumni = async (records: TracerStudy[]) => {
+    try {
+      await academicService.bulkSaveTracerAlumni(records);
+      await refreshAlumni();
+      triggerToast({
+        kind: 'success',
+        title: 'Import Tracer Berhasil',
+        message: `Berhasil mengimpor ${records.length} data tracer alumni.`
+      });
+    } catch (err) {
+      triggerToast({
+        kind: 'error',
+        title: 'Gagal Mengimpor',
+        message: errMsg(err, 'Terjadi kesalahan saat mengimpor data tracer alumni.')
+      });
+      throw err;
+    }
+  };
+
   return {
     alumni,
     setAlumni,
     refreshAlumni,
     handleSaveAlumni,
-    handleDeleteAlumni
+    handleDeleteAlumni,
+    handleBulkImportAlumni
   };
 }

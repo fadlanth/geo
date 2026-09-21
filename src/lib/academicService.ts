@@ -316,6 +316,63 @@ export const academicService = {
     await this.logAuditChange('tracer_study', alumni.id_tracer ? 'update' : 'insert', alumni.id_tracer || `${alumni.npm_mahasiswa}|${alumni.tahun_lulus}`, alumni);
   },
 
+  async bulkSaveTracerAlumni(records: TracerStudy[]): Promise<void> {
+    const { error } = await supabase
+      .from('tracer_study')
+      .upsert(records, { onConflict: 'npm_mahasiswa, tahun_lulus' });
+    if (error) throw new Error(error.message);
+    await this.logAuditChange('tracer_study', 'bulk_import', `bulk_${records.length}`, { count: records.length });
+  },
+
+  async importTracerBundle(
+    mahasiswaList: Mahasiswa[],
+    tracerList: TracerStudy[]
+  ): Promise<{ mahasiswaCount: number; tracerCount: number }> {
+    // 1. Cek mahasiswa yang belum terdaftar di database
+    const npms = mahasiswaList.map((m) => m.npm);
+    let missingMahasiswa: Mahasiswa[] = [];
+
+    if (npms.length > 0) {
+      const { data: existingMhs } = await supabase
+        .from('mahasiswa')
+        .select('npm')
+        .in('npm', npms);
+
+      const existingSet = new Set((existingMhs || []).map((m: any) => m.npm));
+      missingMahasiswa = mahasiswaList.filter((m) => !existingSet.has(m.npm));
+    }
+
+    // 2. Auto-register mahasiswa baru agar Foreign Key database tidak error
+    if (missingMahasiswa.length > 0) {
+      const { error: mhsErr } = await supabase
+        .from('mahasiswa')
+        .upsert(missingMahasiswa, { onConflict: 'npm' });
+      if (mhsErr) {
+        console.warn('Auto-register mahasiswa warning:', mhsErr.message);
+      }
+    }
+
+    // 3. Upsert tracer study
+    if (tracerList.length > 0) {
+      const { error: trErr } = await supabase
+        .from('tracer_study')
+        .upsert(tracerList, { onConflict: 'npm_mahasiswa, tahun_lulus' });
+      if (trErr) throw new Error(trErr.message);
+    }
+
+    await this.logAuditChange(
+      'tracer_study',
+      'bulk_import',
+      `tracer_bundle_${tracerList.length}`,
+      { tracerCount: tracerList.length, newMahasiswaCount: missingMahasiswa.length }
+    );
+
+    return {
+      mahasiswaCount: missingMahasiswa.length,
+      tracerCount: tracerList.length
+    };
+  },
+
   async deleteTracerAlumni(id_tracer: string): Promise<void> {
     const { error } = await supabase.from('tracer_study').delete().eq('id_tracer', id_tracer);
     if (error) throw new Error(error.message);

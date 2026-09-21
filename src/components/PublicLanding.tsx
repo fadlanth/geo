@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Users, BookOpen, Award, GraduationCap, ShieldCheck, ArrowRight, Database, Sparkles, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { fmt } from '../lib/format';
+import PublicTracerDashboard from './PublicTracerDashboard';
 
 interface PublicLandingProps {
   onLogin: () => void;
@@ -126,6 +127,11 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
             })}
           </div>
         )}
+
+        {/* Dashboard Visual Tracer Study Publik (Bento Grid) */}
+        <section className="mt-12">
+          <PublicTracerDashboard className="py-2 px-0 min-h-0" />
+        </section>
 
         {/* Catatan privasi */}
         <div className="mt-10 flex items-start gap-3 p-5 rounded-2xl border border-[var(--color-success)]/20 bg-white">
