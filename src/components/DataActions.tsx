@@ -45,7 +45,7 @@ export default function DataActions({
           {onImportPusat && (
             <button
               onClick={() => { setOpen(false); onImportPusat(); }}
-              className="w-full flex items-center justify-between px-4 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-800 transition text-left"
+              className="w-full flex items-center justify-between px-4 py-2 text-xs text-gray-700 hover:bg-emerald-50 hover:text-emerald-800 transition text-left cursor-pointer"
             >
               <div className="flex items-center gap-2.5">
                 <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -56,13 +56,13 @@ export default function DataActions({
           )}
           <button
             onClick={() => { setOpen(false); onImportCsv(); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition"
+            className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
           >
             <FileText className="w-4 h-4 text-blue-600 shrink-0" /> Format Standar CSV
           </button>
           <button
             onClick={() => { setOpen(false); onImportExcel(); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition"
+            className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" /> Format Standar Excel
           </button>
@@ -71,7 +71,7 @@ export default function DataActions({
           {onExportMultiSheet && (
             <button
               onClick={() => { setOpen(false); onExportMultiSheet(); }}
-              className="w-full flex items-center justify-between px-4 py-2 text-xs text-gray-700 hover:bg-teal-50 hover:text-teal-800 transition text-left"
+              className="w-full flex items-center justify-between px-4 py-2 text-xs text-gray-700 hover:bg-teal-50 hover:text-teal-800 transition text-left cursor-pointer"
             >
               <div className="flex items-center gap-2.5">
                 <FileSpreadsheet className="w-4 h-4 text-teal-600 shrink-0" />
@@ -82,14 +82,14 @@ export default function DataActions({
           )}
           <button
             onClick={() => { setOpen(false); onExportExcel(); }}
-            className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition"
+            className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" /> Excel (.xlsx)
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" /> Excel Sederhana (.xlsx)
           </button>
           {onExportRekapPrestasi && (
             <button
               onClick={() => { setOpen(false); onExportRekapPrestasi(); }}
-              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition"
+              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-gray-700 hover:bg-gray-50 transition cursor-pointer"
             >
               <FileSpreadsheet className="w-4 h-4 text-violet-600 shrink-0" /> Rekap + Grafik
             </button>

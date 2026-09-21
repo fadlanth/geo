@@ -51,7 +51,7 @@ import { exportToExcel, exportRekapMultiSheetToExcel } from '../lib/exportUtils'
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
 import ComboboxMahasiswa from './ComboboxMahasiswa';
-import ExportTracerButton from './ExportTracerButton';
+import { exportTracerMultiSheet } from './ExportTracerButton';
 import { autoMapColumns, validateAndNormalizeRows, getImportSummary } from '../lib/tracerImportUtils';
 
 interface TracerTabProps {
@@ -464,36 +464,35 @@ export default function TracerTab({
           <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">Tracer Study Alumni</h2>
           <p className="text-xs text-[var(--color-text-main)]/55">Profil lulusan: bekerja, studi lanjut, wiraswasta</p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2.5 w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
           <Button
             onClick={() => setShowAddModal(true)}
-            className="flex-1 sm:flex-none shadow-xs"
+            className="shadow-xs"
             icon={<Plus className="w-4 h-4" />}
           >
             Tambah Data Tracer
           </Button>
-          <Button
-            variant="secondary"
-            onClick={() => setShowDiktiImporter(true)}
-            className="flex-1 sm:flex-none border-emerald-200 bg-emerald-50/70 text-emerald-800 hover:bg-emerald-100/80 shadow-xs"
-            icon={<Sparkles className="w-4 h-4 text-emerald-600" />}
-          >
-            Import Tracer Pusat
-          </Button>
-          <ExportTracerButton
-            onSuccess={(total) => {
-              triggerToast?.({
-                kind: 'success',
-                title: 'Ekspor Multi-Sheet Berhasil',
-                message: `Berhasil mengunduh ${total} data alumni ke Laporan_Tracer_Study_GEO.xlsx`
-              });
-            }}
-          />
           <DataActions
+            onImportPusat={() => setShowDiktiImporter(true)}
             onImportCsv={() => setShowImport(true)}
             onImportExcel={() => setShowImport(true)}
+            onExportMultiSheet={async () => {
+              try {
+                const total = await exportTracerMultiSheet();
+                triggerToast?.({
+                  kind: 'success',
+                  title: 'Ekspor Multi-Sheet Berhasil',
+                  message: `Berhasil mengunduh ${total} data alumni ke Laporan_Tracer_Study_GEO.xlsx`
+                });
+              } catch {
+                triggerToast?.({
+                  kind: 'error',
+                  title: 'Ekspor Gagal',
+                  message: 'Gagal mengekspor data tracer study ke Excel.'
+                });
+              }
+            }}
             onExportExcel={handleExportAlumni}
-            onImportPusat={() => setShowDiktiImporter(true)}
           />
         </div>
       </div>

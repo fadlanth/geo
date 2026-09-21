@@ -26,6 +26,160 @@ export interface RawTracerStudyRecord {
   } | null;
 }
 
+// Helper untuk ekstrak nilai fleksibel (support format spesifik ataupun skema relasional)
+const extractRowData = (item: RawTracerStudyRecord) => {
+  const npm = item.npm_mahasiswa || '-';
+  const nama = item.nama_alumni || item.mahasiswa?.nama || '-';
+  const tahun = item.tahun_lulus ?? '-';
+
+  // Format Masa Tunggu
+  let masaTunggu = item.masa_tunggu;
+  if (!masaTunggu && item.masa_tunggu_bulan != null) {
+    masaTunggu = `${item.masa_tunggu_bulan} Bulan`;
+  }
+
+  // Format Kategori Gaji
+  let kategoriGaji = item.kategori_gaji;
+  if (!kategoriGaji && item.gaji_pekerjaan != null) {
+    if (item.gaji_pekerjaan <= 0) kategoriGaji = '-';
+    else if (item.gaji_pekerjaan <= 5_000_000) kategoriGaji = '0-5jt';
+    else if (item.gaji_pekerjaan <= 10_000_000) kategoriGaji = '>5-10jt';
+    else kategoriGaji = '>10jt';
+  }
+
+  return {
+    NPM: npm,
+    Nama: nama,
+    Tahun: tahun,
+    'Masa Tunggu': masaTunggu || '-',
+    'Kategori Gaji': kategoriGaji || '-',
+    Instansi: item.instansi_perusahaan || item.instansi_pekerjaan || '-',
+    Jabatan: item.jabatan || '-',
+    'Bidang Usaha': item.bidang_usaha || '-',
+    'Kampus Tujuan': item.kampus_tujuan || item.universitas_tujuan || item.kampus_lanjut || '-',
+    'Program Studi': item.program_studi || item.prodi_lanjut || '-'
+  };
+};
+
+const getColWidths = (rows: Record<string, unknown>[]) => {
+  if (!rows || rows.length === 0) return [];
+  const keys = Object.keys(rows[0]);
+  return keys.map((key) => {
+    let maxLen = key.length;
+    rows.forEach((r) => {
+      const val = r[key];
+      const strLen = val != null ? String(val).length : 0;
+      if (strLen > maxLen) maxLen = strLen;
+    });
+    return { wch: Math.min(Math.max(maxLen + 4, 14), 45) };
+  });
+};
+
+/**
+ * Generate dan download file Excel Multi-Sheet dari tabel tracer_study
+ */
+export async function exportTracerMultiSheet(
+  onSuccess?: (count: number) => void,
+  onError?: (error: Error) => void
+): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from('tracer_study')
+      .select('*, mahasiswa(nama)');
+
+    if (error) {
+      throw new Error(error.message || 'Gagal mengambil data tracer study dari database.');
+    }
+
+    const records = (data as unknown as RawTracerStudyRecord[]) || [];
+    const workbook = XLSX.utils.book_new();
+
+    // Sheet 1: Bekerja
+    const bekerjaData = records
+      .filter((r) => r.status_lulusan === 'Bekerja')
+      .map((r) => {
+        const d = extractRowData(r);
+        return {
+          NPM: d.NPM,
+          Nama: d.Nama,
+          Tahun: d.Tahun,
+          'Masa Tunggu': d['Masa Tunggu'],
+          Instansi: d.Instansi,
+          Jabatan: d.Jabatan,
+          'Kategori Gaji': d['Kategori Gaji']
+        };
+      });
+
+    const wsBekerja = XLSX.utils.json_to_sheet(
+      bekerjaData.length > 0
+        ? bekerjaData
+        : [{ NPM: '', Nama: '', Tahun: '', 'Masa Tunggu': '', Instansi: '', Jabatan: '', 'Kategori Gaji': '' }]
+    );
+    wsBekerja['!cols'] = getColWidths(bekerjaData);
+    XLSX.utils.book_append_sheet(workbook, wsBekerja, 'Bekerja');
+
+    // Sheet 2: Wiraswasta
+    const wiraswastaData = records
+      .filter((r) => r.status_lulusan === 'Wiraswasta')
+      .map((r) => {
+        const d = extractRowData(r);
+        return {
+          NPM: d.NPM,
+          Nama: d.Nama,
+          Tahun: d.Tahun,
+          'Masa Tunggu': d['Masa Tunggu'],
+          'Bidang Usaha': d['Bidang Usaha'],
+          'Kategori Gaji': d['Kategori Gaji']
+        };
+      });
+
+    const wsWiraswasta = XLSX.utils.json_to_sheet(
+      wiraswastaData.length > 0
+        ? wiraswastaData
+        : [{ NPM: '', Nama: '', Tahun: '', 'Masa Tunggu': '', 'Bidang Usaha': '', 'Kategori Gaji': '' }]
+    );
+    wsWiraswasta['!cols'] = getColWidths(wiraswastaData);
+    XLSX.utils.book_append_sheet(workbook, wsWiraswasta, 'Wiraswasta');
+
+    // Sheet 3: Studi Lanjut
+    const studiLanjutData = records
+      .filter((r) => r.status_lulusan === 'Studi Lanjut')
+      .map((r) => {
+        const d = extractRowData(r);
+        return {
+          NPM: d.NPM,
+          Nama: d.Nama,
+          Tahun: d.Tahun,
+          'Kampus Tujuan': d['Kampus Tujuan'],
+          'Program Studi': d['Program Studi']
+        };
+      });
+
+    const wsStudiLanjut = XLSX.utils.json_to_sheet(
+      studiLanjutData.length > 0
+        ? studiLanjutData
+        : [{ NPM: '', Nama: '', Tahun: '', 'Kampus Tujuan': '', 'Program Studi': '' }]
+    );
+    wsStudiLanjut['!cols'] = getColWidths(studiLanjutData);
+    XLSX.utils.book_append_sheet(workbook, wsStudiLanjut, 'Studi Lanjut');
+
+    // Download file
+    XLSX.writeFile(workbook, 'Laporan_Tracer_Study_GEO.xlsx');
+
+    if (onSuccess) {
+      onSuccess(records.length);
+    }
+    return records.length;
+  } catch (err) {
+    const errorObj = err instanceof Error ? err : new Error('Terjadi kegagalan saat mengekspor data tracer study.');
+    console.error('[ExportTracerButton] Export failed:', errorObj);
+    if (onError) {
+      onError(errorObj);
+    }
+    throw errorObj;
+  }
+}
+
 interface ExportTracerButtonProps {
   className?: string;
   onSuccess?: (count: number) => void;
@@ -44,156 +198,10 @@ export const ExportTracerButton: React.FC<ExportTracerButtonProps> = ({
     try {
       setLoading(true);
       setErrorMessage(null);
-
-      // 1. Fetch data mentah lengkap langsung dari tabel tracer_study (join mahasiswa untuk fallback nama)
-      const { data, error } = await supabase
-        .from('tracer_study')
-        .select('*, mahasiswa(nama)');
-
-      if (error) {
-        throw new Error(error.message || 'Gagal mengambil data tracer study dari database.');
-      }
-
-      const records = (data as unknown as RawTracerStudyRecord[]) || [];
-
-      // Helper untuk ekstrak nilai fleksibel (support format spesifik ataupun skema relasional)
-      const extractRowData = (item: RawTracerStudyRecord) => {
-        const npm = item.npm_mahasiswa || '-';
-        const nama = item.nama_alumni || item.mahasiswa?.nama || '-';
-        const tahun = item.tahun_lulus ?? '-';
-
-        // Format Masa Tunggu
-        let masaTunggu = item.masa_tunggu;
-        if (!masaTunggu && item.masa_tunggu_bulan != null) {
-          masaTunggu = `${item.masa_tunggu_bulan} Bulan`;
-        }
-
-        // Format Kategori Gaji
-        let kategoriGaji = item.kategori_gaji;
-        if (!kategoriGaji && item.gaji_pekerjaan != null) {
-          if (item.gaji_pekerjaan <= 0) kategoriGaji = '-';
-          else if (item.gaji_pekerjaan <= 5_000_000) kategoriGaji = '0-5jt';
-          else if (item.gaji_pekerjaan <= 10_000_000) kategoriGaji = '>5-10jt';
-          else kategoriGaji = '>10jt';
-        }
-
-        return {
-          NPM: npm,
-          Nama: nama,
-          Tahun: tahun,
-          'Masa Tunggu': masaTunggu || '-',
-          'Kategori Gaji': kategoriGaji || '-',
-          Instansi: item.instansi_perusahaan || item.instansi_pekerjaan || '-',
-          Jabatan: item.jabatan || '-',
-          'Bidang Usaha': item.bidang_usaha || '-',
-          'Kampus Tujuan': item.kampus_tujuan || item.universitas_tujuan || item.kampus_lanjut || '-',
-          'Program Studi': item.program_studi || item.prodi_lanjut || '-'
-        };
-      };
-
-      // 2. Buat Workbook Excel
-      const workbook = XLSX.utils.book_new();
-
-      // Auto-width generator
-      const getColWidths = (rows: Record<string, unknown>[]) => {
-        if (!rows || rows.length === 0) return [];
-        const keys = Object.keys(rows[0]);
-        return keys.map((key) => {
-          let maxLen = key.length;
-          rows.forEach((r) => {
-            const val = r[key];
-            const strLen = val != null ? String(val).length : 0;
-            if (strLen > maxLen) maxLen = strLen;
-          });
-          return { wch: Math.min(Math.max(maxLen + 4, 14), 45) };
-        });
-      };
-
-      // 3. Sheet 1: Bekerja
-      // Columns: NPM, Nama, Tahun, Masa Tunggu, Kategori Gaji, Instansi, Jabatan
-      const bekerjaData = records
-        .filter((r) => r.status_lulusan === 'Bekerja')
-        .map((r) => {
-          const d = extractRowData(r);
-          return {
-            NPM: d.NPM,
-            Nama: d.Nama,
-            Tahun: d.Tahun,
-            'Masa Tunggu': d['Masa Tunggu'],
-            'Kategori Gaji': d['Kategori Gaji'],
-            Instansi: d.Instansi,
-            Jabatan: d.Jabatan
-          };
-        });
-
-      const wsBekerja = XLSX.utils.json_to_sheet(
-        bekerjaData.length > 0
-          ? bekerjaData
-          : [{ NPM: '', Nama: '', Tahun: '', 'Masa Tunggu': '', 'Kategori Gaji': '', Instansi: '', Jabatan: '' }]
-      );
-      wsBekerja['!cols'] = getColWidths(bekerjaData);
-      XLSX.utils.book_append_sheet(workbook, wsBekerja, 'Bekerja');
-
-      // 4. Sheet 2: Wiraswasta
-      // Columns: NPM, Nama, Tahun, Masa Tunggu, Bidang Usaha, Kategori Gaji
-      const wiraswastaData = records
-        .filter((r) => r.status_lulusan === 'Wiraswasta')
-        .map((r) => {
-          const d = extractRowData(r);
-          return {
-            NPM: d.NPM,
-            Nama: d.Nama,
-            Tahun: d.Tahun,
-            'Masa Tunggu': d['Masa Tunggu'],
-            'Bidang Usaha': d['Bidang Usaha'],
-            'Kategori Gaji': d['Kategori Gaji']
-          };
-        });
-
-      const wsWiraswasta = XLSX.utils.json_to_sheet(
-        wiraswastaData.length > 0
-          ? wiraswastaData
-          : [{ NPM: '', Nama: '', Tahun: '', 'Masa Tunggu': '', 'Bidang Usaha': '', 'Kategori Gaji': '' }]
-      );
-      wsWiraswasta['!cols'] = getColWidths(wiraswastaData);
-      XLSX.utils.book_append_sheet(workbook, wsWiraswasta, 'Wiraswasta');
-
-      // 5. Sheet 3: Studi Lanjut
-      // Columns: NPM, Nama, Tahun, Kampus Tujuan, Program Studi
-      const studiLanjutData = records
-        .filter((r) => r.status_lulusan === 'Studi Lanjut')
-        .map((r) => {
-          const d = extractRowData(r);
-          return {
-            NPM: d.NPM,
-            Nama: d.Nama,
-            Tahun: d.Tahun,
-            'Kampus Tujuan': d['Kampus Tujuan'],
-            'Program Studi': d['Program Studi']
-          };
-        });
-
-      const wsStudiLanjut = XLSX.utils.json_to_sheet(
-        studiLanjutData.length > 0
-          ? studiLanjutData
-          : [{ NPM: '', Nama: '', Tahun: '', 'Kampus Tujuan': '', 'Program Studi': '' }]
-      );
-      wsStudiLanjut['!cols'] = getColWidths(studiLanjutData);
-      XLSX.utils.book_append_sheet(workbook, wsStudiLanjut, 'Studi Lanjut');
-
-      // 6. Download file sebagai "Laporan_Tracer_Study_GEO.xlsx"
-      XLSX.writeFile(workbook, 'Laporan_Tracer_Study_GEO.xlsx');
-
-      if (onSuccess) {
-        onSuccess(records.length);
-      }
+      await exportTracerMultiSheet(onSuccess, onError);
     } catch (err) {
       const errorObj = err instanceof Error ? err : new Error('Terjadi kegagalan saat mengekspor data tracer study.');
-      console.error('[ExportTracerButton] Export failed:', errorObj);
       setErrorMessage(errorObj.message);
-      if (onError) {
-        onError(errorObj);
-      }
     } finally {
       setLoading(false);
     }
