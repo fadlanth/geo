@@ -464,26 +464,22 @@ export default function TracerTab({
           <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">Tracer Study Alumni</h2>
           <p className="text-xs text-[var(--color-text-main)]/55">Profil lulusan: bekerja, studi lanjut, wiraswasta</p>
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center justify-end gap-2.5 w-full sm:w-auto">
           <Button
             onClick={() => setShowAddModal(true)}
-            className="flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none shadow-xs"
             icon={<Plus className="w-4 h-4" />}
           >
             Tambah Data Tracer
           </Button>
-          <button
+          <Button
+            variant="secondary"
             onClick={() => setShowDiktiImporter(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-[#134e53] hover:bg-[#0e3b3f] rounded-xl shadow-sm transition cursor-pointer"
+            className="flex-1 sm:flex-none border-emerald-200 bg-emerald-50/70 text-emerald-800 hover:bg-emerald-100/80 shadow-xs"
+            icon={<Sparkles className="w-4 h-4 text-emerald-600" />}
           >
-            <Sparkles className="w-4 h-4" />
             Import Tracer Pusat
-          </button>
-          <DataActions
-            onImportCsv={() => setShowImport(true)}
-            onImportExcel={() => setShowImport(true)}
-            onExportExcel={handleExportAlumni}
-          />
+          </Button>
           <ExportTracerButton
             onSuccess={(total) => {
               triggerToast?.({
@@ -492,6 +488,12 @@ export default function TracerTab({
                 message: `Berhasil mengunduh ${total} data alumni ke Laporan_Tracer_Study_GEO.xlsx`
               });
             }}
+          />
+          <DataActions
+            onImportCsv={() => setShowImport(true)}
+            onImportExcel={() => setShowImport(true)}
+            onExportExcel={handleExportAlumni}
+            onImportPusat={() => setShowDiktiImporter(true)}
           />
         </div>
       </div>

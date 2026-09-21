@@ -142,7 +142,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
         {/* Header Modal */}
         <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[#134e53]/10 text-[#134e53] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-[var(--color-primary)]/10 text-[var(--color-primary)] flex items-center justify-center shrink-0">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -168,7 +168,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
           {/* Opsi Filter Prodi */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-stone-50 rounded-2xl border border-stone-200/80 text-xs">
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#134e53]" />
+              <Filter className="w-4 h-4 text-[var(--color-primary)]" />
               <span className="font-semibold text-[#241f20]">Penyaringan Otomatis:</span>
               <span className="text-[#241f20]/70">Hanya ambil mahasiswa Geofisika (abaikan jurusan lain)</span>
             </div>
@@ -179,7 +179,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
                 onChange={(e) => handleToggleFilter(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-9 h-5 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#134e53]"></div>
+              <div className="w-9 h-5 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
             </label>
           </div>
 
@@ -192,8 +192,8 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-3xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 ${
               dragActive
-                ? 'border-[#134e53] bg-[#134e53]/5'
-                : 'border-stone-300 hover:border-[#134e53]/50 bg-stone-50/40'
+                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
+                : 'border-stone-300 hover:border-[var(--color-primary)]/50 bg-stone-50/40'
             }`}
           >
             <input
@@ -203,7 +203,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
               onChange={handleFileInputChange}
               className="hidden"
             />
-            <div className="w-12 h-12 rounded-2xl bg-white shadow-xs border border-stone-200 flex items-center justify-center text-[#134e53]">
+            <div className="w-12 h-12 rounded-2xl bg-white shadow-xs border border-stone-200 flex items-center justify-center text-[var(--color-primary)]">
               <UploadCloud className="w-6 h-6" />
             </div>
             <div>
@@ -215,7 +215,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
               </p>
             </div>
             {fileName && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-stone-200 text-xs font-mono text-[#134e53] rounded-full shadow-2xs">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-stone-200 text-xs font-mono text-[var(--color-primary)] rounded-full shadow-2xs">
                 <FileCheck className="w-3.5 h-3.5" />
                 {fileName}
               </span>
@@ -235,7 +235,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
 
           {/* Loading Indicator */}
           {parsing && (
-            <div className="py-8 flex flex-col items-center justify-center gap-2 text-[#134e53]">
+            <div className="py-8 flex flex-col items-center justify-center gap-2 text-[var(--color-primary)]">
               <Loader2 className="w-6 h-6 animate-spin" />
               <p className="text-xs font-medium">Menganalisis baris kuesioner tracer study...</p>
             </div>
@@ -248,7 +248,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
               {/* Ringkasan Ekstraksi */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/70">
-                  <div className="text-xl font-extrabold text-[#134e53]">
+                  <div className="text-xl font-extrabold text-emerald-700">
                     {parseResult.geofisikaFound}
                   </div>
                   <div className="text-[11px] text-[#241f20]/70 font-medium">
@@ -286,7 +286,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
 
               {/* Status Breakdown Chips */}
               <div className="flex flex-wrap gap-2 pt-1">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#134e53]/10 text-[#134e53]">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-100/70 text-emerald-800">
                   <Briefcase className="w-3.5 h-3.5" /> Bekerja: {parseResult.breakdown.bekerja}
                 </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-100/70 text-teal-800">
@@ -324,7 +324,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
                     <tbody className="divide-y divide-stone-100 bg-white">
                       {parseResult.tracerList.slice(0, 5).map((row, idx) => (
                         <tr key={idx} className="hover:bg-stone-50/50">
-                          <td className="py-2 px-3 font-mono font-semibold text-[#134e53]">
+                          <td className="py-2 px-3 font-mono font-semibold text-stone-800">
                             {row.npm_mahasiswa}
                           </td>
                           <td className="py-2 px-3">{row.tahun_lulus}</td>
@@ -364,24 +364,18 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
             Batal
           </Button>
 
-          <button
+          <Button
             type="button"
             onClick={handleSaveToDatabase}
             disabled={!parseResult || parseResult.tracerList.length === 0 || submitting}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold text-white bg-[#134e53] hover:bg-[#0e3b3f] rounded-xl shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            icon={submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
           >
             {submitting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-teal-200" />
-                <span>Menyimpan ke Database...</span>
-              </>
+              <span>Menyimpan ke Database...</span>
             ) : (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-teal-300" />
-                <span>Simpan {parseResult?.tracerList.length || 0} Data ke Database</span>
-              </>
+              <span>Simpan {parseResult?.tracerList.length || 0} Data ke Database</span>
             )}
-          </button>
+          </Button>
         </div>
 
       </div>

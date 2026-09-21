@@ -206,20 +206,18 @@ export const ExportTracerButton: React.FC<ExportTracerButtonProps> = ({
         onClick={handleExport}
         disabled={loading}
         title="Download rekap data mentah tracer study ke Excel (Multi-Sheet)"
-        className={`group relative inline-flex items-center justify-center gap-2.5 px-4 py-2.5 text-sm font-medium text-white rounded-lg shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#134e53]/40 focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer active:scale-[0.98] ${
-          loading ? 'bg-[#0f3e42]' : 'bg-[#134e53] hover:bg-[#0e3b3f] hover:shadow-md'
-        } ${className}`}
+        className={`inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl font-semibold text-xs transition whitespace-nowrap bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 shadow-xs cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${className}`}
       >
         {loading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin text-teal-200" />
-            <span>Memproses Laporan Excel...</span>
+            <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+            <span>Mengekspor...</span>
           </>
         ) : (
           <>
-            <FileSpreadsheet className="w-4 h-4 text-teal-200 transition-transform group-hover:scale-110" />
-            <span>Export Laporan Tracer (.xlsx)</span>
-            <Download className="w-3.5 h-3.5 text-teal-300/80 transition-transform group-hover:translate-y-0.5" />
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>Export Multi-Sheet</span>
+            <Download className="w-3.5 h-3.5 text-slate-400" />
           </>
         )}
       </button>
