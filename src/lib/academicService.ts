@@ -317,9 +317,16 @@ export const academicService = {
   },
 
   async bulkSaveTracerAlumni(records: TracerStudy[]): Promise<void> {
+    const cleanList = records.map((rec) => {
+      const clean: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(rec)) {
+        if (v !== undefined) clean[k] = v;
+      }
+      return clean;
+    });
     const { error } = await supabase
       .from('tracer_study')
-      .upsert(records, { onConflict: 'npm_mahasiswa, tahun_lulus' });
+      .upsert(cleanList, { onConflict: 'npm_mahasiswa, tahun_lulus' });
     if (error) throw new Error(error.message);
     await this.logAuditChange('tracer_study', 'bulk_import', `bulk_${records.length}`, { count: records.length });
   },
@@ -352,11 +359,18 @@ export const academicService = {
       }
     }
 
-    // 3. Upsert tracer study
+    // 3. Upsert tracer study — bersihkan field undefined agar tidak error schema cache
     if (tracerList.length > 0) {
+      const cleanList = tracerList.map((rec) => {
+        const clean: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(rec)) {
+          if (v !== undefined) clean[k] = v;
+        }
+        return clean;
+      });
       const { error: trErr } = await supabase
         .from('tracer_study')
-        .upsert(tracerList, { onConflict: 'npm_mahasiswa, tahun_lulus' });
+        .upsert(cleanList, { onConflict: 'npm_mahasiswa, tahun_lulus' });
       if (trErr) throw new Error(trErr.message);
     }
 
