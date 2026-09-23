@@ -269,6 +269,30 @@ export default function TracerTab({
     .filter(k => (tungguKategoriMap[k] || 0) > 0)
     .map(k => ({ label: k, count: tungguKategoriMap[k] || 0 }));
 
+  // === Rekap Gaji per Tahun Lulus (alumni Bekerja & Wiraswasta) ===
+  const berpenghasilan = cohortAlumni.filter(a => a.status_lulusan === 'Bekerja' || a.status_lulusan === 'Wiraswasta');
+  const GAJI_KATEGORI = ['0-5jt', '>5-10jt', '>10jt'] as const;
+  const sortedTahun = Array.from(new Set(cohortAlumni.map(a => a.tahun_lulus))).sort((a, b) => b - a);
+  const gajiPerTahun = sortedTahun.map(th => {
+    const bekerjaTahun = berpenghasilan.filter(a => a.tahun_lulus === th);
+    const counts: Record<typeof GAJI_KATEGORI[number], number> = { '0-5jt': 0, '>5-10jt': 0, '>10jt': 0 };
+    bekerjaTahun.forEach(a => {
+      const kategori = getGajiKategori(a.gaji_pekerjaan);
+      if (kategori !== '-') counts[kategori as typeof GAJI_KATEGORI[number]]++;
+    });
+    return {
+      tahun_lulus: th,
+      '0-5jt': counts['0-5jt'],
+      '>5-10jt': counts['>5-10jt'],
+      '>10jt': counts['>10jt'],
+      total: bekerjaTahun.filter(a => getGajiKategori(a.gaji_pekerjaan) !== '-').length,
+    };
+  });
+  const gajiGrandTotal = GAJI_KATEGORI.reduce((acc, k) => {
+    acc[k] = gajiPerTahun.reduce((s, r) => s + r[k], 0);
+    return acc;
+  }, { '0-5jt': 0, '>5-10jt': 0, '>10jt': 0 } as Record<typeof GAJI_KATEGORI[number], number>);
+
   // === Matriks Akreditasi LAMSAMA / IKU-1 Tahunan ===
   const akreditasiMatrix = useMemo(() => {
     return tahunOptions.map(th => {
@@ -898,6 +922,49 @@ export default function TracerTab({
                   )}
                 </div>
               </div>
+
+              {/* Rekap Gaji Alumni per Tahun Lulus (Bekerja & Wiraswasta) */}
+              {gajiPerTahun.length > 0 && (
+                <div className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 shadow-xs">
+                  <div className="flex items-center mb-3 pb-2 border-b border-gray-100">
+                    <h3 className="font-display font-bold text-sm text-[var(--color-text-main)] flex items-center gap-2">
+                      <DollarSign className="w-4 h-4 text-emerald-600" /> Rekap Gaji Alumni per Tahun Lulus
+                    </h3>
+                    <span className="ml-2 text-[10px] font-semibold text-gray-400">Bekerja &amp; Wiraswasta</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs md:text-sm">
+                      <thead>
+                        <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 font-bold uppercase tracking-wider">
+                          <th className="p-3 pl-4">Tahun Lulus</th>
+                          <th className="p-3 text-center">0–5jt</th>
+                          <th className="p-3 text-center">&gt;5–10jt</th>
+                          <th className="p-3 text-center">&gt;10jt</th>
+                          <th className="p-3 text-center font-display">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {gajiPerTahun.map(r => (
+                          <tr key={r.tahun_lulus} className="hover:bg-gray-50/30">
+                            <td className="p-3 pl-4 font-bold text-[var(--color-text-main)]">{r.tahun_lulus}</td>
+                            <td className="p-3 text-center text-gray-700">{r['0-5jt']}</td>
+                            <td className="p-3 text-center text-gray-700">{r['>5-10jt']}</td>
+                            <td className="p-3 text-center text-gray-700">{r['>10jt']}</td>
+                            <td className="p-3 text-center font-bold text-[var(--color-primary)]">{r.total}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t-2 border-gray-200 bg-gray-50/30 font-bold">
+                          <td className="p-3 pl-4 text-[var(--color-text-main)]">TOTAL</td>
+                          <td className="p-3 text-center">{gajiGrandTotal['0-5jt']}</td>
+                          <td className="p-3 text-center">{gajiGrandTotal['>5-10jt']}</td>
+                          <td className="p-3 text-center">{gajiGrandTotal['>10jt']}</td>
+                          <td className="p-3 text-center text-[var(--color-primary)]">{gajiGrandTotal['0-5jt'] + gajiGrandTotal['>5-10jt'] + gajiGrandTotal['>10jt']}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
 
               {/* Table Data Alumni Terlacak */}
               <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden shadow-xs">
