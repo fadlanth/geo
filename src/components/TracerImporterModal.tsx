@@ -15,6 +15,7 @@ import {
   Filter
 } from 'lucide-react';
 import Button from './Button';
+import { useEscapeClose } from '../lib/hooks';
 import { parseTracerFile, TracerParseResult } from '../lib/tracerParser';
 import { academicService } from '../lib/academicService';
 import { ToastOptions } from './Toast';
@@ -32,6 +33,8 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
   onSuccess,
   triggerToast
 }) => {
+  useEscapeClose(isOpen, onClose);
+
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [filterGeofisika, setFilterGeofisika] = useState<boolean>(true);
   const [fileName, setFileName] = useState<string>('');
@@ -185,12 +188,21 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
 
           {/* Area Drag & Drop */}
           <div
+            role="button"
+            tabIndex={0}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-3xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 ${
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            aria-label="Pilih berkas tracer study atau seret berkas ke sini"
+            className={`border-2 border-dashed rounded-3xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
               dragActive
                 ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
                 : 'border-stone-300 hover:border-[var(--color-primary)]/50 bg-stone-50/40'

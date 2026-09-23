@@ -53,7 +53,6 @@ export default function MahasiswaTab({
   const ROWS_PER_PAGE = 25;
   const searchQuery = useDebounce(rawSearch, 350);
 
-  // Modals / Form toggles
   const [showAddMhs, setShowAddMhs] = useState(false);
   const [showImport, setShowImport] = useState(false);
 
@@ -64,10 +63,8 @@ export default function MahasiswaTab({
     if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [page]);
 
-  // Editing state
   const [editingMhs, setEditingMhs] = useState<Mahasiswa | null>(null);
 
-  // Forms states
   const [mhsForm, setMhsForm] = useState<Mahasiswa>({
     npm: '',
     nama: '',
@@ -80,10 +77,8 @@ export default function MahasiswaTab({
     tahun_lulus: undefined
   });
 
-  // Error validasi per-field (ditampilkan inline di form)
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Filter students
   const filteredMahasiswa = mahasiswa.filter(m => {
     const matchesSearch = m.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           m.npm.includes(searchQuery);
@@ -98,11 +93,9 @@ export default function MahasiswaTab({
   const safePage = Math.min(page, Math.max(1, totalPages));
   const paginatedMahasiswa = filteredMahasiswa.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
 
-  // Handle forms submit
   const handleAddMhsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // --- Validasi client sebelum simpan ---
     const errs: Record<string, string> = {};
     errs.nama = val(validators.nama(mhsForm.nama));
     if (!editingMhs) errs.npm = val(validators.npm(mhsForm.npm));
@@ -387,7 +380,7 @@ export default function MahasiswaTab({
                       {filteredMahasiswa.length === 0 && (
                         <tr>
                           <td colSpan={6} className="text-center py-12 text-sm text-gray-400">
-                            Tidak menemukan mahasiswa sesuai kriteria pencarian & filter.
+                            Data mahasiswa tidak ditemukan.
                           </td>
                         </tr>
                       )}
@@ -438,7 +431,7 @@ export default function MahasiswaTab({
                   placeholder="Contoh: Andi Pratama"
                   value={mhsForm.nama}
                   onChange={(e) => { setMhsForm({...mhsForm, nama: e.target.value}); if (errors.nama) setErrors({...errors, nama: undefined}); }}
-                  className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.nama ? 'border-red-400' : ''}`}
+                  className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 ${errors.nama ? 'border-red-400' : ''}`}
                 />
                 {errors.nama && <p className="mt-1 text-[10px] text-red-600">{errors.nama}</p>}
               </div>
@@ -454,7 +447,7 @@ export default function MahasiswaTab({
                     placeholder="Contoh: 12324001"
                     value={mhsForm.npm}
                     onChange={(e) => { setMhsForm({...mhsForm, npm: e.target.value}); if (errors.npm) setErrors({...errors, npm: undefined}); }}
-                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${errors.npm ? 'border-red-400' : ''}`}
+                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${errors.npm ? 'border-red-400' : ''}`}
                   />
                   {errors.npm && <p className="mt-1 text-[10px] text-red-600">{errors.npm}</p>}
                 </div>
@@ -466,7 +459,7 @@ export default function MahasiswaTab({
                     required
                     value={mhsForm.angkatan}
                     onChange={(e) => setMhsForm({...mhsForm, angkatan: Number(e.target.value)})}
-                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.angkatan ? 'border-red-400' : ''}`}
+                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 ${errors.angkatan ? 'border-red-400' : ''}`}
                   />
                   {errors.angkatan && <p className="mt-1 text-[10px] text-red-600">{errors.angkatan}</p>}
                 </div>
@@ -479,7 +472,7 @@ export default function MahasiswaTab({
                     id="mhs-jk"
                     value={mhsForm.jenis_kelamin}
                     onChange={(e) => setMhsForm({...mhsForm, jenis_kelamin: e.target.value})}
-                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+                    className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20"
                   >
                     <option value="L">Laki-laki (L)</option>
                     <option value="P">Perempuan (P)</option>

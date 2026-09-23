@@ -740,7 +740,7 @@ export default function PrestasiTab({
                   {filteredPrestasi.length === 0 && (
                     <tr>
                       <td colSpan={6} className="text-center py-12 text-sm text-gray-400">
-                        Tidak ada data prestasi yang sesuai.
+                        Data prestasi tidak ditemukan.
                       </td>
                     </tr>
                   )}

@@ -513,7 +513,7 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                   {filteredMbkm.length === 0 && (
                     <tr>
                       <td colSpan={5} className="text-center py-12 text-sm text-gray-400">
-                        Tidak ada data magang yang sesuai.
+                        Data magang/MBKM tidak ditemukan.
                       </td>
                     </tr>
                   )}

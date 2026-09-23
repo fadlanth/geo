@@ -408,7 +408,7 @@ export default function DosenTab({
                 ) : (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-gray-400">
-                      Tidak ditemukan data dosen yang cocok dengan filter pencarian.
+                      Data dosen tidak ditemukan.
                     </td>
                   </tr>
                 )}
@@ -472,7 +472,7 @@ export default function DosenTab({
                     placeholder="Contoh: 1982031520..."
                     value={form.nip}
                      onChange={(e) => { setForm({...form, nip: e.target.value.replace(/\s+/g, '')}); if (errors.nip) setErrors({...errors, nip: undefined}); }}
-                    className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition disabled:bg-gray-50 disabled:text-gray-400 ${errors.nip ? 'border-red-400' : ''}`}
+                    className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 transition disabled:bg-gray-50 disabled:text-gray-400 ${errors.nip ? 'border-red-400' : ''}`}
                   />
                   {errors.nip && <p className="mt-1 text-[10px] text-red-600">{errors.nip}</p>}
                 </div>
@@ -484,7 +484,7 @@ export default function DosenTab({
                     placeholder="Contoh: MUF"
                     value={form.kode_dosen}
                     onChange={(e) => setForm({...form, kode_dosen: e.target.value.toUpperCase()})}
-                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition uppercase"
+                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 transition uppercase"
                   />
                 </div>
                 <div>
@@ -496,7 +496,7 @@ export default function DosenTab({
                     placeholder="Contoh: muf2024"
                     value={form.sandi_dosen || ''}
                     onChange={(e) => { setForm({...form, sandi_dosen: e.target.value}); if (errors.sandi) setErrors({...errors, sandi: undefined}); }}
-                    className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition ${errors.sandi ? 'border-red-400' : ''}`}
+                    className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 transition ${errors.sandi ? 'border-red-400' : ''}`}
                   />
                   {errors.sandi && <p className="mt-1 text-[10px] text-red-600">{errors.sandi}</p>}
                 </div>
@@ -509,7 +509,7 @@ export default function DosenTab({
                     id="dosen-golongan"
                     value={form.golongan}
                     onChange={(e) => setForm({...form, golongan: e.target.value})}
-                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] bg-white"
+                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 bg-white"
                   >
                     <option value="III/a">III/a (Penata Muda)</option>
                     <option value="III/b">III/b (Penata Muda Tk. I)</option>
@@ -530,7 +530,7 @@ export default function DosenTab({
                     placeholder="Contoh: Penata"
                     value={form.pangkat}
                     onChange={(e) => setForm({...form, pangkat: e.target.value})}
-                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] transition"
+                    className="w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 transition"
                   />
                 </div>
               </div>
@@ -542,7 +542,7 @@ export default function DosenTab({
                     id="dosen-jabatan"
                     value={form.jabatan}
                     onChange={(e) => { setForm({...form, jabatan: e.target.value}); if (errors.jabatan) setErrors({...errors, jabatan: undefined}); }}
-                    className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] bg-white ${errors.jabatan ? 'border-red-400' : ''}`}
+                    className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 bg-white ${errors.jabatan ? 'border-red-400' : ''}`}
                   >
                     <option value="Asisten Ahli">Asisten Ahli</option>
                     <option value="Lektor">Lektor</option>

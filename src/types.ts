@@ -1,7 +1,5 @@
-// =====================================================
-// GEO INFO — Geofisika UNPAD
-// Types sesuai skema Supabase
-// =====================================================
+// GEO INFO — Types & Master Data Definition sesuai skema Supabase
+
 
 export type UserRole = 'admin' | 'operator' | 'dosen' | 'guest';
 

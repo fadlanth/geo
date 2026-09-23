@@ -1,5 +1,6 @@
 import { AlertTriangle, X } from 'lucide-react';
 import Button from './Button';
+import { useEscapeClose } from '../lib/hooks';
 
 interface ConfirmDialogProps {
   title: string;
@@ -11,6 +12,7 @@ interface ConfirmDialogProps {
 }
 
 export default function ConfirmDialog({ title, message, detail, confirmLabel = 'Hapus', onConfirm, onCancel }: ConfirmDialogProps) {
+  useEscapeClose(true, onCancel);
   return (
     <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={onCancel}>
       <div

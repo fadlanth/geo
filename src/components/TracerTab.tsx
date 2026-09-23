@@ -1293,47 +1293,53 @@ export default function TracerTab({
                             {row.terlacak}
                           </td>
                           <td className="p-3.5 text-center">
-                            <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${
-                              row.rate >= 80 ? 'bg-emerald-100 text-emerald-800' :
-                              row.rate >= 60 ? 'bg-amber-100 text-amber-800' :
-                              'bg-rose-100 text-rose-800'
-                            }`}>
-                              {row.rate}%
-                            </span>
+                            {row.totalLulusan === 0 ? (
+                              <span className="px-2 py-0.5 rounded-full font-bold text-xs bg-gray-100 text-gray-400">
+                                -
+                              </span>
+                            ) : (
+                              <span className={`px-2 py-0.5 rounded-full font-bold text-xs ${
+                                row.rate >= 80 ? 'bg-emerald-100 text-emerald-800' :
+                                row.rate >= 60 ? 'bg-amber-100 text-amber-800' :
+                                'bg-rose-100 text-rose-800'
+                              }`}>
+                                {row.rate}%
+                              </span>
+                            )}
                           </td>
                           {/* Waktu Tunggu */}
                           <td className="p-3 text-center border-l border-gray-100 font-medium text-emerald-700">
-                            {row.tungguKurang6}
+                            {row.totalLulusan === 0 ? '-' : row.tungguKurang6}
                           </td>
                           <td className="p-3 text-center font-medium text-gray-700">
-                            {row.tunggu6sd18}
+                            {row.totalLulusan === 0 ? '-' : row.tunggu6sd18}
                           </td>
                           <td className="p-3 text-center font-medium text-rose-600">
-                            {row.tungguLebih18}
+                            {row.totalLulusan === 0 ? '-' : row.tungguLebih18}
                           </td>
                           {/* Tingkat */}
                           <td className="p-3 text-center border-l border-gray-100 font-medium text-gray-600">
-                            {row.lokal}
+                            {row.totalLulusan === 0 ? '-' : row.lokal}
                           </td>
                           <td className="p-3 text-center font-medium text-blue-700">
-                            {row.nasional}
+                            {row.totalLulusan === 0 ? '-' : row.nasional}
                           </td>
                           <td className="p-3 text-center font-medium text-indigo-700 font-semibold">
-                            {row.multiOrInt}
+                            {row.totalLulusan === 0 ? '-' : row.multiOrInt}
                           </td>
                           {/* Aktivitas */}
                           <td className="p-3 text-center border-l border-gray-100 font-medium text-teal-700">
-                            {row.studiLanjut}
+                            {row.totalLulusan === 0 ? '-' : row.studiLanjut}
                           </td>
                           <td className="p-3 text-center font-medium text-amber-700">
-                            {row.wiraswasta}
+                            {row.totalLulusan === 0 ? '-' : row.wiraswasta}
                           </td>
                           <td className="p-3 text-center font-medium text-gray-400">
-                            {row.belumBekerja}
+                            {row.totalLulusan === 0 ? '-' : row.belumBekerja}
                           </td>
                           {/* Gaji */}
                           <td className="p-3 text-center pr-5 border-l border-gray-100 font-bold text-teal-800">
-                            {row.gajiDiatasUMR}
+                            {row.totalLulusan === 0 ? '-' : row.gajiDiatasUMR}
                           </td>
                         </tr>
                       ))}

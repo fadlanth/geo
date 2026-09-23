@@ -1,7 +1,5 @@
-// =====================================================
-// GEO INFO — Smart Tracer Study Import Utils
-// Auto-detects columns, normalizes messy data, validates rows
-// =====================================================
+// Integrasi dan normalisasi kolom hasil parse Tracer Study Pusat ke skema GEO INFO.
+
 
 import { TracerStudy } from '../types';
 

@@ -1,8 +1,6 @@
-// ==============================================================================
-// GEO INFO — Parser Cerdas Format Kuesioner Tracer Study Pusat (Kemdikbud)
-// Mendukung file: .xlsx, .xls, .csv, dan XML Spreadsheet 2003
-// Kompatibel dengan variasi format dari berbagai tahun survei.
-// ==============================================================================
+// Parser Kuesioner Tracer Study Pusat (Kemdikbud).
+// Mendukung file: .xlsx, .xls, .csv, dan XML Spreadsheet 2003.
+
 
 import * as XLSX from 'xlsx';
 import { Mahasiswa, TracerStudy } from '../types';

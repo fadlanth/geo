@@ -123,7 +123,7 @@ export default function OverviewTab({
     return (
       <button
         onClick={(e) => { e.stopPropagation(); setDrillFilter({ angkatan, status }); setShowAngkatanDetail(true); }}
-        className={`chip ${chipClass} cursor-pointer hover:opacity-80`}
+        className={`chip ${chipClass} cursor-pointer hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]`}
         title={title}
       >
         {count}
@@ -226,10 +226,19 @@ export default function OverviewTab({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Stat 1: Students */}
           <div 
+            role="button"
+            tabIndex={0}
             onClick={() => { setShowAngkatanDetail(true); setDrillFilter(null); }}
-            className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 shadow-xs hover:shadow-md transition duration-200 cursor-pointer hover:border-[var(--color-primary)]/30 relative"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowAngkatanDetail(true);
+                setDrillFilter(null);
+              }
+            }}
+            aria-label="Lihat ringkasan detail mahasiswa per angkatan"
+            className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10 shadow-xs hover:shadow-md transition duration-200 cursor-pointer hover:border-[var(--color-primary)]/30 relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
           >
             <div className="flex justify-between items-start mb-3">
               <div className="p-3 bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)] rounded-xl">

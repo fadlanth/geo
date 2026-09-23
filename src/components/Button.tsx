@@ -15,7 +15,7 @@ interface ButtonProps {
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }
 
-const BASE = 'inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-xs transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed';
+const BASE = 'inline-flex items-center justify-center gap-2 rounded-xl font-semibold text-xs transition whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-primary)]';
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: 'bg-[var(--color-primary)] text-[var(--color-base)] hover:bg-[var(--color-primary-light)] shadow-sm shadow-[var(--color-primary)]/20',

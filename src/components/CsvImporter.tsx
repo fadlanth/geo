@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle2, AlertCircle, FileText, X } from 'lucide-react';
 import Button from './Button';
+import { useEscapeClose } from '../lib/hooks';
 import { errMsg } from '../lib/format';
 
 const getXLSX = async () => import('xlsx');
@@ -24,6 +25,7 @@ export default function CsvImporter({
   templateCsv,
   templateData
 }: CsvImporterProps) {
+  useEscapeClose(true, onClose);
   const [dragActive, setDragActive] = useState(false);
   const [status, setStatus] = useState<'idle' | 'parsing' | 'preview' | 'importing' | 'success' | 'error'>('idle');
   const [parsedData, setParsedData] = useState<Record<string, unknown>[]>([]);
@@ -245,18 +247,18 @@ export default function CsvImporter({
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl">
-        <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-[var(--color-primary)] text-white">
+      <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-[var(--color-primary)] text-white shrink-0">
           <div>
             <h3 className="font-display font-bold text-lg">Import CSV: {title}</h3>
-              <p className="text-xs opacity-80 mt-0.5">Unggah data massal dengan mudah melalui format CSV atau Excel</p>
+            <p className="text-xs opacity-80 mt-0.5">Unggah data massal berkas .csv atau .xlsx</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-xl transition">
+          <button onClick={onClose} aria-label="Tutup" className="p-2 hover:bg-white/10 rounded-xl transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           {/* STATE: IDLE OR ERROR (SHOW UPLOAD) */}
           {(status === 'idle' || status === 'error') && (
             <div className="space-y-4">
@@ -277,16 +279,18 @@ export default function CsvImporter({
               )}
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-xs text-blue-900 font-semibold mb-2">📋 Format Kolom yang Diperlukan:</p>
+                <p className="text-xs text-blue-900 font-semibold mb-2">Format Kolom yang Diperlukan:</p>
                 <div className="text-xs text-blue-800 space-y-1">
                   <p><span className="font-mono bg-white px-2 py-1 rounded mr-2">{expectedHeaders.join(', ')}</span></p>
-                  <p className="mt-2">✓ Gunakan template yang tersedia untuk kemudahan</p>
-                  <p>✓ Pastikan data sesuai dengan urutan kolom</p>
+                  <p className="mt-2">Pastikan nama kolom sesuai dengan format di atas.</p>
+                  <p>Gunakan template resmi bila diperlukan.</p>
                 </div>
               </div>
 
               <div 
-                className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer ${
+                role="button"
+                tabIndex={0}
+                className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
                   dragActive ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-gray-200 hover:border-[var(--color-primary)]/50 hover:bg-gray-50'
                 }`}
                 onDragEnter={handleDrag}
@@ -294,6 +298,13 @@ export default function CsvImporter({
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                aria-label="Pilih berkas CSV atau seret ke area ini"
               >
                 <input
                   ref={fileInputRef}
