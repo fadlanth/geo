@@ -348,6 +348,7 @@ export default function App() {
                     <TracerTab
                       alumni={alumni}
                       mahasiswa={mahasiswa}
+                      dosen={dosen}
                       loading={initialLoading || isRefreshing}
                       onSaveAlumni={handleSaveAlumni}
                       onDeleteAlumni={handleDeleteAlumni}
