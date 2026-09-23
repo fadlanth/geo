@@ -13,7 +13,12 @@ diubah pengguna terautentikasi.
 - **Dosen** — CRUD, Sandi Dosen (tersembunyi, tidak diexport), grafik jabatan
 - **Prestasi** — CRUD prestasi + anggota, filter tingkat/juara
 - **Magang & MBKM** — CRUD riwayat magang, filter semester
-- **Tracer Study** — CRUD profil lulusan, rekap gaji/status, export multi-sheet
+- **Tracer Study & Monitoring Cohort** — 
+  - **Cohort Selector**: Analisis berbasis tahun kelulusan resmi prodi (TS, TS-1, TS-2, TS-3, dst.).
+  - **Response Rate Indicator**: Pemantauan tingkat keterlacakan otomatis dengan target kepatuhan akreditasi Unggul LAMSAMA ($\ge 80\%$).
+  - **Gap Analysis (Alumni Belum Terlacak)**: Sinkronisasi Master Data Mahasiswa lulusan dengan hasil kuesioner untuk mendeteksi alumni yang belum merespons, dilengkapi info Dosen Wali dan aksi cepat input/salin data.
+  - **Matriks Akreditasi LAMSAMA & IKU-1**: Tabel matriks standar borang akreditasi (waktu tunggu kerja, skala perusahaan, studi lanjut, wiraswasta, gaji $\ge$ UMR) siap ekspor ke Excel.
+  - **Smart Importer Kuesioner**: Parser cerdas untuk file unduhan tracer study universitas / Dikti (kode f8, f5-02, dsb.) serta file CSV/Excel manual.
 - **Log Aktivitas** — audit trail (admin-only)
 
 ## Quick Start
