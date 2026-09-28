@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense, lazy } from 'react';
 import { 
   Menu, 
   User, 
-  Database
+  Database,
+  LogOut,
+  ChevronDown
 } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import LoginPage from './components/LoginPage';
@@ -47,21 +49,46 @@ const isTabAuthorized = (tab: string, userRole: UserRole): boolean => {
 
 export default function App() {
   const { isAuthenticated, isLoading: authLoading, logout, username, role } = useAuth();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    if (showProfileMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showProfileMenu]);
   
-  // Hash-based routing
-  const getInitialTab = (): string => {
-    const hash = window.location.hash.replace(/^#\/?/, '').trim();
-    return VALID_TABS.includes(hash) ? hash : 'ringkasan';
+  // Hash-based routing & sub-routing (e.g. #mbkm/penelitian)
+  const parseHash = () => {
+    const raw = window.location.hash.replace(/^#\/?/, '').trim();
+    const [tab, subTab] = raw.split('/');
+    const resolvedTab = VALID_TABS.includes(tab) ? tab : 'ringkasan';
+    return {
+      tab: resolvedTab,
+      subTab: subTab || (resolvedTab === 'mbkm' ? 'magang' : undefined)
+    };
   };
 
-  const [activeTab, setActiveTabState] = useState<string>(getInitialTab);
+  const initialRoute = parseHash();
+  const [activeTab, setActiveTabState] = useState<string>(initialRoute.tab);
+  const [activeSubTab, setActiveSubTab] = useState<string>(initialRoute.subTab || 'magang');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
 
-  const setActiveTab = useCallback((tab: string) => {
+  const setActiveTab = useCallback((tab: string, subTab?: string) => {
     if (isTabAuthorized(tab, role)) {
       setActiveTabState(tab);
-      window.location.hash = `#${tab}`;
+      const nextSubTab = subTab || (tab === 'mbkm' ? 'magang' : undefined);
+      if (nextSubTab) {
+        setActiveSubTab(nextSubTab);
+      }
+      window.location.hash = nextSubTab && tab === 'mbkm' ? `#${tab}/${nextSubTab}` : `#${tab}`;
     } else {
       setActiveTabState('ringkasan');
       window.location.hash = '#ringkasan';
@@ -79,13 +106,12 @@ export default function App() {
 
   useEffect(() => {
     const handleHashChange = () => {
-      const hash = window.location.hash.replace(/^#\/?/, '').trim();
-      if (VALID_TABS.includes(hash)) {
-        if (isTabAuthorized(hash, role)) {
-          setActiveTabState(hash);
-        } else {
-          setActiveTab('ringkasan');
-        }
+      const { tab, subTab } = parseHash();
+      if (isTabAuthorized(tab, role)) {
+        setActiveTabState(tab);
+        if (subTab) setActiveSubTab(subTab);
+      } else {
+        setActiveTab('ringkasan');
       }
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -198,6 +224,7 @@ export default function App() {
       {/* SIDEBAR NAVIGATION */}
       <Sidebar 
         activeTab={activeTab} 
+        activeSubTab={activeSubTab}
         setActiveTab={setActiveTab} 
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={setIsMobileOpen}
@@ -234,19 +261,41 @@ export default function App() {
               </span>
             </div>
 
-            {/* Admin User info */}
-            <div className="flex items-center gap-2.5">
-              <div className="text-right hidden sm:block">
-                <p className="text-xs font-bold text-[var(--color-text-main)]">{username}</p>
-                <p className="text-[9px] text-gray-400 font-semibold tracking-wider uppercase">Fakultas MIPA ({role})</p>
-              </div>
-              <button 
-                onClick={logout}
-                className="p-2 bg-[var(--color-accent)] hover:bg-[var(--color-accent-dark)] rounded-xl text-[var(--color-base)] transition"
-                title="Keluar (Logout)"
+            {/* Profile dropdown */}
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => setShowProfileMenu(prev => !prev)}
+                className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-50 transition"
+                aria-expanded={showProfileMenu}
+                aria-haspopup="true"
               >
-                <User className="w-5 h-5" />
+                <div className="w-8 h-8 rounded-lg bg-[var(--color-accent)] flex items-center justify-center text-[var(--color-base)]">
+                  <User className="w-4.5 h-4.5" />
+                </div>
+                <div className="text-left hidden sm:block">
+                  <p className="text-xs font-bold text-[var(--color-text-main)] leading-tight">{username}</p>
+                  <p className="text-[9px] text-gray-400 font-semibold tracking-wider uppercase">FMIPA · {role}</p>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-gray-400 hidden sm:block transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
               </button>
+
+              {showProfileMenu && (
+                <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-gray-100 shadow-lg shadow-black/8 py-1.5 z-50">
+                  <div className="px-4 py-2.5 border-b border-gray-100">
+                    <p className="text-sm font-bold text-[var(--color-text-main)]">{username}</p>
+                    <p className="text-[10px] text-gray-400 font-semibold tracking-wider uppercase mt-0.5">Fakultas MIPA · {role}</p>
+                  </div>
+                  <div className="p-1.5">
+                    <button
+                      onClick={() => { setShowProfileMenu(false); logout(); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Keluar dari Sistem
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -336,6 +385,8 @@ export default function App() {
                       mahasiswa={mahasiswa}
                       dosen={dosen}
                       loading={initialLoading || isRefreshing}
+                      activeSubTab={activeSubTab}
+                      onSubTabChange={setActiveSubTab}
                       onSaveMbkm={handleSaveMbkm}
                       onDeleteMbkm={handleDeleteMbkm}
                       onBulkImportMagang={handleBulkImportMagang}

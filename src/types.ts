@@ -63,15 +63,24 @@ export interface AnggotaPrestasi {
   peran?: string | null;
 }
 
+export type JenisKegiatan = 'Magang Industri' | 'Penelitian Dosen';
+
 export interface RiwayatMBKM {
   id_mbkm?: string;
   npm_mahasiswa: string;
+  jenis_kegiatan: JenisKegiatan;
   tempat_instansi: string;
   semester: string;
   judul_topik_magang?: string;
   dosen_pembimbing_lapangan?: string;
   nip_dosen_pembimbing_dalam?: string | null;
   periode_magang?: string;
+
+  // Khusus Penelitian Dosen (sesuai borang data riil akreditasi)
+  keterlibatan?: string;
+  sumber_dana?: string;
+  nama_ketua_riset?: string;
+  bukti_dokumen?: string;
 }
 
 export interface TracerStudy {

@@ -8,15 +8,17 @@ import {
   Briefcase,
   ChevronLeft,
   ChevronRight,
-  LogOut,
   BookOpen,
   Activity,
+  Building2,
+  Microscope,
 } from 'lucide-react';
-import { useAuth, UserRole } from '../lib/AuthContext';
+import { UserRole } from '../lib/AuthContext';
 
 interface SidebarProps {
   activeTab: string;
-  setActiveTab: (tab: string) => void;
+  activeSubTab?: string;
+  setActiveTab: (tab: string, subTab?: string) => void;
   isMobileOpen: boolean;
   setIsMobileOpen: (open: boolean) => void;
   role: UserRole;
@@ -24,12 +26,13 @@ interface SidebarProps {
 
 export default function Sidebar({ 
   activeTab, 
+  activeSubTab,
   setActiveTab, 
   isMobileOpen,
   setIsMobileOpen,
   role
 }: SidebarProps) {
-  const { logout } = useAuth();
+
   const [collapsed, setCollapsed] = useState<boolean>(false);
 
   useEffect(() => {
@@ -70,9 +73,13 @@ export default function Sidebar({
     },
     {
       id: 'mbkm',
-      label: 'Program Magang / MBKM',
+      label: 'Kegiatan Luar Prodi',
       icon: Briefcase,
-      roles: ['admin', 'operator'] as UserRole[]
+      roles: ['admin', 'operator'] as UserRole[],
+      subItems: [
+        { id: 'magang', label: 'Magang Industri', icon: Building2 },
+        { id: 'penelitian', label: 'Penelitian Dosen', icon: Microscope },
+      ]
     },
     {
       id: 'tracer',
@@ -147,25 +154,53 @@ export default function Sidebar({
             {visibleSections.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+              const subItems = 'subItems' in item ? (item as any).subItems as { id: string; label: string; icon: any }[] : undefined;
 
               return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    setIsMobileOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3.5 rounded-xl font-medium text-sm transition-all duration-200 ${isActive ? 'shadow-md shadow-[var(--color-accent)]/15 font-semibold scale-[1.01]' : 'text-[var(--sidebar-text)]/75 hover:text-white hover:bg-white/10'}`}
-                  style={{ 
-                    padding: collapsed ? '0.55rem' : '0.7rem 1rem', 
-                    justifyContent: collapsed ? 'center' : 'flex-start',
-                    background: isActive ? 'color-mix(in srgb, var(--color-accent) 14%, var(--color-base))' : 'transparent', 
-                    color: isActive ? 'var(--color-accent-dark)' : 'inherit' 
-                  }}
-                >
-                  <Icon className="w-5 h-5 shrink-0" />
-                  {!collapsed && <span className="truncate">{item.label}</span>}
-                </button>
+                <div key={item.id} className="space-y-1">
+                  <button
+                    onClick={() => {
+                      setActiveTab(item.id, subItems ? (activeSubTab || 'magang') : undefined);
+                      if (!subItems) setIsMobileOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3.5 rounded-xl font-medium text-sm transition-all duration-200 ${isActive ? 'shadow-md shadow-[var(--color-accent)]/15 font-semibold scale-[1.01]' : 'text-[var(--sidebar-text)]/75 hover:text-white hover:bg-white/10'}`}
+                    style={{ 
+                      padding: collapsed ? '0.55rem' : '0.7rem 1rem', 
+                      justifyContent: collapsed ? 'center' : 'flex-start',
+                      background: isActive ? 'color-mix(in srgb, var(--color-accent) 14%, var(--color-base))' : 'transparent', 
+                      color: isActive ? 'var(--color-accent-dark)' : 'inherit' 
+                    }}
+                  >
+                    <Icon className="w-5 h-5 shrink-0" />
+                    {!collapsed && <span className="truncate flex-1 text-left">{item.label}</span>}
+                  </button>
+
+                  {!collapsed && subItems && isActive && (
+                    <div className="pl-6 pr-1 space-y-1">
+                      {subItems.map((sub) => {
+                        const SubIcon = sub.icon;
+                        const isSubActive = (activeSubTab || 'magang') === sub.id;
+                        return (
+                          <button
+                            key={sub.id}
+                            onClick={() => {
+                              setActiveTab(item.id, sub.id);
+                              setIsMobileOpen(false);
+                            }}
+                            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                              isSubActive
+                                ? 'bg-white/20 text-white font-bold shadow-xs'
+                                : 'text-[var(--sidebar-text)]/70 hover:text-white hover:bg-white/10'
+                            }`}
+                          >
+                            <SubIcon className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                            <span className="truncate">{sub.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>
@@ -189,20 +224,6 @@ export default function Sidebar({
             </div>
           )}
 
-          <button
-            onClick={logout}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-semibold transition ${collapsed ? 'px-0' : 'px-3'}`}
-            style={{
-              backgroundColor: 'color-mix(in srgb, var(--color-warning) 20%, transparent)',
-              color: 'var(--color-warning)',
-              border: '1px solid color-mix(in srgb, var(--color-warning) 30%, transparent)',
-              marginTop: collapsed ? '0.5rem' : '0.75rem'
-            }}
-            title="Keluar dari sistem"
-          >
-            <LogOut className="w-4 h-4" />
-            {!collapsed && 'Logout'}
-          </button>
         </div>
       </aside>
     </>

@@ -87,14 +87,13 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="space-y-1">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">Monitoring Sistem</p>
           <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)] flex items-center gap-2">
             <Activity className="w-5 h-5 text-[var(--color-primary)]" /> Log Aktivitas Sistem
           </h2>
-          <p className="text-xs text-[var(--color-text-main)]/55">Jejak riwayat perubahan data oleh pengguna sistem</p>
+          <p className="text-xs text-[var(--color-text-main)]/75">Jejak riwayat perubahan data oleh pengguna sistem</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64 sm:flex-none">
@@ -105,12 +104,12 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
               aria-label="Cari log aktivitas"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              className="w-full pl-10 pr-9 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
+              className="w-full pl-10 pr-9 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] shadow-sm"
             />
             {search && (
               <button
                 onClick={() => { setSearch(''); setPage(1); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:outline-none transition"
                 aria-label="Bersihkan pencarian"
               >
                 <X className="w-3.5 h-3.5" />
@@ -125,7 +124,6 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
         </div>
       </div>
 
-      {/* Main Table */}
       <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 shadow-xs overflow-hidden">
         {isBusy && logs.length === 0 ? (
           <SkeletonTable rows={5} cols={6} />
@@ -134,7 +132,7 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="text-xs font-bold font-display uppercase tracking-wider text-[var(--color-text-main)]/60 border-b border-gray-100 bg-gray-50/50">
+                  <tr className="text-xs font-bold font-display uppercase tracking-wider text-[var(--color-text-main)]/75 border-b border-gray-100 bg-gray-50/50">
                     <th className="p-3 pl-4">Tanggal/Jam</th>
                     <th className="p-3">Pengguna</th>
                     <th className="p-3">Entitas</th>
@@ -147,11 +145,11 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
                   {logs.length > 0 ? (
                     logs.map((row) => (
                       <tr key={row.id} className="hover:bg-gray-50/40 transition">
-                        <td className="p-3 pl-4 font-mono text-[11px] text-[var(--color-text-main)]/70 whitespace-nowrap">
+                        <td className="p-3 pl-4 font-mono text-[11px] text-[var(--color-text-main)]/85 whitespace-nowrap">
                           {new Date(row.created_at).toLocaleString('id-ID')}
                         </td>
                         <td className="p-3 text-[var(--color-text-main)]/80">
-                          {row.actor_email || <span className="text-gray-400 font-mono text-xs">— sistem —</span>}
+                          {row.actor_email || <span className="text-gray-400 font-mono text-xs">(sistem)</span>}
                         </td>
                         <td className="p-3">
                           <StatusChip status={row.entitas} tone="neutral" />
@@ -165,13 +163,13 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
                             <StatusChip status={row.aksi} tone="neutral" />
                           )}
                         </td>
-                        <td className="p-3 font-mono text-xs text-[var(--color-text-main)]/70 truncate max-w-[160px]" title={row.entitas_id}>
+                        <td className="p-3 font-mono text-xs text-[var(--color-text-main)]/85 truncate max-w-[160px]" title={row.entitas_id}>
                           {row.entitas_id}
                         </td>
                         <td className="p-3 pr-4 text-center">
                           <button
                             onClick={() => setSelectedLog(row)}
-                            className="inline-flex items-center gap-1 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 px-2.5 py-1 rounded-lg text-xs font-semibold transition"
+                            className="inline-flex items-center gap-1 text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 px-2.5 py-1 rounded-lg text-xs font-semibold focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:outline-none transition cursor-pointer"
                             title="Buka detail payload JSON"
                           >
                             <Eye className="w-3.5 h-3.5" /> Detail
@@ -190,7 +188,6 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
               </table>
             </div>
 
-            {/* Pagination Footer */}
             <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-gray-50/40">
               <p className="text-xs text-gray-500">
                 Menampilkan {logs.length > 0 ? (page - 1) * ROWS_PER_PAGE + 1 : 0}–{Math.min(page * ROWS_PER_PAGE, totalCount)} dari <b>{totalCount}</b> aktivitas
@@ -201,7 +198,6 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
         )}
       </div>
 
-      {/* Modal Detail Payload JSON */}
       {selectedLog && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-xs">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
@@ -217,14 +213,14 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
               </div>
               <button
                 onClick={() => setSelectedLog(null)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:outline-none transition cursor-pointer"
                 aria-label="Tutup detail modal"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div className="bg-gray-50 p-2.5 rounded-xl border border-gray-100">
                 <p className="text-gray-400 uppercase text-[10px] font-bold">Entitas</p>
                 <p className="font-semibold mt-0.5 text-gray-800 capitalize">{selectedLog.entitas}</p>
@@ -244,7 +240,7 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
                 <p className="text-xs font-bold text-gray-600">Data Payload (JSON):</p>
                 <button
                   onClick={handleCopyPayload}
-                  className="text-[11px] font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1 cursor-pointer"
+                  className="text-[11px] font-semibold text-[var(--color-primary)] hover:underline flex items-center gap-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:outline-none rounded px-1"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copied ? 'Tersalin!' : 'Salin JSON'}</span>
@@ -258,7 +254,7 @@ export default function AuditTab({ loading: initialLoading, triggerToast }: Audi
             <div className="flex justify-end pt-2 border-t border-gray-100">
               <button
                 onClick={() => setSelectedLog(null)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:outline-none transition cursor-pointer"
               >
                 Tutup
               </button>

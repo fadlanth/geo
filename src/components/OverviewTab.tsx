@@ -93,6 +93,8 @@ export default function OverviewTab({
   const pctMbkm = mhsRegulasi > 0 ? Math.round((mbkm.length / mhsRegulasi) * 100) : 0;
   // Instansi unik penempatan magang (untuk label "Total Instansi")
   const totalInstansi = new Set(mbkm.map(m => m.tempat_instansi).filter(Boolean)).size;
+  const countMagang = mbkm.filter(m => (m.jenis_kegiatan || 'Magang Industri') === 'Magang Industri').length;
+  const countPenelitian = mbkm.filter(m => m.jenis_kegiatan === 'Penelitian Dosen').length;
 
   // Modal state for per-angkatan detail
   const [showAngkatanDetail, setShowAngkatanDetail] = useState(false);
@@ -262,11 +264,11 @@ export default function OverviewTab({
               <div className="p-3 bg-[var(--color-primary-soft)] text-[var(--color-primary-dark)] rounded-xl">
                 <Briefcase className="w-5 h-5" />
               </div>
-              <StatusChip status={`${totalInstansi} Total Instansi`} tone="neutral" count />
+              <StatusChip status={`${totalInstansi} Instansi/Lab`} tone="neutral" count />
             </div>
-            <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">MBKM / Magang</p>
+            <p className="text-xs text-[var(--color-text-main)]/60 font-medium uppercase tracking-wider">Kegiatan Luar Prodi</p>
             <p className="text-3xl font-bold font-display text-[var(--color-text-main)] mt-1">{fmt(totalMbkm)}</p>
-            <p className="text-xs text-[var(--color-text-main)]/50 mt-1">{pctMbkm}% dari mahasiswa regulasi aktif</p>
+            <p className="text-xs text-[var(--color-text-main)]/50 mt-1">{countMagang} magang · {countPenelitian} penelitian dosen</p>
             <div className="mt-3 flex items-center justify-between text-xs text-[var(--color-text-main)]/50 border-t border-gray-100 pt-3">
               <button onClick={() => setActiveTab('mbkm')} className="text-[var(--color-primary)] hover:underline flex items-center gap-1 font-semibold">
                 Lihat Detail <ArrowUpRight className="w-3 h-3" />

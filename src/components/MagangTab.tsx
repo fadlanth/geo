@@ -4,20 +4,24 @@ import Pagination from './Pagination';
 import DataActions from './DataActions';
 import Button from './Button';
 import IconButton from './IconButton';
-import StatusChip from './StatusChip';
 import {
   Search,
   Plus,
   Trash2,
-  Edit2,
   Building2,
-  ChevronDown,
-  ChevronUp,
+  Calendar,
   BookOpen,
   UserCheck,
-  Calendar,
+  Edit2,
+  ChevronDown,
+  ChevronUp,
   BarChart3,
-  X
+  Briefcase,
+  FileText,
+  DollarSign,
+  Landmark,
+  X,
+  Microscope
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -33,7 +37,7 @@ import { useDebounce, useEscapeClose } from '../lib/hooks';
 import { fmt } from '../lib/format';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
-import { SkeletonTable, SkeletonCard, SkeletonChart } from './Skeleton';
+import { SkeletonTable, SkeletonCard } from './Skeleton';
 import ComboboxMahasiswa from './ComboboxMahasiswa';
 
 interface MagangTabProps {
@@ -41,29 +45,53 @@ interface MagangTabProps {
   mahasiswa: Mahasiswa[];
   dosen: Dosen[];
   loading?: boolean;
+  activeSubTab?: string;
+  onSubTabChange?: (subTab: string) => void;
   onSaveMbkm: (m: RiwayatMBKM) => void;
   onDeleteMbkm: (id: string) => void;
   onBulkImportMagang: (data: Record<string, unknown>[]) => Promise<void>;
   onRefresh: () => Promise<void>;
-  activeSubTab?: string;
   triggerToast?: (options: ToastOptions) => void;
 }
+
+const SKEMA_KETERLIBATAN_OPTIONS = [
+  'Dengan dosen tetap dari perguruan tinggi homebase',
+  'Dengan lembaga riset yang bereputasi',
+  'Dengan pemerintah/BUMN/BUMD (dibimbing dosen)',
+  'Dengan dosen tetap dari perguruan tinggi lain'
+] as const;
 
 export default function MagangTab({
   mbkm,
   mahasiswa,
   dosen,
   loading,
+  activeSubTab,
+  onSubTabChange,
   onSaveMbkm,
   onDeleteMbkm,
   onBulkImportMagang,
-  onRefresh,
   triggerToast
 }: MagangTabProps) {
+
+  // Sub-Tab Switcher State (Induk: Kegiatan Luar Prodi -> Magang vs Penelitian)
+  const [subTab, setSubTab] = useState<'magang' | 'penelitian'>((activeSubTab as any) || 'magang');
+
+  useEffect(() => {
+    if (activeSubTab === 'magang' || activeSubTab === 'penelitian') {
+      setSubTab(activeSubTab);
+      setPage(1);
+      setQuery('');
+      setFilterKeterlibatan('All');
+      setFilterSemester('All');
+      setExpandedId(null);
+    }
+  }, [activeSubTab]);
 
   const [query, setQuery] = useState('');
   const searchQuery = useDebounce(query, 350);
   const [filterSemester, setFilterSemester] = useState('All');
+  const [filterKeterlibatan, setFilterKeterlibatan] = useState('All');
   const [page, setPage] = useState(1);
   const tableRef = useRef<HTMLDivElement | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -80,70 +108,165 @@ export default function MagangTab({
   useEffect(() => {
     if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [page]);
+
+  // Form state
   const [form, setForm] = useState<RiwayatMBKM>({
     npm_mahasiswa: '',
+    jenis_kegiatan: 'Magang Industri',
     tempat_instansi: '',
     semester: '',
     judul_topik_magang: '',
     dosen_pembimbing_lapangan: '',
     nip_dosen_pembimbing_dalam: null,
-    periode_magang: ''
+    periode_magang: '',
+    keterlibatan: 'Dengan dosen tetap dari perguruan tinggi homebase',
+    sumber_dana: '',
+    nama_ketua_riset: '',
+    bukti_dokumen: ''
   });
 
-  const totalMbkm = mbkm.length;
-  const mahasiswaMagang = new Set(mbkm.filter(m => m.npm_mahasiswa).map(m => m.npm_mahasiswa)).size;
-  const instansiMitra = new Set(mbkm.map(m => m.tempat_instansi)).size;
-  const instansiCounts = mbkm.reduce<Record<string, number>>((acc, m) => {
-    acc[m.tempat_instansi] = (acc[m.tempat_instansi] || 0) + 1;
+  // Partisi data
+  const magangList = mbkm.filter(m => (m.jenis_kegiatan || 'Magang Industri') === 'Magang Industri');
+  const penelitianList = mbkm.filter(m => m.jenis_kegiatan === 'Penelitian Dosen');
+
+  const countMagang = magangList.length;
+  const countPenelitian = penelitianList.length;
+
+  const currentDataset = subTab === 'magang' ? magangList : penelitianList;
+
+  // Statistik Magang Industri
+  const mhsMagang = new Set(magangList.map(m => m.npm_mahasiswa)).size;
+  const instansiMagang = new Set(magangList.map(m => m.tempat_instansi)).size;
+
+  // Statistik Penelitian Dosen
+  const mhsPeneliti = new Set(penelitianList.map(m => m.npm_mahasiswa)).size;
+  const judulRisetCount = new Set(penelitianList.map(m => m.judul_topik_magang).filter(Boolean)).size;
+  const dosenRisetCount = new Set(
+    penelitianList.map(m => m.nama_ketua_riset || m.dosen_pembimbing_lapangan).filter(Boolean)
+  ).size;
+  const sumberDanaCount = new Set(penelitianList.map(m => m.sumber_dana).filter(Boolean)).size;
+
+  const keterlibatanCounts = penelitianList.reduce<Record<string, number>>((acc, m) => {
+    const k = m.keterlibatan || 'Lainnya';
+    acc[k] = (acc[k] || 0) + 1;
     return acc;
   }, {});
-  const topInstansi = Object.entries(instansiCounts).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
-  const filteredMbkm = mbkm.filter(m => {
+  const getDospemDalamName = (nip: string | null | undefined): string => {
+    if (!nip) return '';
+    const d = dosen.find(ds => ds.nip === nip);
+    return d ? d.nama : nip;
+  };
+
+  // Filter dataset aktif
+  const filteredCurrentData = currentDataset.filter(m => {
     const mhs = mahasiswa.find(s => s.npm === m.npm_mahasiswa);
     const mhsName = mhs ? mhs.nama.toLowerCase() : '';
-    const instansi = m.tempat_instansi.toLowerCase();
-    const matchesSearch = mhsName.includes(searchQuery.toLowerCase()) ||
-                          instansi.includes(searchQuery.toLowerCase()) ||
-                          m.npm_mahasiswa.toLowerCase().includes(searchQuery.toLowerCase());
+    const instansi = (m.tempat_instansi || '').toLowerCase();
+    const judul = (m.judul_topik_magang || '').toLowerCase();
+    const dospemDalam = getDospemDalamName(m.nip_dosen_pembimbing_dalam).toLowerCase();
+    const dospemLuar = (m.dosen_pembimbing_lapangan || '').toLowerCase();
+    const ketuaRiset = (m.nama_ketua_riset || '').toLowerCase();
+    const sumberDana = (m.sumber_dana || '').toLowerCase();
+    const bukti = (m.bukti_dokumen || '').toLowerCase();
+    const q = searchQuery.toLowerCase();
+
+    const matchesSearch = mhsName.includes(q) ||
+                          instansi.includes(q) ||
+                          judul.includes(q) ||
+                          dospemDalam.includes(q) ||
+                          dospemLuar.includes(q) ||
+                          ketuaRiset.includes(q) ||
+                          sumberDana.includes(q) ||
+                          bukti.includes(q) ||
+                          m.npm_mahasiswa.toLowerCase().includes(q);
+
     const matchesSemester = filterSemester === 'All' || m.semester === filterSemester;
-    return matchesSearch && matchesSemester;
+    const matchesKeterlibatan = filterKeterlibatan === 'All' || (m.keterlibatan || '') === filterKeterlibatan;
+
+    return matchesSearch && matchesSemester && (subTab === 'magang' ? true : matchesKeterlibatan);
   });
 
-  const totalPages = Math.ceil(filteredMbkm.length / ROWS_PER_PAGE);
+  const totalPages = Math.ceil(filteredCurrentData.length / ROWS_PER_PAGE);
   const safePage = Math.min(page, Math.max(1, totalPages));
-  const paginatedMbkm = filteredMbkm.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+  const paginatedData = filteredCurrentData.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
 
   const handleEditClick = (m: RiwayatMBKM) => {
     setEditingMbkm(m);
     setForm({
       npm_mahasiswa: m.npm_mahasiswa,
-      tempat_instansi: m.tempat_instansi,
-      semester: m.semester,
+      jenis_kegiatan: m.jenis_kegiatan || (subTab === 'magang' ? 'Magang Industri' : 'Penelitian Dosen'),
+      tempat_instansi: m.tempat_instansi || '',
+      semester: m.semester || '',
       judul_topik_magang: m.judul_topik_magang || '',
       dosen_pembimbing_lapangan: m.dosen_pembimbing_lapangan || '',
       nip_dosen_pembimbing_dalam: m.nip_dosen_pembimbing_dalam || null,
-      periode_magang: m.periode_magang || ''
+      periode_magang: m.periode_magang || '',
+      keterlibatan: m.keterlibatan || (m.tempat_instansi && SKEMA_KETERLIBATAN_OPTIONS.includes(m.tempat_instansi as any) ? m.tempat_instansi : 'Dengan dosen tetap dari perguruan tinggi homebase'),
+      sumber_dana: m.sumber_dana || '',
+      nama_ketua_riset: m.nama_ketua_riset || m.dosen_pembimbing_lapangan || '',
+      bukti_dokumen: m.bukti_dokumen || ''
     });
     setShowAddModal(true);
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleOpenAddModal = () => {
+    resetForm();
+    setShowAddModal(true);
+  };
+
+  const resetForm = () => {
+    setForm({
+      npm_mahasiswa: '',
+      jenis_kegiatan: subTab === 'magang' ? 'Magang Industri' : 'Penelitian Dosen',
+      tempat_instansi: subTab === 'magang' ? '' : 'Dengan dosen tetap dari perguruan tinggi homebase',
+      semester: '',
+      judul_topik_magang: '',
+      dosen_pembimbing_lapangan: '',
+      nip_dosen_pembimbing_dalam: null,
+      periode_magang: '',
+      keterlibatan: 'Dengan dosen tetap dari perguruan tinggi homebase',
+      sumber_dana: '',
+      nama_ketua_riset: '',
+      bukti_dokumen: ''
+    });
+    setEditingMbkm(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.npm_mahasiswa || !form.tempat_instansi || !form.semester) {
-      if (triggerToast) {
-        triggerToast({
-          kind: 'error',
-          title: 'Validasi Gagal',
-          message: 'Mahasiswa, tempat instansi, dan semester harus diisi.'
-        });
-      }
+    if (!form.npm_mahasiswa) {
+      triggerToast?.({ kind: 'error', title: 'Validasi Gagal', message: 'Mahasiswa harus dipilih.' });
       return;
     }
 
-    const data: RiwayatMBKM = editingMbkm
-      ? { ...form, id_mbkm: editingMbkm.id_mbkm }
-      : form;
+    if (subTab === 'magang') {
+      if (!form.tempat_instansi || !form.semester) {
+        triggerToast?.({ kind: 'error', title: 'Validasi Gagal', message: 'Instansi magang dan semester harus diisi.' });
+        return;
+      }
+    } else {
+      if (!form.judul_topik_magang || !form.semester) {
+        triggerToast?.({ kind: 'error', title: 'Validasi Gagal', message: 'Judul riset dan tahun/periode harus diisi.' });
+        return;
+      }
+    }
+
+    const resolvedTempat = subTab === 'magang'
+      ? form.tempat_instansi
+      : (form.keterlibatan || form.tempat_instansi || 'Dengan dosen tetap dari perguruan tinggi homebase');
+
+    const data: RiwayatMBKM = {
+      ...form,
+      id_mbkm: editingMbkm ? editingMbkm.id_mbkm : undefined,
+      jenis_kegiatan: subTab === 'magang' ? 'Magang Industri' : 'Penelitian Dosen',
+      tempat_instansi: resolvedTempat,
+      dosen_pembimbing_lapangan: subTab === 'magang' ? form.dosen_pembimbing_lapangan : form.nama_ketua_riset,
+      nama_ketua_riset: subTab === 'penelitian' ? form.nama_ketua_riset : undefined,
+      keterlibatan: subTab === 'penelitian' ? form.keterlibatan : undefined,
+      sumber_dana: subTab === 'penelitian' ? form.sumber_dana : undefined,
+      bukti_dokumen: subTab === 'penelitian' ? form.bukti_dokumen : undefined
+    };
 
     setIsSubmitting(true);
     try {
@@ -151,61 +274,70 @@ const handleSubmit = async (e: React.FormEvent) => {
       resetForm();
       setShowAddModal(false);
     } catch {
-      // error toast already handled by App.tsx
+      // toast handled by parent
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const resetForm = () => {
-    setForm({
-      npm_mahasiswa: '',
-      tempat_instansi: '',
-      semester: '',
-      judul_topik_magang: '',
-      dosen_pembimbing_lapangan: '',
-      nip_dosen_pembimbing_dalam: null,
-      periode_magang: ''
-    });
-    setEditingMbkm(null);
-  };
-
-  const semesterOptions = Array.from(new Set(mbkm.map(m => m.semester))).sort();
+  const semesterOptions = Array.from(
+    new Set(currentDataset.map(m => m.semester).filter((s): s is string => Boolean(s && String(s).trim())))
+  ).sort();
   const reversedSemesters = [...semesterOptions].reverse();
 
-  // Rekap per semester
-const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, number>>, m) => {
-    if (!acc[m.semester]) acc[m.semester] = {};
-    acc[m.semester][m.tempat_instansi] = (acc[m.semester][m.tempat_instansi] || 0) + 1;
-    return acc;
-  }, {});
+  // Chart per semester
   const semesterChartData = reversedSemesters.map(sem => ({
     semester: sem,
-    jumlah: Object.values(semesterInstansiMap[sem] || {}).reduce((sum, c) => sum + c, 0),
-    instansi: Object.keys(semesterInstansiMap[sem] || {}).length
+    jumlah: currentDataset.filter(m => m.semester === sem).length
   }));
 
-  const handleExportMbkm = () => {
-    const dataToExport = mbkm.map(m => {
-      const dospemDalam = m.nip_dosen_pembimbing_dalam
-        ? dosen.find(d => d.nip === m.nip_dosen_pembimbing_dalam)
-        : null;
-      return {
-        'NPM': m.npm_mahasiswa,
-        'NAMA INSTANSI TEMPAT MAGANG': m.tempat_instansi,
-        'SEMESTER': m.semester,
-        'JUDUL TOPIK MAGANG': m.judul_topik_magang || '',
-        'DOSEN PEMBIMBING LAPANGAN': m.dosen_pembimbing_lapangan || '',
-        'DOSEN PEMBIMBING DALAM': dospemDalam ? dospemDalam.nama : '',
-        'PERIODE MAGANG': m.periode_magang || ''
-      };
-    });
-    exportToExcel(dataToExport, 'data_magang_mahasiswa', 'Magang');
-    if (triggerToast) {
-      triggerToast({
+  // Ekspor Excel disesuaikan 100% dengan kolom borang akreditasi riil
+  const handleExport = () => {
+    if (subTab === 'magang') {
+      const dataToExport = magangList.map((m, idx) => {
+        const dospemDalam = m.nip_dosen_pembimbing_dalam ? dosen.find(d => d.nip === m.nip_dosen_pembimbing_dalam) : null;
+        const mhs = mahasiswa.find(s => s.npm === m.npm_mahasiswa);
+        return {
+          'NO': idx + 1,
+          'NAMA MAHASISWA': mhs ? mhs.nama : '',
+          'NPM': m.npm_mahasiswa,
+          'TEMPAT / INSTANSI MAGANG': m.tempat_instansi,
+          'SEMESTER': m.semester,
+          'JUDUL TOPIK MAGANG': m.judul_topik_magang || '',
+          'DOSEN PEMBIMBING LAPANGAN': m.dosen_pembimbing_lapangan || '',
+          'DOSEN PEMBIMBING UNPAD': dospemDalam ? dospemDalam.nama : '',
+          'PERIODE MAGANG': m.periode_magang || ''
+        };
+      });
+      exportToExcel(dataToExport, 'data_magang_industri_mahasiswa', 'Magang Industri');
+      triggerToast?.({
         kind: 'success',
         title: 'Ekspor Berhasil',
-        message: `Berhasil mengunduh ${dataToExport.length} data magang ke Excel.`
+        message: `Berhasil mengunduh ${dataToExport.length} data magang industri.`
+      });
+    } else {
+      // Format resmi tabel penelitian dosen (sesuai gambar yang diberikan pengguna)
+      const dataToExport = penelitianList.map((m, idx) => {
+        const dospemDalam = m.nip_dosen_pembimbing_dalam ? dosen.find(d => d.nip === m.nip_dosen_pembimbing_dalam) : null;
+        const mhs = mahasiswa.find(s => s.npm === m.npm_mahasiswa);
+        const ketuaRiset = m.nama_ketua_riset || (dospemDalam ? dospemDalam.nama : (m.dosen_pembimbing_lapangan || ''));
+        return {
+          'NO': idx + 1,
+          'NAMA MAHASISWA': mhs ? mhs.nama : '',
+          'NPM': m.npm_mahasiswa,
+          'KETERLIBATAN': m.keterlibatan || m.tempat_instansi || '',
+          'JUDUL RISET': m.judul_topik_magang || '',
+          'JENIS RISET/SUMBER DANA': m.sumber_dana || '',
+          'NAMA KETUA RISET (DOSEN)': ketuaRiset,
+          'BUKTI': m.bukti_dokumen || '',
+          'TAHUN/PERIODE': m.semester || m.periode_magang || ''
+        };
+      });
+      exportToExcel(dataToExport, 'rekap_mahasiswa_terlibat_penelitian_dosen', 'Penelitian Dosen');
+      triggerToast?.({
+        kind: 'success',
+        title: 'Ekspor Berhasil',
+        message: `Berhasil mengunduh ${dataToExport.length} data penelitian dosen.`
       });
     }
   };
@@ -215,139 +347,168 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
     setExpandedId(prev => prev === id ? null : id);
   };
 
-  const getDospemDalamName = (nip?: string | null): string | null => {
-    if (!nip) return null;
-    const d = dosen.find(d => d.nip === nip);
-    return d ? d.nama : null;
-  };
-
-  const detailItems = (m: RiwayatMBKM) => {
-    const items: { icon: React.ReactNode; label: string; value: React.ReactNode }[] = [];
-
-    if (m.semester) {
-      items.push({
-        icon: <Calendar className="w-3.5 h-3.5 shrink-0" />,
-        label: 'Semester',
-        value: m.semester
-      });
+  const getKeterlibatanBadge = (ket?: string) => {
+    if (!ket) return <span className="text-gray-400 text-xs">-</span>;
+    let cls = 'bg-gray-100 text-gray-700 border-gray-200';
+    let label = ket;
+    if (ket.includes('homebase')) {
+      cls = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+      label = 'PT Homebase';
+    } else if (ket.includes('lembaga riset')) {
+      cls = 'bg-purple-50 text-purple-800 border-purple-200';
+      label = 'Lembaga Riset';
+    } else if (ket.includes('pemerintah') || ket.includes('BUMN')) {
+      cls = 'bg-amber-50 text-amber-800 border-amber-200';
+      label = 'Pemerintah / BUMN';
+    } else if (ket.includes('tinggi lain')) {
+      cls = 'bg-blue-50 text-blue-800 border-blue-200';
+      label = 'PT Lain';
     }
-    if (m.judul_topik_magang) {
-      items.push({
-        icon: <BookOpen className="w-3.5 h-3.5 shrink-0" />,
-        label: 'Topik',
-        value: m.judul_topik_magang
-      });
-    }
-    if (m.dosen_pembimbing_lapangan) {
-      items.push({
-        icon: <UserCheck className="w-3.5 h-3.5 shrink-0" />,
-        label: 'Dospem Lapangan',
-        value: m.dosen_pembimbing_lapangan
-      });
-    }
-    const dospemDalam = getDospemDalamName(m.nip_dosen_pembimbing_dalam);
-    if (dospemDalam) {
-      items.push({
-        icon: <UserCheck className="w-3.5 h-3.5 shrink-0" />,
-        label: 'Dospem UNPAD',
-        value: dospemDalam
-      });
-    }
-    if (m.periode_magang) {
-      items.push({
-        icon: <Calendar className="w-3.5 h-3.5 shrink-0" />,
-        label: 'Periode',
-        value: m.periode_magang
-      });
-    }
-
-    return items;
+    return (
+      <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border ${cls}`} title={ket}>
+        {label}
+      </span>
+    );
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">MBKM / Kampus Merdeka</p>
-          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">Magang & MBKM</h2>
-          <p className="text-xs text-[var(--color-text-main)]/55">Rekapitulasi aktivitas magang mahasiswa</p>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
-          <Button
-            onClick={() => setShowAddModal(true)}
-            className="flex-1 sm:flex-none"
-            icon={<Plus className="w-4 h-4" />}
-          >
-            Catat Magang
-          </Button>
-          <DataActions
-            onImportCsv={() => setShowImport(true)}
-            onImportExcel={() => setShowImport(true)}
-            onExportExcel={handleExportMbkm}
-          />
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-bold uppercase tracking-wider">
+              <Briefcase className="w-3 h-3" /> MHS Berkegiatan di Luar Prodi
+            </div>
+            <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">
+              {subTab === 'magang' ? 'Magang Industri' : 'Mahasiswa Terlibat Penelitian Dosen'}
+            </h2>
+            <p className="text-xs text-[var(--color-text-main)]/55">
+              {subTab === 'magang' 
+                ? 'Rekapitulasi magang kerja praktik mahasiswa di dunia usaha dan industri.'
+                : 'Pencatatan keterlibatan mahasiswa dalam riset dosen.'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+            <Button
+              onClick={handleOpenAddModal}
+              className="flex-1 sm:flex-none shadow-xs"
+              icon={<Plus className="w-4 h-4" />}
+            >
+              {subTab === 'magang' ? 'Catat Magang' : 'Catat Riset Mahasiswa'}
+            </Button>
+            <DataActions
+              onImportCsv={() => setShowImport(true)}
+              onImportExcel={() => setShowImport(true)}
+              onExportExcel={handleExport}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Summary & Rekap */}
+      {/* Summary Cards */}
       {loading ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-          <SkeletonChart />
-        </>
-      ) : totalMbkm === 0 ? (
-        <div className="bg-white p-6 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
-          <Building2 className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
-          <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data magang</h3>
-          <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Catat Magang" untuk menambahkan data pertama</p>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      ) : currentDataset.length === 0 ? (
+        <div className="bg-white p-8 sm:p-12 rounded-2xl border border-[var(--color-primary)]/10 text-center">
+          {subTab === 'magang' ? (
+            <Building2 className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
+          ) : (
+            <Microscope className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
+          )}
+          <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">
+            {subTab === 'magang' ? 'Belum ada data magang industri' : 'Belum ada data mahasiswa terlibat penelitian dosen'}
+          </h3>
+          <p className="text-xs text-[var(--color-text-main)]/30 mt-1">
+            Klik tombol tambah di atas atau gunakan impor file Excel / CSV.
+          </p>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="grid grid-cols-3 gap-px bg-gray-100">
-              <div className="bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Magang</p>
-                <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">{fmt(totalMbkm)}</p>
-              </div>
-              <div className="bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mahasiswa Peserta</p>
-                <p className="text-2xl font-bold font-display mt-1 text-[var(--color-primary)]">{fmt(mahasiswaMagang)}</p>
-              </div>
-              <div className="bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Instansi Mitra</p>
-                <p className="text-2xl font-bold font-display mt-1 text-[var(--color-primary)]">{fmt(instansiMitra)}</p>
+          {subTab === 'magang' ? (
+            /* Stat Cards Magang */
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-gray-100">
+                <div className="bg-white p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Magang</p>
+                  <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">{fmt(countMagang)}</p>
+                </div>
+                <div className="bg-white p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mahasiswa Peserta</p>
+                  <p className="text-2xl font-bold font-display mt-1 text-[var(--color-primary)]">{fmt(mhsMagang)}</p>
+                </div>
+                <div className="bg-white p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mitra Instansi</p>
+                  <p className="text-2xl font-bold font-display mt-1 text-emerald-600">{fmt(instansiMagang)}</p>
+                </div>
               </div>
             </div>
-            {topInstansi.length > 0 && (
-              <div className="px-4 py-2.5 border-t border-gray-100 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                <span className="font-bold uppercase tracking-wider text-gray-400">Top Instansi:</span>
-                {topInstansi.map(([instansi, count]) => (
-                  <span key={instansi} className="inline-flex items-center gap-1.5 font-medium text-gray-600">
-                    <span className="w-2 h-2 rounded-full bg-[var(--color-primary)]" />
-                    {instansi} <b className="text-[var(--color-text-main)]">{count}</b>
-                  </span>
-                ))}
+          ) : (
+            /* Stat Cards Penelitian Dosen (Sesuai Skema Borang) */
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-gray-100">
+                <div className="bg-white p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Keterlibatan</p>
+                  <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">{fmt(countPenelitian)}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Kegiatan mahasiswa</p>
+                </div>
+                <div className="bg-white p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mahasiswa Peneliti</p>
+                  <p className="text-2xl font-bold font-display mt-1 text-purple-700">{fmt(mhsPeneliti)}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">NPM unik terdata</p>
+                </div>
+                <div className="bg-white p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Judul Riset</p>
+                  <p className="text-2xl font-bold font-display mt-1 text-indigo-600">{fmt(judulRisetCount)}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Topik riset terdaftar</p>
+                </div>
+                <div className="bg-white p-4">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Dosen Ketua Riset</p>
+                  <p className="text-2xl font-bold font-display mt-1 text-teal-700">{fmt(dosenRisetCount)}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{sumberDanaCount} skema hibah/dana</p>
+                </div>
               </div>
-            )}
-          </div>
 
+              {/* Breakdown Skema Keterlibatan */}
+              <div className="px-4 py-2.5 border-t border-gray-100 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+                <span className="font-bold uppercase tracking-wider text-gray-400">Skema:</span>
+                {SKEMA_KETERLIBATAN_OPTIONS.map(skema => {
+                  const c = keterlibatanCounts[skema] || 0;
+                  if (c === 0) return null;
+                  return (
+                    <span key={skema} className="inline-flex items-center gap-1.5 font-medium text-gray-600">
+                      {getKeterlibatanBadge(skema)}
+                      <b className="text-[var(--color-text-main)]">{c}</b>
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Grafik per Semester */}
           {semesterChartData.length > 0 && (
-            <div className="bg-white p-5 rounded-2xl border border-[var(--color-primary)]/10">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-[var(--color-primary)]" />
-                  <h3 className="font-bold text-sm text-[var(--color-text-main)]">Rekap Magang per Semester</h3>
+                  <h3 className="font-bold text-sm text-[var(--color-text-main)]">
+                    {subTab === 'magang' ? 'Sebaran Magang per Semester' : 'Sebaran Keterlibatan Riset per Periode'}
+                  </h3>
                 </div>
+                <span className="text-xs text-gray-400 font-medium">Berdasarkan Tahun/Periode</span>
               </div>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={semesterChartData} barSize={32} margin={{ top: 5, right: 20, left: -15, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--color-primary)" strokeOpacity={0.08} />
-                    <XAxis dataKey="semester" tick={{ fontSize: 10 }} angle={0} height={60} tickMargin={8} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.7} />
+                    <XAxis dataKey="semester" tick={{ fontSize: 10 }} />
                     <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
                     <Tooltip
                       cursor={{ fill: 'var(--color-primary)', opacity: 0.05 }}
@@ -355,15 +516,19 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                         if (!active || !payload?.length) return null;
                         const data = payload[0].payload;
                         return (
-                          <div className="bg-white rounded-lg border border-[var(--color-primary)]/20 px-3 py-2 text-xs shadow-sm">
-                            <p className="font-semibold text-[var(--color-text-main)] mb-1">{label}</p>
-                            <p className="text-[var(--color-text-main)]/70">Mahasiswa: <span className="font-semibold text-[var(--color-primary)]">{data.jumlah}</span></p>
-                            <p className="text-[var(--color-text-main)]/70">Instansi: <span className="font-semibold text-[var(--color-primary)]">{data.instansi}</span></p>
+                          <div className="bg-white rounded-lg border border-gray-200 px-3 py-2 text-xs shadow-sm">
+                            <p className="font-semibold text-gray-800 mb-1">{label}</p>
+                            <p className="text-gray-600">Jumlah Mahasiswa: <span className="font-semibold text-[var(--color-primary)]">{data.jumlah}</span></p>
                           </div>
                         );
                       }}
                     />
-                    <Bar dataKey="jumlah" name="Mahasiswa" radius={[4, 4, 0, 0]} fill="var(--color-primary)" />
+                    <Bar
+                      dataKey="jumlah"
+                      name="Mahasiswa"
+                      radius={[4, 4, 0, 0]}
+                      fill={subTab === 'magang' ? 'var(--color-primary)' : '#7C3AED'}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -372,102 +537,222 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
         </>
       )}
 
+      {/* CSV / Excel Importer Modal */}
       {showImport && (
         <CsvImporter
-          title="Riwayat Magang"
-          expectedHeaders={[ 'NPM', 'NAMA INSTANSI TEMPAT MAGANG', 'SEMESTER' ]}
-          optionalHeaders={[ 'npm_mahasiswa', 'tempat_instansi', 'semester', 'NO', 'NAMA LENGKAP', 'JUDUL TOPIK MAGANG', 'DOSEN PEMBIMBING LAPANGAN', 'DOSEN PEMBIMBING DALAM', 'PERIODE MAGANG', 'judul_topik_magang', 'dosen_pembimbing_lapangan', 'nip_dosen_pembimbing_dalam', 'periode_magang' ]}
-          templateCsv={`NPM,NAMA INSTANSI TEMPAT MAGANG,SEMESTER,JUDUL TOPIK MAGANG,DOSEN PEMBIMBING LAPANGAN,DOSEN PEMBIMBING DALAM,PERIODE MAGANG
-31242001,PT Geo Teknologi,Genap 2025/2026,Analisis Data,Bapak Andi,Dr. Maria Ulfah,Jan-Jun 2025`}
-          templateData={[
-            { 'NPM': '31242001', 'NAMA INSTANSI TEMPAT MAGANG': 'PT Geo Teknologi', 'SEMESTER': 'Genap 2025/2026', 'JUDUL TOPIK MAGANG': 'Analisis Data', 'DOSEN PEMBIMBING LAPANGAN': 'Bapak Andi', 'DOSEN PEMBIMBING DALAM': 'Dr. Maria Ulfah, S.Si., M.Si.', 'PERIODE MAGANG': 'Jan-Jun 2025' }
+          title={subTab === 'magang' ? 'Impor Data Magang Industri' : 'Impor Data Penelitian Dosen'}
+          expectedHeaders={
+            subTab === 'magang'
+              ? [ 'NPM', 'NAMA INSTANSI TEMPAT MAGANG', 'SEMESTER' ]
+              : [ 'NPM', 'JUDUL RISET', 'KETERLIBATAN' ]
+          }
+          optionalHeaders={[
+            'npm_mahasiswa', 'tempat_instansi', 'semester', 'jenis_kegiatan', 'JENIS KEGIATAN',
+            'NO', 'NAMA LENGKAP', 'NAMA MAHASISWA', 'JUDUL TOPIK MAGANG', 'DOSEN PEMBIMBING LAPANGAN',
+            'DOSEN PEMBIMBING DALAM', 'PERIODE MAGANG', 'judul_topik_magang',
+            'dosen_pembimbing_lapangan', 'nip_dosen_pembimbing_dalam', 'periode_magang',
+            'KETERLIBATAN', 'JUDUL RISET', 'JENIS RISET/SUMBER DANA', 'NAMA KETUA RISET (DOSEN)',
+            'BUKTI', 'TAHUN/PERIODE'
           ]}
+          templateCsv={
+            subTab === 'magang'
+              ? `NPM,NAMA MAHASISWA,NAMA INSTANSI TEMPAT MAGANG,SEMESTER,JUDUL TOPIK MAGANG,DOSEN PEMBIMBING LAPANGAN,DOSEN PEMBIMBING DALAM,PERIODE MAGANG
+31242001,Andi Pratama,PT Geo Teknologi,Genap 2025/2026,Analisis Data Geofisika,Bapak Andi,Dr. Maria Ulfah,Jan-Jun 2025`
+              : `NO,NAMA MAHASISWA,NPM,KETERLIBATAN,JUDUL RISET,JENIS RISET/SUMBER DANA,NAMA KETUA RISET (DOSEN),BUKTI,TAHUN/PERIODE
+1,Akmal Renaisans Barnais,140710220035,Dengan pemerintah/BUMN/BUMD (dibimbing dosen),Kota Cimahi Untuk Rekomendasi Zonasi,Hibah Bappeltbangda Kota,Kusnahadi Susanto,LAPORAN PENELITIAN KOTA CIMAHI_compresse,2025
+2,Sonya Hutabarat,140710220055,Dengan lembaga riset yang bereputasi,CORE Project (Citarum Oxbow Remediation and Enhancement),Kolaborasi Internasional / Coca Cola Fondation,Kusnahadi Susanto,Surat Keterangan mahasiswa Unpad.pdf,2026 ganjil 26/27
+3,Gita Putri Jelita,140710220011,Dengan dosen tetap dari perguruan tinggi homebase,MONITORING GETARAN TANAH BERBASIS IoT DAN AI UNTUK MITIGASI BENCANA GERAKAN TANAH,RIM Kompetisi Gelombang 8,Prof. Dr. rer. nat. Yudi Rosandi, M.Si.,,2025-2026 genap 25/26`
+          }
+          templateData={
+            subTab === 'magang'
+              ? [
+                  { 'NPM': '31242001', 'NAMA MAHASISWA': 'Andi Pratama', 'NAMA INSTANSI TEMPAT MAGANG': 'PT Geo Teknologi', 'SEMESTER': 'Genap 2025/2026', 'JUDUL TOPIK MAGANG': 'Analisis Data Geofisika', 'DOSEN PEMBIMBING LAPANGAN': 'Bapak Andi', 'DOSEN PEMBIMBING DALAM': 'Dr. Maria Ulfah, S.Si., M.Si.', 'PERIODE MAGANG': 'Jan-Jun 2025' }
+                ]
+              : [
+                  { 'NO': 1, 'NAMA MAHASISWA': 'Akmal Renaisans Barnais', 'NPM': '140710220035', 'KETERLIBATAN': 'Dengan pemerintah/BUMN/BUMD (dibimbing dosen)', 'JUDUL RISET': 'Kota Cimahi Untuk Rekomendasi Zonasi', 'JENIS RISET/SUMBER DANA': 'Hibah Bappeltbangda Kota', 'NAMA KETUA RISET (DOSEN)': 'Kusnahadi Susanto', 'BUKTI': 'LAPORAN PENELITIAN KOTA CIMAHI_compresse', 'TAHUN/PERIODE': '2025' },
+                  { 'NO': 2, 'NAMA MAHASISWA': 'Sonya Hutabarat', 'NPM': '140710220055', 'KETERLIBATAN': 'Dengan lembaga riset yang bereputasi', 'JUDUL RISET': 'CORE Project (Citarum Oxbow Remediation and Enhancement)', 'JENIS RISET/SUMBER DANA': 'Kolaborasi Internasional / Coca Cola Fondation', 'NAMA KETUA RISET (DOSEN)': 'Kusnahadi Susanto', 'BUKTI': 'Surat Keterangan mahasiswa Unpad.pdf', 'TAHUN/PERIODE': '2026 ganjil 26/27' },
+                  { 'NO': 3, 'NAMA MAHASISWA': 'Gita Putri Jelita', 'NPM': '140710220011', 'KETERLIBATAN': 'Dengan dosen tetap dari perguruan tinggi homebase', 'JUDUL RISET': 'MONITORING GETARAN TANAH BERBASIS IoT DAN AI UNTUK MITIGASI BENCANA GERAKAN TANAH', 'JENIS RISET/SUMBER DANA': 'RIM Kompetisi Gelombang 8', 'NAMA KETUA RISET (DOSEN)': 'Prof. Dr. rer. nat. Yudi Rosandi, M.Si.', 'BUKTI': '', 'TAHUN/PERIODE': '2025-2026 genap 25/26' }
+                ]
+          }
           onImport={onBulkImportMagang}
           onClose={() => setShowImport(false)}
         />
       )}
 
-      {/* Main Content Area */}
-      <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 overflow-hidden">
-        {/* Filters */}
-        <div className="p-4 border-b border-gray-100 bg-[var(--color-primary)]/5 flex flex-col md:flex-row gap-3">
+      {/* Main Table Area */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Filter Bar */}
+        <div className="p-4 border-b border-gray-100 bg-slate-50/70 flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40" />
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40 pointer-events-none" />
             <input
               type="text"
-              placeholder="Cari mahasiswa atau instansi magang..."
-              aria-label="Cari data magang"
-               value={query}
-               onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
-              className="w-full pl-10 pr-9 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
+              placeholder={
+                subTab === 'magang'
+                  ? 'Cari nama mahasiswa, NPM, atau instansi magang...'
+                  : 'Cari mahasiswa, judul riset, ketua riset, sumber dana, bukti...'
+              }
+              aria-label="Cari data kegiatan"
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
+              className="w-full pl-10 pr-9 py-2 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)]"
             />
             {query && (
               <button
                 onClick={() => { setQuery(''); setPage(1); setExpandedId(null); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:outline-none transition"
                 aria-label="Bersihkan pencarian"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
+
+          {subTab === 'penelitian' && (
+            <select
+              value={filterKeterlibatan}
+              onChange={(e) => { setFilterKeterlibatan(e.target.value); setPage(1); setExpandedId(null); }}
+              aria-label="Filter skema keterlibatan"
+              className="p-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] sm:w-56 text-slate-700 font-medium"
+            >
+              <option value="All">Semua Skema Keterlibatan</option>
+              {SKEMA_KETERLIBATAN_OPTIONS.map(skema => (
+                <option key={skema} value={skema}>{skema}</option>
+              ))}
+            </select>
+          )}
+
           <select
             value={filterSemester}
             onChange={(e) => { setFilterSemester(e.target.value); setPage(1); setExpandedId(null); }}
-            className="p-2 text-xs bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] sm:w-48"
+            aria-label={subTab === 'magang' ? 'Filter semester magang' : 'Filter tahun/periode riset'}
+            className="p-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] sm:w-44 text-slate-700 font-medium"
           >
-            <option value="All">Semua Semester</option>
+            <option value="All">{subTab === 'magang' ? 'Semua Semester' : 'Semua Tahun/Periode'}</option>
             {semesterOptions.map(sem => (
               <option key={sem} value={sem}>{sem}</option>
             ))}
           </select>
         </div>
 
-        {/* Table List */}
+        {/* Tabel Data */}
         {loading ? (
-          <SkeletonTable rows={10} cols={5} />
+          <SkeletonTable rows={10} cols={6} />
         ) : (
           <>
             <div className="overflow-x-auto" ref={tableRef}>
               <table className="w-full text-left">
                 <thead>
-                  <tr className="bg-gray-50/50 border-b border-gray-100 text-[var(--color-text-main)]/60 text-xs font-bold uppercase">
-                    <th className="p-4 pl-6 w-10">#</th>
-                    <th className="p-4">Mahasiswa</th>
-                    <th className="p-4">Semester</th>
-                    <th className="p-4">Instansi Magang</th>
-                    <th className="p-4 pr-6 text-center w-14"></th>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider">
+                    <th className="p-3.5 pl-5 w-12 text-center">#</th>
+                    <th className="p-3.5 min-w-[170px]">Mahasiswa</th>
+                    {subTab === 'magang' ? (
+                      <>
+                        <th className="p-3.5 min-w-[180px]">Instansi Magang</th>
+                        <th className="p-3.5 w-32 text-center">Semester</th>
+                        <th className="p-3.5 min-w-[220px]">Topik Magang</th>
+                        <th className="p-3.5 min-w-[160px]">Dospem</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="p-3.5 min-w-[140px]">Keterlibatan</th>
+                        <th className="p-3.5 min-w-[240px] max-w-[320px]">Judul Riset</th>
+                        <th className="p-3.5 min-w-[160px]">Ketua Riset (Dosen)</th>
+                        <th className="p-3.5 min-w-[140px]">Sumber Dana</th>
+                        <th className="p-3.5 w-32 text-center">Tahun / Periode</th>
+                        <th className="p-3.5 min-w-[150px] max-w-[200px]">Bukti</th>
+                      </>
+                    )}
+                    <th className="p-3.5 pr-5 text-center w-12"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
-                  {paginatedMbkm.map((m, idx) => {
+                  {paginatedData.map((m, idx) => {
                     const mhs = mahasiswa.find(s => s.npm === m.npm_mahasiswa);
                     const isExpanded = expandedId === m.id_mbkm;
-                    const details = detailItems(m);
+                    const dospemDalam = getDospemDalamName(m.nip_dosen_pembimbing_dalam);
+                    const ketuaRiset = m.nama_ketua_riset || (dospemDalam || m.dosen_pembimbing_lapangan || '-');
 
                     return (
                       <React.Fragment key={m.id_mbkm}>
                         <tr
-                          className={`hover:bg-gray-50/50 transition cursor-pointer ${isExpanded ? 'bg-[var(--color-primary)]/5' : ''}`}
+                          tabIndex={0}
+                          role="button"
+                          aria-expanded={isExpanded}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              toggleExpand(m.id_mbkm);
+                            }
+                          }}
+                          className={`hover:bg-slate-50/80 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-inset ${
+                            isExpanded ? 'bg-[var(--color-primary)]/[0.04]' : ''
+                          }`}
                           onClick={() => toggleExpand(m.id_mbkm)}
                         >
-                          <td className="p-4 pl-6 text-xs text-[var(--color-text-main)]/40 font-mono">
+                          <td className="p-3.5 pl-5 text-slate-400 font-mono text-xs text-center">
                             {(safePage - 1) * ROWS_PER_PAGE + idx + 1}
                           </td>
-                          <td className="p-4">
-                            <div className="font-semibold text-[var(--color-text-main)]">{mhs ? mhs.nama : 'Unknown'}</div>
-                            <div className="text-xs font-mono text-[var(--color-text-main)]/50">{m.npm_mahasiswa}</div>
-                          </td>
-                          <td className="p-4">
-                            <StatusChip status={m.semester} tone="neutral" />
-                          </td>
-                          <td className="p-4">
-                            <div className="flex items-center gap-1.5 font-bold text-sm">
-                              <Building2 className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0" />
-                              <span>{m.tempat_instansi}</span>
+                          <td className="p-3.5">
+                            <div className="font-semibold text-[var(--color-text-main)]">
+                              {mhs ? mhs.nama : 'N/A'}
+                            </div>
+                            <div className="text-xs font-mono text-slate-500">
+                              {m.npm_mahasiswa}
                             </div>
                           </td>
-                          <td className="p-4 pr-6 text-center">
+
+                          {subTab === 'magang' ? (
+                            <>
+                              <td className="p-3.5 font-medium text-[var(--color-text-main)]">
+                                {m.tempat_instansi}
+                              </td>
+                              <td className="p-3.5 text-xs font-medium text-slate-600 text-center">
+                                {m.semester}
+                              </td>
+                              <td className="p-3.5 text-xs text-slate-600 max-w-xs truncate" title={m.judul_topik_magang}>
+                                {m.judul_topik_magang || '-'}
+                              </td>
+                              <td className="p-3.5 text-xs text-slate-600">
+                                {dospemDalam || m.dosen_pembimbing_lapangan || '-'}
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="p-3.5">
+                                {getKeterlibatanBadge(m.keterlibatan || m.tempat_instansi)}
+                              </td>
+                              <td className="p-3.5 max-w-[320px]">
+                                <span className="text-xs font-medium text-slate-800 line-clamp-2 block" title={m.judul_topik_magang}>
+                                  {m.judul_topik_magang || '-'}
+                                </span>
+                              </td>
+                              <td className="p-3.5 text-xs font-medium text-slate-700">
+                                {ketuaRiset}
+                              </td>
+                              <td className="p-3.5 text-xs text-slate-600 max-w-[140px] truncate" title={m.sumber_dana}>
+                                {m.sumber_dana || '-'}
+                              </td>
+                              <td className="p-3.5 text-xs font-medium text-slate-600 whitespace-nowrap text-center">
+                                {m.semester}
+                              </td>
+                              <td className="p-3.5 text-xs text-slate-700 max-w-[200px]">
+                                {m.bukti_dokumen ? (
+                                  <span
+                                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-mono font-medium max-w-full truncate"
+                                    title={m.bukti_dokumen}
+                                  >
+                                    <FileText className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
+                                    <span className="truncate">{m.bukti_dokumen}</span>
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-300 font-mono text-center block">-</span>
+                                )}
+                              </td>
+                            </>
+                          )}
+
+                          <td className="p-3.5 pr-5 text-center">
                             <IconButton
                               label={isExpanded ? 'Tutup detail' : 'Lihat detail'}
                               onClick={(e) => { e.stopPropagation(); toggleExpand(m.id_mbkm); }}
@@ -475,30 +760,92 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                             />
                           </td>
                         </tr>
+
+                        {/* Detail Expandable Row */}
                         {isExpanded && (
                           <tr>
-                            <td colSpan={5} className="p-0">
-                              <div className="px-6 pb-4 pt-2 bg-gradient-to-b from-[var(--color-primary)]/[0.03] to-transparent border-t border-[var(--color-primary)]/5">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2.5">
-                                  {details.map((item, i) => (
-                                    <div key={i} className="flex items-center gap-2.5 text-sm">
-                                      <span className="text-[var(--color-primary)]/60">{item.icon}</span>
-                                      <span className="text-xs text-[var(--color-text-main)]/50 font-medium min-w-[95px]">{item.label}</span>
-                                      <span className="text-[var(--color-text-main)] font-medium">{item.value}</span>
-                                    </div>
-                                  ))}
+                            <td colSpan={subTab === 'magang' ? 7 : 9} className="p-0">
+                              <div className="px-6 pb-4 pt-3 bg-slate-50/90 border-t border-slate-200">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2.5 text-xs">
+                                  {subTab === 'magang' ? (
+                                    <>
+                                      <div className="flex items-center gap-2">
+                                        <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Instansi:</span>
+                                        <span className="font-semibold text-gray-800">{m.tempat_instansi}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Semester:</span>
+                                        <span className="font-semibold text-gray-800">{m.semester}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Periode:</span>
+                                        <span className="font-semibold text-gray-800">{m.periode_magang || '-'}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 md:col-span-2">
+                                        <BookOpen className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Topik Magang:</span>
+                                        <span className="font-semibold text-gray-800">{m.judul_topik_magang || '-'}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <UserCheck className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Dospem Lapangan:</span>
+                                        <span className="font-semibold text-gray-800">{m.dosen_pembimbing_lapangan || '-'}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <UserCheck className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Dospem UNPAD:</span>
+                                        <span className="font-semibold text-gray-800">{dospemDalam || '-'}</span>
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="flex items-center gap-2 md:col-span-2">
+                                        <Landmark className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Skema Keterlibatan:</span>
+                                        <span className="font-semibold text-gray-800">{m.keterlibatan || m.tempat_instansi}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Tahun/Periode:</span>
+                                        <span className="font-semibold text-gray-800">{m.semester}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 md:col-span-3">
+                                        <BookOpen className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Judul Riset:</span>
+                                        <span className="font-semibold text-gray-900">{m.judul_topik_magang || '-'}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <UserCheck className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Ketua Riset (Dosen):</span>
+                                        <span className="font-semibold text-gray-800">{ketuaRiset}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Sumber Dana:</span>
+                                        <span className="font-semibold text-gray-800">{m.sumber_dana || '-'}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <FileText className="w-3.5 h-3.5 text-gray-400" />
+                                        <span className="text-gray-500">Bukti:</span>
+                                        <span className="font-semibold text-gray-800">{m.bukti_dokumen || '-'}</span>
+                                      </div>
+                                    </>
+                                  )}
                                 </div>
 
-                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--color-primary)]/10">
+                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200">
                                   <button
                                     onClick={(e) => { e.stopPropagation(); handleEditClick(m); }}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition cursor-pointer"
                                   >
                                     <Edit2 className="w-3.5 h-3.5" /> Edit
                                   </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); m.id_mbkm && onDeleteMbkm(m.id_mbkm); }}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 transition cursor-pointer"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" /> Hapus
                                   </button>
@@ -510,24 +857,23 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                       </React.Fragment>
                     );
                   })}
-                  {filteredMbkm.length === 0 && (
+                  {filteredCurrentData.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="text-center py-12 text-sm text-gray-400">
-                        Data magang/MBKM tidak ditemukan.
+                      <td colSpan={subTab === 'magang' ? 7 : 9} className="text-center py-10 text-gray-400 text-xs">
+                        Tidak ada data yang sesuai dengan filter pencarian.
                       </td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-            {filteredMbkm.length > ROWS_PER_PAGE && (
-              <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 bg-gray-50/30">
-                <span className="text-xs text-gray-500">
-                  Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-{Math.min(safePage * ROWS_PER_PAGE, filteredMbkm.length)} dari {filteredMbkm.length} data
+
+            {filteredCurrentData.length > ROWS_PER_PAGE && (
+              <div className="flex items-center justify-between p-4 border-t border-gray-100">
+                <span className="text-xs text-[var(--color-text-main)]/50">
+                  Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}–{Math.min(safePage * ROWS_PER_PAGE, filteredCurrentData.length)} dari {filteredCurrentData.length} data
                 </span>
-                <div className="flex gap-2">
-                  <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
-                </div>
+                <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
               </div>
             )}
           </>
@@ -536,118 +882,289 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
 
       {/* Add / Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 max-w-2xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-display font-bold text-lg">
-                {editingMbkm ? 'Edit Magang' : 'Catat Magang Baru'}
-              </h3>
-              <button onClick={() => { setShowAddModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600">✕</button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-xl shadow-xl max-h-[90vh] overflow-y-auto border border-slate-200">
+            <div className="flex items-start justify-between pb-4 border-b border-slate-100 mb-4">
+              <div>
+                <h3 className="font-display font-bold text-lg text-[var(--color-text-main)]">
+                  {editingMbkm
+                    ? (subTab === 'magang' ? 'Edit Data Magang Industri' : 'Edit Keterlibatan Penelitian Dosen')
+                    : (subTab === 'magang' ? 'Catat Magang Industri Baru' : 'Catat Keterlibatan Penelitian Dosen Baru')}
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {subTab === 'magang'
+                    ? 'Lengkapi rincian instansi dan bimbingan magang mahasiswa.'
+                    : 'Lengkapi data keterlibatan mahasiswa dalam riset dosen.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowAddModal(false); resetForm(); }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:outline-none transition"
+                aria-label="Tutup modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Required Fields */}
-              <div>
-                <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Data Wajib</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label htmlFor="magang-mahasiswa" className="block text-xs font-semibold mb-1">Mahasiswa <span className="text-rose-500">*</span></label>
-                    <ComboboxMahasiswa
-                      id="magang-mahasiswa"
-                      mahasiswa={mahasiswa}
-                      value={form.npm_mahasiswa}
-                      onChange={(npm) => setForm({...form, npm_mahasiswa: npm})}
-                      placeholder="Cari nama/NPM mahasiswa..."
-                      required
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label htmlFor="magang-tempat" className="block text-xs font-semibold mb-1">Tempat / Instansi Magang <span className="text-rose-500">*</span></label>
-                    <input
-                      id="magang-tempat"
-                      type="text"
-                      required
-                      placeholder="Pertamina Geothermal Energy, BMKG, Chevron..."
-                      value={form.tempat_instansi}
-                      onChange={(e) => setForm({...form, tempat_instansi: e.target.value})}
-                      className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label htmlFor="magang-semester" className="block text-xs font-semibold mb-1">Semester Pelaksanaan <span className="text-rose-500">*</span></label>
-                    <input
-                      id="magang-semester"
-                      type="text"
-                      required
-                      placeholder="Genap 2025/2026"
-                      value={form.semester}
-                      onChange={(e) => setForm({...form, semester: e.target.value})}
-                      className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Optional Fields */}
-              <div className="border-t border-gray-100 pt-4">
-                <h4 className="text-xs font-bold text-[var(--color-muted)] uppercase tracking-wider mb-3">Data Tambahan (Opsional)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label htmlFor="magang-judul" className="block text-xs font-semibold mb-1">Judul Topik Magang</label>
-                    <input
-                      id="magang-judul"
-                      type="text"
-                      placeholder="Analisis Petrofisika dan Penentuan Net Pay..."
-                      value={form.judul_topik_magang || ''}
-                      onChange={(e) => setForm({...form, judul_topik_magang: e.target.value})}
-                      className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
-                    />
-                  </div>
-
+              {/* Form Khusus Magang Industri */}
+              {subTab === 'magang' ? (
+                <>
                   <div>
-                    <label htmlFor="magang-dpl" className="block text-xs font-semibold mb-1">Dosen Pembimbing Lapangan</label>
-                    <input
-                      id="magang-dpl"
-                      type="text"
-                      placeholder="Nama + instansi, misal: Bapak Andi (PGE)"
-                      value={form.dosen_pembimbing_lapangan || ''}
-                      onChange={(e) => setForm({...form, dosen_pembimbing_lapangan: e.target.value})}
-                      className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
-                    />
+                    <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Data Wajib Magang</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label htmlFor="magang-mahasiswa" className="block text-xs font-semibold text-slate-700 mb-1">Mahasiswa <span className="text-rose-500">*</span></label>
+                        <ComboboxMahasiswa
+                          id="magang-mahasiswa"
+                          mahasiswa={mahasiswa}
+                          value={form.npm_mahasiswa}
+                          onChange={(npm) => setForm({...form, npm_mahasiswa: npm})}
+                          placeholder="Cari nama/NPM mahasiswa..."
+                          required
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label htmlFor="magang-tempat" className="block text-xs font-semibold text-slate-700 mb-1">
+                          Tempat / Instansi Magang <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          id="magang-tempat"
+                          type="text"
+                          required
+                          placeholder="Contoh: PT Pertamina Geothermal Energy"
+                          value={form.tempat_instansi}
+                          onChange={(e) => setForm({...form, tempat_instansi: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="magang-semester" className="block text-xs font-semibold text-slate-700 mb-1">Semester Pelaksanaan <span className="text-rose-500">*</span></label>
+                        <input
+                          id="magang-semester"
+                          type="text"
+                          required
+                          placeholder="Contoh: Genap 2025/2026"
+                          value={form.semester}
+                          onChange={(e) => setForm({...form, semester: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="magang-periode" className="block text-xs font-semibold text-slate-700 mb-1">Periode Magang</label>
+                        <input
+                          id="magang-periode"
+                          type="text"
+                          placeholder="Contoh: 1 Juli - 31 Agustus 2026"
+                          value={form.periode_magang || ''}
+                          onChange={(e) => setForm({...form, periode_magang: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
                   </div>
 
+                  <div className="border-t border-slate-100 pt-4">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Topik & Pembimbing</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label htmlFor="magang-judul" className="block text-xs font-semibold text-slate-700 mb-1">Judul Topik Magang</label>
+                        <input
+                          id="magang-judul"
+                          type="text"
+                          placeholder="Contoh: Analisis Petrofisika dan Evaluasi Formasi Reservoar"
+                          value={form.judul_topik_magang || ''}
+                          onChange={(e) => setForm({...form, judul_topik_magang: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="magang-dpl" className="block text-xs font-semibold text-slate-700 mb-1">Dosen Pembimbing Lapangan</label>
+                        <input
+                          id="magang-dpl"
+                          type="text"
+                          placeholder="Contoh: Ir. Budi Santoso (PT Pertamina)"
+                          value={form.dosen_pembimbing_lapangan || ''}
+                          onChange={(e) => setForm({...form, dosen_pembimbing_lapangan: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="magang-dpd" className="block text-xs font-semibold text-slate-700 mb-1">Dosen Pembimbing UNPAD</label>
+                        <select
+                          id="magang-dpd"
+                          value={form.nip_dosen_pembimbing_dalam || ''}
+                          onChange={(e) => setForm({...form, nip_dosen_pembimbing_dalam: e.target.value || null})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 font-medium"
+                        >
+                          <option value="">-- Belum Ditentukan --</option>
+                          {dosen.map(d => (
+                            <option key={d.nip} value={d.nip}>{d.nama} ({d.nip})</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Form Khusus Penelitian Dosen (Sesuai Kolom Borang Riil) */
+                <>
                   <div>
-                    <label htmlFor="magang-dpd" className="block text-xs font-semibold mb-1">Dosen Pembimbing Dalam (UNPAD)</label>
-                    <select
-                      id="magang-dpd"
-                      value={form.nip_dosen_pembimbing_dalam || ''}
-                      onChange={(e) => setForm({...form, nip_dosen_pembimbing_dalam: e.target.value || null})}
-                      className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
-                    >
-                      <option value="">-- Belum Ditentukan --</option>
-                      {dosen.map(d => (
-                        <option key={d.nip} value={d.nip}>{d.nama} ({d.nip})</option>
-                      ))}
-                    </select>
+                    <h4 className="text-xs font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Data Riset & Keterlibatan</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label htmlFor="riset-mahasiswa" className="block text-xs font-semibold text-slate-700 mb-1">Mahasiswa <span className="text-rose-500">*</span></label>
+                        <ComboboxMahasiswa
+                          id="riset-mahasiswa"
+                          mahasiswa={mahasiswa}
+                          value={form.npm_mahasiswa}
+                          onChange={(npm) => setForm({...form, npm_mahasiswa: npm})}
+                          placeholder="Cari nama/NPM mahasiswa..."
+                          required
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label htmlFor="riset-keterlibatan" className="block text-xs font-semibold text-slate-700 mb-1">
+                          Skema Keterlibatan <span className="text-rose-500">*</span>
+                        </label>
+                        <select
+                          id="riset-keterlibatan"
+                          value={form.keterlibatan}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setForm({
+                              ...form,
+                              keterlibatan: val,
+                              tempat_instansi: val
+                            });
+                          }}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 font-medium"
+                        >
+                          {SKEMA_KETERLIBATAN_OPTIONS.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                        {form.keterlibatan === 'Dengan dosen tetap dari perguruan tinggi homebase' && (
+                          <p className="text-[11px] text-emerald-700 mt-1 font-medium">
+                            Skema Homebase: Anda dapat langsung memilih dosen Geofisika Unpad pada kolom "Pilih Dosen UNPAD" di bawah.
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label htmlFor="riset-judul" className="block text-xs font-semibold text-slate-700 mb-1">
+                          Judul Riset <span className="text-rose-500">*</span>
+                        </label>
+                        <textarea
+                          id="riset-judul"
+                          required
+                          rows={2}
+                          placeholder="Contoh: MONITORING GETARAN TANAH BERBASIS IoT DAN AI..."
+                          value={form.judul_topik_magang || ''}
+                          onChange={(e) => setForm({...form, judul_topik_magang: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="riset-sumberdana" className="block text-xs font-semibold text-slate-700 mb-1">
+                          Jenis Riset / Sumber Dana
+                        </label>
+                        <input
+                          id="riset-sumberdana"
+                          type="text"
+                          placeholder="Contoh: Hibah Bappeltbangda, RKDU 2026, RIM..."
+                          value={form.sumber_dana || ''}
+                          onChange={(e) => setForm({...form, sumber_dana: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
+
+                      <div>
+                        <label htmlFor="riset-periode" className="block text-xs font-semibold text-slate-700 mb-1">
+                          Tahun / Periode <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          id="riset-periode"
+                          type="text"
+                          required
+                          placeholder="Contoh: 2025, 2025-2026 genap 25/26"
+                          value={form.semester}
+                          onChange={(e) => setForm({...form, semester: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
                   </div>
 
-                  <div>
-                    <label htmlFor="magang-periode" className="block text-xs font-semibold mb-1">Periode Magang</label>
-                    <input
-                      id="magang-periode"
-                      type="text"
-                      placeholder="6 Juli - 6 Agustus 2026"
-                      value={form.periode_magang || ''}
-                      onChange={(e) => setForm({...form, periode_magang: e.target.value})}
-                      className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
-                    />
-                  </div>
-                </div>
-              </div>
+                  <div className="border-t border-slate-100 pt-4">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Ketua Riset & Dokumen Bukti</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="riset-ketua" className="block text-xs font-semibold text-slate-700 mb-1">
+                          Nama Ketua Riset (Dosen)
+                        </label>
+                        <input
+                          id="riset-ketua"
+                          type="text"
+                          placeholder="Contoh: Prof. Dr. rer. nat. Yudi Rosandi, M.Si."
+                          value={form.nama_ketua_riset || ''}
+                          onChange={(e) => setForm({...form, nama_ketua_riset: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
+                      <div>
+                        <label htmlFor="riset-dosen-unpad" className="block text-xs font-semibold text-slate-700 mb-1">
+                          Pilih Dosen UNPAD (Sinkron NIP)
+                        </label>
+                        <select
+                          id="riset-dosen-unpad"
+                          value={form.nip_dosen_pembimbing_dalam || ''}
+                          onChange={(e) => {
+                            const nip = e.target.value || null;
+                            const d = dosen.find(ds => ds.nip === nip);
+                            setForm({
+                              ...form,
+                              nip_dosen_pembimbing_dalam: nip,
+                              nama_ketua_riset: d ? d.nama : form.nama_ketua_riset
+                            });
+                          }}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 font-medium"
+                        >
+                          <option value="">-- Dosen Luar / Pilih Dosen UNPAD --</option>
+                          {dosen.map(d => (
+                            <option key={d.nip} value={d.nip}>{d.nama}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label htmlFor="riset-bukti" className="block text-xs font-semibold text-slate-700 mb-1">
+                          Bukti Dokumen (Nama File / Surat Keterangan / Laporan)
+                        </label>
+                        <input
+                          id="riset-bukti"
+                          type="text"
+                          placeholder="Contoh: LAPORAN PENELITIAN KOTA CIMAHI_compresse, Surat Keterangan.pdf"
+                          value={form.bukti_dokumen || ''}
+                          onChange={(e) => setForm({...form, bukti_dokumen: e.target.value})}
+                          className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
                 <Button
                   type="button"
                   variant="secondary"
@@ -662,7 +1179,7 @@ const semesterInstansiMap = mbkm.reduce((acc: Record<string, Record<string, numb
                   {isSubmitting ? (
                     <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Menyimpan...</>
                   ) : (
-                    editingMbkm ? 'Simpan Perubahan' : 'Simpan Data Magang'
+                    editingMbkm ? 'Simpan Perubahan' : 'Simpan Data'
                   )}
                 </Button>
               </div>

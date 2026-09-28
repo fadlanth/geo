@@ -316,6 +316,7 @@ export default function TracerTab({
       const multiOrInt = bekerjaLulusan.filter(a => a.tingkat_perusahaan === 'Multinasional' || a.tingkat_perusahaan === 'Internasional').length;
 
       const studiLanjut = tracerTh.filter(a => a.status_lulusan === 'Studi Lanjut').length;
+      const studiLanjutKurang12 = tracerTh.filter(a => a.status_lulusan === 'Studi Lanjut' && a.masa_tunggu_bulan <= 12).length;
       const wiraswasta = tracerTh.filter(a => a.status_lulusan === 'Wiraswasta').length;
       const belumBekerja = tracerTh.filter(a => a.status_lulusan === 'Belum Bekerja').length;
 
@@ -334,6 +335,7 @@ export default function TracerTab({
         nasional,
         multiOrInt,
         studiLanjut,
+        studiLanjutKurang12,
         wiraswasta,
         belumBekerja,
         gajiDiatasUMR
@@ -413,6 +415,7 @@ export default function TracerTab({
       'Tingkat Nasional': row.nasional,
       'Tingkat Multinasional / Internasional': row.multiOrInt,
       'Studi Lanjut': row.studiLanjut,
+      'Studi Lanjut (<= 1 Tahun)': row.studiLanjutKurang12,
       'Wiraswasta': row.wiraswasta,
       'Belum Bekerja': row.belumBekerja,
       'Gaji >= UMR (> 5 Juta)': row.gajiDiatasUMR
@@ -520,7 +523,13 @@ export default function TracerTab({
   };
 
   // Helper Badges
-  const masaTungguBadge = (bulan: number) => {
+  const masaTungguBadge = (bulan: number, isStudiLanjut = false) => {
+    if (isStudiLanjut) {
+      const cls = bulan <= 12 ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                  'bg-rose-100 text-rose-800 border-rose-200';
+      const label = bulan <= 12 ? `${bulan} bln (≤1 Thn)` : `${bulan} bln (>1 Thn)`;
+      return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cls}`}>{label}</span>;
+    }
     const kategori = getMasaTungguKategori(bulan);
     const cls = bulan <= 6 ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
                 bulan <= 12 ? 'bg-amber-100 text-amber-800 border-amber-200' :
@@ -551,7 +560,7 @@ export default function TracerTab({
     if (a.status_lulusan === 'Studi Lanjut') {
       if (a.universitas_tujuan) items.push({ icon: <GraduationCap className="w-3.5 h-3.5 shrink-0" />, label: 'Universitas', value: a.universitas_tujuan });
       if (a.program_studi) items.push({ icon: <BookOpen className="w-3.5 h-3.5 shrink-0" />, label: 'Program Studi', value: a.program_studi });
-      items.push({ icon: <Clock className="w-3.5 h-3.5 shrink-0" />, label: 'Masa Tunggu', value: masaTungguBadge(a.masa_tunggu_bulan) });
+      items.push({ icon: <Clock className="w-3.5 h-3.5 shrink-0" />, label: 'Masa Tunggu', value: masaTungguBadge(a.masa_tunggu_bulan, true) });
     }
 
     if (a.status_lulusan === 'Wiraswasta') {
@@ -821,7 +830,7 @@ export default function TracerTab({
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40" />
                   <input
                     type="text"
-                    placeholder="Cari alumni terlacak berdasarkan nama, instansi, atau NPM..."
+                    placeholder="Cari nama, NPM, atau instansi alumni"
                     aria-label="Cari data tracer alumni terlacak"
                     value={query}
                     onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
@@ -1008,7 +1017,13 @@ export default function TracerTab({
                               <td className="p-4">
                                 <div className="flex flex-col gap-1 items-start">
                                   <StatusChip status={a.status_lulusan} />
-                                  <span className="text-[10px] text-gray-500 font-medium">Lulus: {a.tahun_lulus}</span>
+                                  {a.status_lulusan === 'Studi Lanjut' ? (
+                                    <span className={`text-[10px] font-semibold ${a.masa_tunggu_bulan <= 12 ? 'text-emerald-700' : 'text-gray-500'}`}>
+                                      Lulus: {a.tahun_lulus} · {a.masa_tunggu_bulan <= 12 ? '≤1 Thn' : '>1 Thn'}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-gray-500 font-medium">Lulus: {a.tahun_lulus}</span>
+                                  )}
                                 </div>
                               </td>
                               <td className="p-4">
@@ -1124,7 +1139,8 @@ export default function TracerTab({
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    placeholder="Cari mahasiswa belum terlacak berdasarkan nama atau NPM..."
+                    placeholder="Cari nama atau NPM mahasiswa"
+                    aria-label="Cari mahasiswa belum terlacak"
                     value={query}
                     onChange={(e) => { setQuery(e.target.value); setUntrackedPage(1); }}
                     className="w-full pl-10 pr-9 py-2 text-sm bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-rose-600"
@@ -1275,7 +1291,10 @@ export default function TracerTab({
                         <th className="p-2 text-center">Nasional</th>
                         <th className="p-2 text-center">Multi/Int</th>
                         {/* Aktivitas Lain */}
-                        <th className="p-2 text-center border-l border-gray-200">S2/S3</th>
+                        <th className="p-2 text-center border-l border-gray-200">
+                          S2/S3
+                          <span className="block text-[9px] font-normal text-gray-400">Total (≤1 Thn)</span>
+                        </th>
                         <th className="p-2 text-center">Wirausaha</th>
                         <th className="p-2 text-center">Belum Kerja</th>
                       </tr>
@@ -1329,7 +1348,16 @@ export default function TracerTab({
                           </td>
                           {/* Aktivitas */}
                           <td className="p-3 text-center border-l border-gray-100 font-medium text-teal-700">
-                            {row.totalLulusan === 0 ? '-' : row.studiLanjut}
+                            {row.totalLulusan === 0 ? '-' : (
+                              <span>
+                                {row.studiLanjut}
+                                {row.studiLanjut > 0 && (
+                                  <span className="text-[10px] text-emerald-600 font-semibold ml-1">
+                                    ({row.studiLanjutKurang12})
+                                  </span>
+                                )}
+                              </span>
+                            )}
                           </td>
                           <td className="p-3 text-center font-medium text-amber-700">
                             {row.totalLulusan === 0 ? '-' : row.wiraswasta}
@@ -1482,7 +1510,7 @@ export default function TracerTab({
                       type="number"
                       min={0}
                       step={100000}
-                      placeholder="contoh: 8500000"
+                      placeholder="Contoh: 8500000"
                       value={form.gaji_pekerjaan || ''}
                       onChange={(e) => setForm({ ...form, gaji_pekerjaan: e.target.value ? Number(e.target.value) : undefined })}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -1501,7 +1529,7 @@ export default function TracerTab({
                     <input
                       id="tracer-univ"
                       type="text"
-                      placeholder="Kyushu University, ITB, UI..."
+                      placeholder="Contoh: Kyushu University / Institut Teknologi Bandung"
                       value={form.universitas_tujuan || ''}
                       onChange={(e) => setForm({ ...form, universitas_tujuan: e.target.value })}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -1512,7 +1540,7 @@ export default function TracerTab({
                     <input
                       id="tracer-prodi"
                       type="text"
-                      placeholder="Magister Teknik Geofisika"
+                      placeholder="Contoh: Magister Teknik Geofisika"
                       value={form.program_studi || ''}
                       onChange={(e) => setForm({ ...form, program_studi: e.target.value })}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
@@ -1530,7 +1558,7 @@ export default function TracerTab({
                     <input
                       id="tracer-usaha"
                       type="text"
-                      placeholder="Konsultasi Geofisika, Startup Teknologi..."
+                      placeholder="Contoh: Jasa Survei Geofisika"
                       value={form.bidang_usaha || ''}
                       onChange={(e) => setForm({ ...form, bidang_usaha: e.target.value })}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"

@@ -244,7 +244,7 @@ export default function MahasiswaTab({
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40" />
                   <input
                     type="text"
-                    placeholder="Cari mahasiswa berdasarkan Nama, NPM..."
+                    placeholder="Cari nama atau NPM mahasiswa"
                     aria-label="Cari mahasiswa"
                     value={rawSearch}
                     onChange={(e) => { setRawSearch(e.target.value); setPage(1); }}
@@ -444,7 +444,7 @@ export default function MahasiswaTab({
                     type="text" 
                     required
                     disabled={!!editingMhs}
-                    placeholder="Contoh: 12324001"
+                    placeholder="Contoh: 140710220001"
                     value={mhsForm.npm}
                     onChange={(e) => { setMhsForm({...mhsForm, npm: e.target.value}); if (errors.npm) setErrors({...errors, npm: undefined}); }}
                     className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${errors.npm ? 'border-red-400' : ''}`}

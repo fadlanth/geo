@@ -284,7 +284,7 @@ export default function DosenTab({
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Cari dosen berdasarkan Nama, NIP, atau Sandi..."
+                placeholder="Cari nama, NIP, atau kode dosen"
                 aria-label="Cari dosen"
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(1); }}
@@ -469,7 +469,7 @@ export default function DosenTab({
                     type="text" 
                     required
                     disabled={!!editingDosen}
-                    placeholder="Contoh: 1982031520..."
+                    placeholder="Contoh: 198203152008121001"
                     value={form.nip}
                      onChange={(e) => { setForm({...form, nip: e.target.value.replace(/\s+/g, '')}); if (errors.nip) setErrors({...errors, nip: undefined}); }}
                     className={`w-full text-sm p-3 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 transition disabled:bg-gray-50 disabled:text-gray-400 ${errors.nip ? 'border-red-400' : ''}`}

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { academicService } from '../lib/academicService';
-import { RiwayatMBKM, Dosen } from '../types';
+import { RiwayatMBKM, JenisKegiatan, Dosen } from '../types';
 import { errMsg } from '../lib/format';
 import { ToastOptions } from '../components/Toast';
 
@@ -68,13 +68,51 @@ export function useMagangActions(
     let errors = 0;
     for (const row of data) {
       const nr = Object.fromEntries(
-        Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), String(v ?? '')])
+        Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), String(v ?? '').trim()])
       );
-      const npmVal = nr['npm'] || nr['npm_mahasiswa'] || '';
-      const instansiVal = nr['nama instansi tempat magang'] || nr['tempat_instansi'] || '';
-      const semesterVal = nr['semester'] || '';
-      if (!npmVal || !instansiVal || !semesterVal) { errors++; continue; }
-      const dospemDalamName = nr['dosen pembimbing dalam'] || nr['dosen_pembimbing_dalam'] || '';
+
+      // Parse NPM, handle Excel scientific notation (misal "1,4071E+11" atau "1.4071E+11")
+      let npmVal = nr['npm'] || nr['npm_mahasiswa'] || '';
+      if (/^[0-9]+[.,][0-9]+[eE]\+[0-9]+$/.test(npmVal)) {
+        try {
+          const num = Number(npmVal.replace(',', '.'));
+          if (!isNaN(num)) {
+            npmVal = Math.round(num).toString();
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      // Deteksi otomatis apakah data ini penelitian dosen
+      const isPenelitian = Boolean(
+        nr['keterlibatan'] ||
+        nr['judul riset'] ||
+        nr['judul_riset'] ||
+        nr['jenis riset/sumber dana'] ||
+        nr['nama ketua riset (dosen)'] ||
+        (nr['jenis kegiatan'] || nr['jenis_kegiatan'] || '').toLowerCase().includes('penelitian')
+      );
+
+      const jenisKegiatan: JenisKegiatan = isPenelitian ? 'Penelitian Dosen' : 'Magang Industri';
+
+      const keterlibatanVal = nr['keterlibatan'] || undefined;
+      const sumberDanaVal = nr['jenis riset/sumber dana'] || nr['jenis riset'] || nr['sumber dana'] || nr['sumber_dana'] || undefined;
+      const ketuaRisetVal = nr['nama ketua riset (dosen)'] || nr['nama ketua riset'] || nr['ketua riset'] || nr['nama_ketua_riset'] || undefined;
+      const buktiVal = nr['bukti'] || nr['bukti_dokumen'] || nr['bukti dokumen'] || undefined;
+      const judulVal = nr['judul riset'] || nr['judul_riset'] || nr['judul topik magang'] || nr['judul_topik_magang'] || nr['judul'] || undefined;
+      const semesterVal = nr['tahun/periode'] || nr['tahun_periode'] || nr['periode'] || nr['semester'] || '';
+
+      const instansiVal = isPenelitian
+        ? (nr['lab / unit penelitian'] || nr['tempat_instansi'] || keterlibatanVal || 'Riset Dosen Geofisika')
+        : (nr['nama instansi tempat magang'] || nr['tempat_instansi'] || nr['instansi'] || '');
+
+      if (!npmVal || !instansiVal || !semesterVal) {
+        errors++;
+        continue;
+      }
+
+      const dospemDalamName = nr['dosen pembimbing dalam'] || nr['dosen_pembimbing_dalam'] || ketuaRisetVal || '';
       const dospemDalamNip = (() => {
         if (!dospemDalamName) return null;
         const clean = dospemDalamName.trim().toLowerCase();
@@ -87,12 +125,17 @@ export function useMagangActions(
 
       const m: RiwayatMBKM = {
         npm_mahasiswa: npmVal,
+        jenis_kegiatan: jenisKegiatan,
         tempat_instansi: instansiVal,
         semester: semesterVal,
-        judul_topik_magang: nr['judul topik magang'] || nr['judul_topik_magang'] || undefined,
-        dosen_pembimbing_lapangan: nr['dosen pembimbing lapangan'] || nr['dosen_pembimbing_lapangan'] || undefined,
+        judul_topik_magang: judulVal,
+        dosen_pembimbing_lapangan: nr['dosen pembimbing lapangan'] || nr['dosen_pembimbing_lapangan'] || ketuaRisetVal || undefined,
         nip_dosen_pembimbing_dalam: dospemDalamNip,
-        periode_magang: nr['periode magang'] || nr['periode_magang'] || undefined
+        periode_magang: nr['periode magang'] || nr['periode_magang'] || semesterVal || undefined,
+        keterlibatan: keterlibatanVal,
+        sumber_dana: sumberDanaVal,
+        nama_ketua_riset: ketuaRisetVal,
+        bukti_dokumen: buktiVal,
       };
       listToInsert.push(m);
     }

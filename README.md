@@ -1,56 +1,78 @@
-# GEO INFO — Sistem Informasi Akademik Geosains Universitas
+# GEO INFO - Sistem Informasi Akademik Geofisika UNPAD
 
-Aplikasi web akademik (React + TypeScript + Vite + Tailwind + Supabase):
-akses publik hanya angka agregat, data pribadi dilindungi RLS dan hanya bisa
-diubah pengguna terautentikasi.
+Aplikasi web sistem informasi akademik (React, TypeScript, Vite, Tailwind CSS, Supabase):
+akses publik hanya menyajikan angka agregat, sedangkan data riil dilindungi Row Level Security (RLS) Supabase dan hanya dapat dikelola oleh pengguna terautentikasi sesuai perannya.
 
-## Fitur
+## Fitur Utama
 
-- **Publik/Landing** — statistik agregat tanpa login (view `v_publik_rekap`)
-- **Login & Peran** — Supabase Auth; peran `admin`, `operator`, `dosen`, `guest`
-- **Ringkasan** — dashboard statistik + grafik rekap per angkatan/status lulusan, drill-down per sel
-- **Mahasiswa** — CRUD, plotting dosen wali, filter, import/export Excel
-- **Dosen** — CRUD, Sandi Dosen (tersembunyi, tidak diexport), grafik jabatan
-- **Prestasi** — CRUD prestasi + anggota, filter tingkat/juara
-- **Magang & MBKM** — CRUD riwayat magang, filter semester
-- **Tracer Study & Monitoring Cohort** — 
+- **Publik / Landing Page**: Statistik agregat publik tanpa login (view `v_publik_rekap`).
+- **Autentikasi & Otorisasi Berjenjang**: Supabase Auth dengan hak akses berbasis peran: `admin`, `operator`, `dosen`, dan `guest`.
+- **Profil Pengguna**: Dropdown status akun di header navigasi (nama, fakultas, peran) dilengkapi aksi keluar sistem yang aman.
+- **Ringkasan**: Dashboard statistik, grafik rekapitulasi per angkatan dan status kelulusan, serta drill-down data per sel tabel.
+- **Master Mahasiswa**: Manajemen data mahasiswa, plotting dosen wali, pencarian multi-kolom, filter status/angkatan, dan impor/ekspor Excel.
+- **Master Dosen**: Manajemen data dosen, sandi verifikasi dosen (terlindungi, tidak diekspor), dan visualisasi jabatan fungsional.
+- **Prestasi Mahasiswa**: Pencatatan capaian prestasi akademik/non-akademik beserta anggota tim dan filter tingkat kejuaraan.
+- **Kegiatan Mahasiswa di Luar Prodi (MBKM)**:
+  - **Magang Industri**: Rekapitulasi kerja praktik dan magang mahasiswa di dunia usaha/industri.
+  - **Penelitian Dosen**: Pencatatan keterlibatan mahasiswa dalam riset dosen homebase.
+  - Navigasi sub-rute cepat berbasis hash (`#mbkm/magang` dan `#mbkm/penelitian`).
+- **Tracer Study & Monitoring Cohort**:
   - **Cohort Selector**: Analisis berbasis tahun kelulusan resmi prodi (TS, TS-1, TS-2, TS-3, dst.).
-  - **Response Rate Indicator**: Pemantauan tingkat keterlacakan otomatis dengan target kepatuhan akreditasi Unggul LAMSAMA ($\ge 80\%$).
-  - **Gap Analysis (Alumni Belum Terlacak)**: Sinkronisasi Master Data Mahasiswa lulusan dengan hasil kuesioner untuk mendeteksi alumni yang belum merespons, dilengkapi info Dosen Wali dan aksi cepat input/salin data.
-  - **Matriks Akreditasi LAMSAMA & IKU-1**: Tabel matriks standar borang akreditasi (waktu tunggu kerja, skala perusahaan, studi lanjut, wiraswasta, gaji $\ge$ UMR) siap ekspor ke Excel.
-  - **Smart Importer Kuesioner**: Parser cerdas untuk file unduhan tracer study universitas / Dikti (kode f8, f5-02, dsb.) serta file CSV/Excel manual.
-- **Log Aktivitas** — audit trail (admin-only)
+  - **Response Rate Indicator**: Pemantauan tingkat keterlacakan lulusan dengan target kepatuhan akreditasi Unggul LAMSAMA (≥ 80%).
+  - **Gap Analysis (Alumni Belum Terlacak)**: Sinkronisasi data kelulusan dengan kuesioner tracer untuk mendeteksi alumni yang belum merespons, dilengkapi info Dosen Wali dan aksi cepat input/salin data.
+  - **Matriks Akreditasi LAMSAMA & IKU-1**: Tabel matriks standar borang akreditasi (waktu tunggu kerja, skala perusahaan, studi lanjut, wiraswasta, gaji ≥ UMR) siap ekspor ke Excel.
+  - **Smart Importer Kuesioner**: Parser data tracer study unduhan kuesioner universitas / Dikti (kode f8, f5-02, dsb.) serta file CSV/Excel manual.
+- **Log Aktivitas (Audit Trail)**: Pencatatan jejak mutasi data (khusus admin) dengan inspeksi payload JSON dan dukungan navigasi keyboard penuh.
 
-## Quick Start
+## Teknologi & Arsitektur
+
+- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Build Tool**: Vite dengan optimasi `manualChunks` (pemisahan vendor bundle XLSX, Recharts, Supabase, Lucide)
+- **Backend & Database**: Supabase (PostgreSQL, Row Level Security, RPC Security Definer)
+- **Icons**: Lucide React
+- **Keandalan**: Error Boundary mandiri dengan diagnosa runtime
+
+## Panduan Instalasi Lokal
 
 ```bash
-cp .env.example .env   # isi VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY (publishable key)
+# Salin konfigurasi environment
+cp .env.example .env
+
+# Isi variabel pada berkas .env:
+# VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+# VITE_SUPABASE_ANON_KEY=eyxxxxxxxxxxxxxxxx
+
+# Pasang dependensi
 npm install
-npm run dev            # http://localhost:3000
+
+# Jalankan server pengembangan lokal (http://localhost:3000)
+npm run dev
 ```
 
-Script lain: `npm run lint`, `npm run build`, `npm run preview`.
+Perintah lain yang tersedia:
+- `npm run build`: Kompilasi aset produksi ke folder `dist/`
+- `npm run preview`: Uji coba bundle produksi secara lokal
+- `npm run lint`: Pemeriksaan standar kualitas kode
 
-## Setup Database (urutan penting)
+## Setup Database Supabase
 
-1. **Database baru:** jalankan script DDL dari `src/lib/academicService.ts` (`SUPABASE_DDL`),
-   lalu `supabase/migrations/001_security.sql`.
-2. **Database lama:** jalankan `supabase/migrations/002_reconcile.sql` dulu
-   (kolom `sandi_dosen` + unique constraint), lalu `001_security.sql`.
-3. **Set peran:** user baru otomatis `guest`. Promote lewat SQL Editor:
+1. **Inisialisasi Database Baru**:
+   Jalankan skrip DDL pada `src/lib/academicService.ts` (`SUPABASE_DDL`), kemudian jalankan berkas migrasi keamanan `supabase/migrations/001_security.sql`.
+2. **Database yang Sudah Berjalan**:
+   Jalankan migrasi `supabase/migrations/002_reconcile.sql` terlebih dahulu (penyesuaian kolom `sandi_dosen` dan unique constraint), lalu jalankan `001_security.sql`.
+3. **Konfigurasi Hak Akses**:
+   Pengguna baru yang mendaftar secara bawaan berstatus `guest`. Tingkatkan peran menjadi `admin` atau `operator` melalui SQL Editor Supabase:
    ```sql
-   UPDATE public.profiles SET role = 'admin' WHERE email = 'nama@example.ac.id';
+   UPDATE public.profiles SET role = 'admin' WHERE email = 'nama@unpad.ac.id';
    ```
 
-> Folder `supabase/migrations/` sengaja tidak ikut git (`.gitignore`).
+## Standar Keamanan & Tata Kelola Data
 
-## Keamanan
-
-- RLS aktif di semua tabel; anon hanya baca `v_publik_rekap`.
-- `audit_log` ditulis via RPC `audit_log_insert` (SECURITY DEFINER) — user tidak bisa menulis langsung.
-- Sandi Dosen tidak masuk audit log dan tidak ikut export.
-- Kunci `service_role` tidak pernah dipakai di kode.
+- Row Level Security (RLS) aktif di seluruh tabel data; peran anonim hanya dapat membaca ringkasan publik `v_publik_rekap`.
+- Pencatatan `audit_log` diproses melalui fungsi RPC `audit_log_insert` (SECURITY DEFINER), mencegah manipulasi langsung dari sisi klien.
+- Sandi verifikasi dosen tidak dicatat dalam riwayat audit log dan tidak disertakan dalam berkas ekspor data.
+- Kunci `service_role` tidak pernah digunakan maupun disematkan pada kode sisi klien.
 
 ## Lisensi
 
-Universitas / Program Studi Geosains, Fakultas Sains.
+Program Studi Geofisika, Fakultas Matematika dan Ilmu Pengetahuan Alam (FMIPA), Universitas Padjadjaran.

@@ -125,6 +125,7 @@ export default function PrestasiTab({
   }, {});
   const TINGKAT_LABELS = ['Internasional', 'Nasional', 'Wilayah', 'Universitas'] as const;
 
+
   const filteredPrestasi = prestasi.filter(p => {
     const namaMhs = getPrestasiNamaMahasiswa(p, mahasiswa);
     const matchesSearch = p.nama_kompetisi.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -456,7 +457,7 @@ export default function PrestasiTab({
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-main)]/40" />
             <input
               type="text"
-              placeholder="Cari nama mahasiswa atau nama kompetisi..."
+              placeholder="Cari mahasiswa atau kompetisi"
               aria-label="Cari prestasi"
               value={query}
               onChange={(e) => { setQuery(e.target.value); setPage(1); setExpandedId(null); }}
@@ -646,7 +647,7 @@ export default function PrestasiTab({
                                             <input
                                               id="anggota-nama"
                                               type="text"
-                                              placeholder="Nama peserta"
+                                              placeholder="Nama lengkap mahasiswa"
                                               value={anggotaForm.nama_lengkap}
                                               onChange={(e) => setAnggotaForm({...anggotaForm, nama_lengkap: e.target.value})}
                                               className="w-full text-xs p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-violet-400"
@@ -657,7 +658,7 @@ export default function PrestasiTab({
                                             <input
                                               id="anggota-npm"
                                               type="text"
-                                              placeholder="NPM"
+                                              placeholder="NPM mahasiswa"
                                               value={anggotaForm.npm}
                                               onChange={(e) => setAnggotaForm({...anggotaForm, npm: e.target.value})}
                                               className="w-full text-xs p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-violet-400"
@@ -668,7 +669,7 @@ export default function PrestasiTab({
                                             <input
                                               id="anggota-prodi"
                                               type="text"
-                                              placeholder="Geofisika"
+                                              placeholder="Contoh: Geofisika"
                                               value={anggotaForm.prodi}
                                               onChange={(e) => setAnggotaForm({...anggotaForm, prodi: e.target.value})}
                                               className="w-full text-xs p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-violet-400"
@@ -679,7 +680,7 @@ export default function PrestasiTab({
                                             <input
                                               id="anggota-univ"
                                               type="text"
-                                              placeholder="UNPAD"
+                                              placeholder="Contoh: Universitas Padjadjaran"
                                               value={anggotaForm.universitas}
                                               onChange={(e) => setAnggotaForm({...anggotaForm, universitas: e.target.value})}
                                               className="w-full text-xs p-2 border border-gray-200 rounded-lg focus:outline-none focus:border-violet-400"
@@ -887,11 +888,11 @@ export default function PrestasiTab({
                     />
                   </div>
                   <div>
-                    <label htmlFor="prestasi-tempat" className="block text-xs font-semibold mb-1">Tempat</label>
+                    <label htmlFor="prestasi-tempat" className="block text-xs font-semibold mb-1">Tempat Pelaksanaan</label>
                     <input
                       id="prestasi-tempat"
                       type="text"
-                      placeholder="Bandung, Jakarta, Tokyo..."
+                      placeholder="Contoh: Bandung / Daring"
                       value={form.tempat || ''}
                       onChange={(e) => setForm({...form, tempat: e.target.value})}
                       className="w-full text-sm p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
