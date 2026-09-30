@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import CsvImporter from './CsvImporter';
 import Pagination from './Pagination';
 import DataActions from './DataActions';
@@ -22,7 +22,10 @@ import {
   Landmark,
   X,
   Microscope,
-  ExternalLink
+  ExternalLink,
+  User,
+  Users,
+  UserPlus
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -40,6 +43,24 @@ import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
 import { SkeletonTable, SkeletonCard } from './Skeleton';
 import ComboboxMahasiswa from './ComboboxMahasiswa';
+
+interface GroupedProject {
+  id: string;
+  judul_topik_magang: string;
+  nama_ketua_riset?: string;
+  nip_dosen_pembimbing_dalam?: string | null;
+  dosen_pembimbing_lapangan?: string;
+  keterlibatan?: string;
+  sumber_dana?: string;
+  semester: string;
+  bukti_dokumen?: string | null;
+  members: {
+    id_mbkm?: string;
+    npm_mahasiswa: string;
+    nama: string;
+    raw: RiwayatMBKM;
+  }[];
+}
 
 interface MagangTabProps {
   mbkm: RiwayatMBKM[];
@@ -77,10 +98,12 @@ export default function MagangTab({
 
   // Sub-Tab Switcher State (Induk: Kegiatan Luar Prodi -> Magang vs Penelitian)
   const [subTab, setSubTab] = useState<'magang' | 'penelitian'>((activeSubTab as any) || 'magang');
+  const [viewMode, setViewMode] = useState<'individu' | 'kelompok'>('individu');
 
   useEffect(() => {
     if (activeSubTab === 'magang' || activeSubTab === 'penelitian') {
       setSubTab(activeSubTab);
+      setViewMode('individu');
       setPage(1);
       setQuery('');
       setFilterKeterlibatan('All');
@@ -188,9 +211,69 @@ export default function MagangTab({
     return matchesSearch && matchesSemester && (subTab === 'magang' ? true : matchesKeterlibatan);
   });
 
-  const totalPages = Math.ceil(filteredCurrentData.length / ROWS_PER_PAGE);
+  const groupedProjects: GroupedProject[] = useMemo(() => {
+    if (subTab !== 'penelitian') return [];
+    const map = new Map<string, GroupedProject>();
+
+    filteredCurrentData.forEach((m) => {
+      const judul = (m.judul_topik_magang || '').trim();
+      const ketua = (m.nama_ketua_riset || m.nip_dosen_pembimbing_dalam || m.dosen_pembimbing_lapangan || '').trim().toLowerCase();
+      const sem = (m.semester || '').trim().toLowerCase();
+      const key = judul ? `${judul.toLowerCase()}:::${ketua}:::${sem}` : (m.id_mbkm || Math.random().toString());
+      const mhs = mahasiswa.find(s => s.npm === m.npm_mahasiswa);
+      const nama = mhs ? mhs.nama : 'N/A';
+
+      if (!map.has(key)) {
+        map.set(key, {
+          id: m.id_mbkm || key,
+          judul_topik_magang: m.judul_topik_magang || '-',
+          nama_ketua_riset: m.nama_ketua_riset,
+          nip_dosen_pembimbing_dalam: m.nip_dosen_pembimbing_dalam,
+          dosen_pembimbing_lapangan: m.dosen_pembimbing_lapangan,
+          keterlibatan: m.keterlibatan || m.tempat_instansi,
+          sumber_dana: m.sumber_dana,
+          semester: m.semester,
+          bukti_dokumen: m.bukti_dokumen,
+          members: []
+        });
+      }
+
+      map.get(key)!.members.push({
+        id_mbkm: m.id_mbkm,
+        npm_mahasiswa: m.npm_mahasiswa,
+        nama,
+        raw: m
+      });
+    });
+
+    return Array.from(map.values());
+  }, [subTab, filteredCurrentData, mahasiswa]);
+
+  const isKelompok = subTab === 'penelitian' && viewMode === 'kelompok';
+  const totalItems = isKelompok ? groupedProjects.length : filteredCurrentData.length;
+  const totalPages = Math.ceil(totalItems / ROWS_PER_PAGE);
   const safePage = Math.min(page, Math.max(1, totalPages));
   const paginatedData = filteredCurrentData.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+  const paginatedGrouped = groupedProjects.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+
+  const handleOpenAddWithPreset = (group: GroupedProject) => {
+    setForm({
+      npm_mahasiswa: '',
+      jenis_kegiatan: 'Penelitian Dosen',
+      tempat_instansi: group.keterlibatan || 'Dengan dosen tetap dari perguruan tinggi homebase',
+      semester: group.semester,
+      judul_topik_magang: group.judul_topik_magang,
+      dosen_pembimbing_lapangan: group.dosen_pembimbing_lapangan || '',
+      nip_dosen_pembimbing_dalam: group.nip_dosen_pembimbing_dalam || null,
+      periode_magang: '',
+      keterlibatan: group.keterlibatan || 'Dengan dosen tetap dari perguruan tinggi homebase',
+      sumber_dana: group.sumber_dana || '',
+      nama_ketua_riset: group.nama_ketua_riset || '',
+      bukti_dokumen: group.bukti_dokumen || ''
+    });
+    setEditingMbkm(null);
+    setShowAddModal(true);
+  };
 
   const handleEditClick = (m: RiwayatMBKM) => {
     setEditingMbkm(m);
@@ -610,6 +693,37 @@ export default function MagangTab({
           </div>
 
           {subTab === 'penelitian' && (
+            <div className="inline-flex items-center p-0.5 rounded-xl bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 shrink-0">
+              <button
+                type="button"
+                onClick={() => { setViewMode('individu'); setPage(1); setExpandedId(null); }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  viewMode === 'individu'
+                    ? 'bg-white text-[var(--color-primary)] shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Tampilkan per baris mahasiswa"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Individu ({filteredCurrentData.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => { setViewMode('kelompok'); setPage(1); setExpandedId(null); }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
+                  viewMode === 'kelompok'
+                    ? 'bg-white text-[var(--color-primary)] shadow-xs font-bold'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="Gabungkan mahasiswa dengan judul riset yang sama"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Kelompok Riset ({groupedProjects.length})</span>
+              </button>
+            </div>
+          )}
+
+          {subTab === 'penelitian' && (
             <select
               value={filterKeterlibatan}
               onChange={(e) => { setFilterKeterlibatan(e.target.value); setPage(1); setExpandedId(null); }}
@@ -645,108 +759,108 @@ export default function MagangTab({
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-bold uppercase tracking-wider">
-                    <th className="p-3.5 pl-5 w-12 text-center">#</th>
-                    <th className="p-3.5 min-w-[170px]">Mahasiswa</th>
-                    {subTab === 'magang' ? (
+                    {isKelompok ? (
                       <>
-                        <th className="p-3.5 min-w-[180px]">Instansi Magang</th>
-                        <th className="p-3.5 w-32 text-center">Semester</th>
-                        <th className="p-3.5 min-w-[220px]">Topik Magang</th>
-                        <th className="p-3.5 min-w-[160px]">Dospem</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="p-3.5 min-w-[140px]">Keterlibatan</th>
-                        <th className="p-3.5 min-w-[240px] max-w-[320px]">Judul Riset</th>
+                        <th className="p-3.5 pl-5 w-12 text-center">#</th>
+                        <th className="p-3.5 min-w-[260px] max-w-[340px]">Judul Riset & Skema</th>
                         <th className="p-3.5 min-w-[160px]">Ketua Riset (Dosen)</th>
+                        <th className="p-3.5 min-w-[200px]">Anggota Mahasiswa</th>
                         <th className="p-3.5 min-w-[140px]">Sumber Dana</th>
                         <th className="p-3.5 w-32 text-center">Tahun / Periode</th>
                         <th className="p-3.5 min-w-[150px] max-w-[200px]">Bukti</th>
+                        <th className="p-3.5 pr-5 text-center min-w-[110px]">Aksi</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="p-3.5 pl-5 w-12 text-center">#</th>
+                        <th className="p-3.5 min-w-[170px]">Mahasiswa</th>
+                        {subTab === 'magang' ? (
+                          <>
+                            <th className="p-3.5 min-w-[180px]">Instansi Magang</th>
+                            <th className="p-3.5 w-32 text-center">Semester</th>
+                            <th className="p-3.5 min-w-[220px]">Topik Magang</th>
+                            <th className="p-3.5 min-w-[160px]">Dospem</th>
+                          </>
+                        ) : (
+                          <>
+                            <th className="p-3.5 min-w-[140px]">Keterlibatan</th>
+                            <th className="p-3.5 min-w-[240px] max-w-[320px]">Judul Riset</th>
+                            <th className="p-3.5 min-w-[160px]">Ketua Riset (Dosen)</th>
+                            <th className="p-3.5 min-w-[140px]">Sumber Dana</th>
+                            <th className="p-3.5 w-32 text-center">Tahun / Periode</th>
+                            <th className="p-3.5 min-w-[150px] max-w-[200px]">Bukti</th>
+                          </>
+                        )}
+                        <th className="p-3.5 pr-5 text-center w-12"></th>
                       </>
                     )}
-                    <th className="p-3.5 pr-5 text-center w-12"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
-                  {paginatedData.map((m, idx) => {
-                    const mhs = mahasiswa.find(s => s.npm === m.npm_mahasiswa);
-                    const isExpanded = expandedId === m.id_mbkm;
-                    const dospemDalam = getDospemDalamName(m.nip_dosen_pembimbing_dalam);
-                    const ketuaRiset = m.nama_ketua_riset || (dospemDalam || m.dosen_pembimbing_lapangan || '-');
+                  {isKelompok ? (
+                    <>
+                      {paginatedGrouped.map((grp, idx) => {
+                        const isExpanded = expandedId === grp.id;
+                        const dospemDalam = getDospemDalamName(grp.nip_dosen_pembimbing_dalam);
+                        const ketuaRiset = grp.nama_ketua_riset || (dospemDalam || grp.dosen_pembimbing_lapangan || '-');
 
-                    return (
-                      <React.Fragment key={m.id_mbkm}>
-                        <tr
-                          tabIndex={0}
-                          role="button"
-                          aria-expanded={isExpanded}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              toggleExpand(m.id_mbkm);
-                            }
-                          }}
-                          className={`hover:bg-slate-50/80 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-inset ${
-                            isExpanded ? 'bg-[var(--color-primary)]/[0.04]' : ''
-                          }`}
-                          onClick={() => toggleExpand(m.id_mbkm)}
-                        >
-                          <td className="p-3.5 pl-5 text-slate-400 font-mono text-xs text-center">
-                            {(safePage - 1) * ROWS_PER_PAGE + idx + 1}
-                          </td>
-                          <td className="p-3.5">
-                            <div className="font-semibold text-[var(--color-text-main)]">
-                              {mhs ? mhs.nama : 'N/A'}
-                            </div>
-                            <div className="text-xs font-mono text-slate-500">
-                              {m.npm_mahasiswa}
-                            </div>
-                          </td>
-
-                          {subTab === 'magang' ? (
-                            <>
-                              <td className="p-3.5 font-medium text-[var(--color-text-main)]">
-                                {m.tempat_instansi}
+                        return (
+                          <React.Fragment key={grp.id}>
+                            <tr
+                              tabIndex={0}
+                              role="button"
+                              aria-expanded={isExpanded}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  toggleExpand(grp.id);
+                                }
+                              }}
+                              className={`hover:bg-slate-50/80 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-inset ${
+                                isExpanded ? 'bg-[var(--color-primary)]/[0.04]' : ''
+                              }`}
+                              onClick={() => toggleExpand(grp.id)}
+                            >
+                              <td className="p-3.5 pl-5 text-slate-400 font-mono text-xs text-center">
+                                {(safePage - 1) * ROWS_PER_PAGE + idx + 1}
                               </td>
-                              <td className="p-3.5 text-xs font-medium text-slate-600 text-center">
-                                {m.semester}
-                              </td>
-                              <td className="p-3.5 text-xs text-slate-600 max-w-xs truncate" title={m.judul_topik_magang}>
-                                {m.judul_topik_magang || '-'}
-                              </td>
-                              <td className="p-3.5 text-xs text-slate-600">
-                                {dospemDalam || m.dosen_pembimbing_lapangan || '-'}
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="p-3.5">
-                                {getKeterlibatanBadge(m.keterlibatan || m.tempat_instansi)}
-                              </td>
-                              <td className="p-3.5 max-w-[320px]">
-                                <span className="text-xs font-medium text-slate-800 line-clamp-2 block" title={m.judul_topik_magang}>
-                                  {m.judul_topik_magang || '-'}
+                              <td className="p-3.5 max-w-[340px]">
+                                <span className="text-xs font-semibold text-slate-900 line-clamp-2 block" title={grp.judul_topik_magang}>
+                                  {grp.judul_topik_magang || '-'}
                                 </span>
+                                <div className="mt-1">
+                                  {getKeterlibatanBadge(grp.keterlibatan)}
+                                </div>
                               </td>
                               <td className="p-3.5 text-xs font-medium text-slate-700">
                                 {ketuaRiset}
                               </td>
-                              <td className="p-3.5 text-xs text-slate-600 max-w-[140px] truncate" title={m.sumber_dana}>
-                                {m.sumber_dana || '-'}
+                              <td className="p-3.5">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-[var(--color-primary)] border border-rose-200 mb-1">
+                                  <Users className="w-3.5 h-3.5 shrink-0" />
+                                  <span>{grp.members.length} Mahasiswa</span>
+                                </div>
+                                <div className="text-[11px] text-slate-600 line-clamp-1 max-w-[220px]" title={grp.members.map(m => m.nama).join(', ')}>
+                                  {grp.members.slice(0, 2).map(m => m.nama).join(', ')}
+                                  {grp.members.length > 2 ? `, +${grp.members.length - 2} lainnya` : ''}
+                                </div>
+                              </td>
+                              <td className="p-3.5 text-xs text-slate-600 max-w-[140px] truncate" title={grp.sumber_dana}>
+                                {grp.sumber_dana || '-'}
                               </td>
                               <td className="p-3.5 text-xs font-medium text-slate-600 whitespace-nowrap text-center">
-                                {m.semester}
+                                {grp.semester}
                               </td>
                               <td className="p-3.5 text-xs text-slate-700 max-w-[200px]">
-                                {m.bukti_dokumen ? (
-                                  /^https?:\/\//i.test(m.bukti_dokumen) ? (
+                                {grp.bukti_dokumen ? (
+                                  /^https?:\/\//i.test(grp.bukti_dokumen) ? (
                                     <a
-                                      href={m.bukti_dokumen}
+                                      href={grp.bukti_dokumen}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => e.stopPropagation()}
                                       className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-50 text-[var(--color-primary)] hover:bg-red-100 hover:text-[#7f2626] border border-red-200 text-[11px] font-medium transition cursor-pointer max-w-full group shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-                                      title={`Buka dokumen: ${m.bukti_dokumen}`}
+                                      title={`Buka dokumen: ${grp.bukti_dokumen}`}
                                     >
                                       <FileText className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
                                       <span className="truncate">Buka Dokumen</span>
@@ -755,158 +869,357 @@ export default function MagangTab({
                                   ) : (
                                     <span
                                       className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-mono font-medium max-w-full truncate"
-                                      title={m.bukti_dokumen}
+                                      title={grp.bukti_dokumen}
                                     >
                                       <FileText className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
-                                      <span className="truncate">{m.bukti_dokumen}</span>
+                                      <span className="truncate">{grp.bukti_dokumen}</span>
                                     </span>
                                   )
                                 ) : (
                                   <span className="text-slate-300 font-mono text-center block">-</span>
                                 )}
                               </td>
-                            </>
-                          )}
+                              <td className="p-3.5 pr-5 text-center">
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenAddWithPreset(grp);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:text-[var(--color-primary)] shadow-2xs transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                                    title="Tambah anggota mahasiswa ke riset ini"
+                                  >
+                                    <UserPlus className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                                    <span className="hidden sm:inline">Anggota</span>
+                                  </button>
+                                  <IconButton
+                                    label={isExpanded ? 'Tutup daftar anggota' : 'Lihat daftar anggota'}
+                                    onClick={(e) => { e.stopPropagation(); toggleExpand(grp.id); }}
+                                    icon={isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                  />
+                                </div>
+                              </td>
+                            </tr>
 
-                          <td className="p-3.5 pr-5 text-center">
-                            <IconButton
-                              label={isExpanded ? 'Tutup detail' : 'Lihat detail'}
-                              onClick={(e) => { e.stopPropagation(); toggleExpand(m.id_mbkm); }}
-                              icon={isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            />
+                            {/* Detail Anggota Kelompok */}
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={8} className="p-0">
+                                  <div className="px-6 pb-4 pt-3 bg-slate-50/90 border-t border-slate-200">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2 border-b border-slate-200">
+                                      <div>
+                                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                          <Users className="w-3.5 h-3.5 text-[var(--color-primary)]" />
+                                          Daftar Anggota Mahasiswa ({grp.members.length} Orang)
+                                        </h4>
+                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                          Riset: <span className="font-semibold text-slate-700">{grp.judul_topik_magang}</span>
+                                        </p>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenAddWithPreset(grp)}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--color-primary)] hover:bg-[#852c2c] text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer self-start sm:self-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                                      >
+                                        <UserPlus className="w-3.5 h-3.5" />
+                                        <span>+ Tambah Anggota</span>
+                                      </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                      {grp.members.map((mbr) => (
+                                        <div
+                                          key={mbr.id_mbkm || mbr.npm_mahasiswa}
+                                          className="flex items-center justify-between p-2.5 bg-white border border-slate-200 rounded-lg shadow-2xs hover:border-slate-300 transition"
+                                        >
+                                          <div className="min-w-0 pr-2">
+                                            <div className="text-xs font-semibold text-slate-900 truncate" title={mbr.nama}>
+                                              {mbr.nama}
+                                            </div>
+                                            <div className="text-[11px] font-mono text-slate-500">
+                                              {mbr.npm_mahasiswa}
+                                            </div>
+                                          </div>
+                                          <div className="flex items-center gap-1 shrink-0">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleEditClick(mbr.raw)}
+                                              title={`Edit data ${mbr.nama}`}
+                                              className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                            >
+                                              <Edit2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              onClick={() => mbr.id_mbkm && onDeleteMbkm(mbr.id_mbkm)}
+                                              title={`Hapus ${mbr.nama} dari riset`}
+                                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                      {paginatedGrouped.length === 0 && (
+                        <tr>
+                          <td colSpan={8} className="text-center py-10 text-gray-400 text-xs">
+                            Tidak ada kelompok riset yang sesuai dengan filter pencarian.
                           </td>
                         </tr>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {paginatedData.map((m, idx) => {
+                        const mhs = mahasiswa.find(s => s.npm === m.npm_mahasiswa);
+                        const isExpanded = expandedId === m.id_mbkm;
+                        const dospemDalam = getDospemDalamName(m.nip_dosen_pembimbing_dalam);
+                        const ketuaRiset = m.nama_ketua_riset || (dospemDalam || m.dosen_pembimbing_lapangan || '-');
 
-                        {/* Detail Expandable Row */}
-                        {isExpanded && (
-                          <tr>
-                            <td colSpan={subTab === 'magang' ? 7 : 9} className="p-0">
-                              <div className="px-6 pb-4 pt-3 bg-slate-50/90 border-t border-slate-200">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2.5 text-xs">
-                                  {subTab === 'magang' ? (
-                                    <>
-                                      <div className="flex items-center gap-2">
-                                        <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Instansi:</span>
-                                        <span className="font-semibold text-gray-800">{m.tempat_instansi}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Semester:</span>
-                                        <span className="font-semibold text-gray-800">{m.semester}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Periode:</span>
-                                        <span className="font-semibold text-gray-800">{m.periode_magang || '-'}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2 md:col-span-2">
-                                        <BookOpen className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Topik Magang:</span>
-                                        <span className="font-semibold text-gray-800">{m.judul_topik_magang || '-'}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <UserCheck className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Dospem Lapangan:</span>
-                                        <span className="font-semibold text-gray-800">{m.dosen_pembimbing_lapangan || '-'}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <UserCheck className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Dospem UNPAD:</span>
-                                        <span className="font-semibold text-gray-800">{dospemDalam || '-'}</span>
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <div className="flex items-center gap-2 md:col-span-2">
-                                        <Landmark className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Skema Keterlibatan:</span>
-                                        <span className="font-semibold text-gray-800">{m.keterlibatan || m.tempat_instansi}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Tahun/Periode:</span>
-                                        <span className="font-semibold text-gray-800">{m.semester}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2 md:col-span-3">
-                                        <BookOpen className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Judul Riset:</span>
-                                        <span className="font-semibold text-gray-900">{m.judul_topik_magang || '-'}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <UserCheck className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Ketua Riset (Dosen):</span>
-                                        <span className="font-semibold text-gray-800">{ketuaRiset}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <DollarSign className="w-3.5 h-3.5 text-gray-400" />
-                                        <span className="text-gray-500">Sumber Dana:</span>
-                                        <span className="font-semibold text-gray-800">{m.sumber_dana || '-'}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                                        <span className="text-gray-500">Bukti:</span>
-                                        {m.bukti_dokumen ? (
-                                          /^https?:\/\//i.test(m.bukti_dokumen) ? (
-                                            <a
-                                              href={m.bukti_dokumen}
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)] hover:underline truncate max-w-md"
-                                              title={m.bukti_dokumen}
-                                            >
-                                              <span className="truncate">{m.bukti_dokumen}</span>
-                                              <ExternalLink className="w-3.5 h-3.5 shrink-0 ml-0.5" />
-                                            </a>
-                                          ) : (
-                                            <span className="font-semibold text-gray-800">{m.bukti_dokumen}</span>
-                                          )
-                                        ) : (
-                                          <span className="font-semibold text-gray-800">-</span>
-                                        )}
-                                      </div>
-                                    </>
-                                  )}
+                        return (
+                          <React.Fragment key={m.id_mbkm}>
+                            <tr
+                              tabIndex={0}
+                              role="button"
+                              aria-expanded={isExpanded}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  toggleExpand(m.id_mbkm);
+                                }
+                              }}
+                              className={`hover:bg-slate-50/80 transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-inset ${
+                                isExpanded ? 'bg-[var(--color-primary)]/[0.04]' : ''
+                              }`}
+                              onClick={() => toggleExpand(m.id_mbkm)}
+                            >
+                              <td className="p-3.5 pl-5 text-slate-400 font-mono text-xs text-center">
+                                {(safePage - 1) * ROWS_PER_PAGE + idx + 1}
+                              </td>
+                              <td className="p-3.5">
+                                <div className="font-semibold text-[var(--color-text-main)]">
+                                  {mhs ? mhs.nama : 'N/A'}
                                 </div>
+                                <div className="text-xs font-mono text-slate-500">
+                                  {m.npm_mahasiswa}
+                                </div>
+                              </td>
 
-                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); handleEditClick(m); }}
-                                    aria-label={`Edit data ${subTab === 'magang' ? 'magang' : 'riset'} ${m.npm_mahasiswa}`}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition cursor-pointer"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" /> Edit
-                                  </button>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); m.id_mbkm && onDeleteMbkm(m.id_mbkm); }}
-                                    aria-label={`Hapus data ${subTab === 'magang' ? 'magang' : 'riset'} ${m.npm_mahasiswa}`}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 transition cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" /> Hapus
-                                  </button>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                  {filteredCurrentData.length === 0 && (
-                    <tr>
-                      <td colSpan={subTab === 'magang' ? 7 : 9} className="text-center py-10 text-gray-400 text-xs">
-                        Tidak ada data yang sesuai dengan filter pencarian.
-                      </td>
-                    </tr>
+                              {subTab === 'magang' ? (
+                                <>
+                                  <td className="p-3.5 font-medium text-[var(--color-text-main)]">
+                                    {m.tempat_instansi}
+                                  </td>
+                                  <td className="p-3.5 text-xs font-medium text-slate-600 text-center">
+                                    {m.semester}
+                                  </td>
+                                  <td className="p-3.5 text-xs text-slate-600 max-w-xs truncate" title={m.judul_topik_magang}>
+                                    {m.judul_topik_magang || '-'}
+                                  </td>
+                                  <td className="p-3.5 text-xs text-slate-600">
+                                    {dospemDalam || m.dosen_pembimbing_lapangan || '-'}
+                                  </td>
+                                </>
+                              ) : (
+                                <>
+                                  <td className="p-3.5">
+                                    {getKeterlibatanBadge(m.keterlibatan || m.tempat_instansi)}
+                                  </td>
+                                  <td className="p-3.5 max-w-[320px]">
+                                    <span className="text-xs font-medium text-slate-800 line-clamp-2 block" title={m.judul_topik_magang}>
+                                      {m.judul_topik_magang || '-'}
+                                    </span>
+                                  </td>
+                                  <td className="p-3.5 text-xs font-medium text-slate-700">
+                                    {ketuaRiset}
+                                  </td>
+                                  <td className="p-3.5 text-xs text-slate-600 max-w-[140px] truncate" title={m.sumber_dana}>
+                                    {m.sumber_dana || '-'}
+                                  </td>
+                                  <td className="p-3.5 text-xs font-medium text-slate-600 whitespace-nowrap text-center">
+                                    {m.semester}
+                                  </td>
+                                  <td className="p-3.5 text-xs text-slate-700 max-w-[200px]">
+                                    {m.bukti_dokumen ? (
+                                      /^https?:\/\//i.test(m.bukti_dokumen) ? (
+                                        <a
+                                          href={m.bukti_dokumen}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-50 text-[var(--color-primary)] hover:bg-red-100 hover:text-[#7f2626] border border-red-200 text-[11px] font-medium transition cursor-pointer max-w-full group shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                                          title={`Buka dokumen: ${m.bukti_dokumen}`}
+                                        >
+                                          <FileText className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
+                                          <span className="truncate">Buka Dokumen</span>
+                                          <ExternalLink className="w-3 h-3 opacity-70 group-hover:opacity-100 shrink-0" />
+                                        </a>
+                                      ) : (
+                                        <span
+                                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-mono font-medium max-w-full truncate"
+                                          title={m.bukti_dokumen}
+                                        >
+                                          <FileText className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
+                                          <span className="truncate">{m.bukti_dokumen}</span>
+                                        </span>
+                                      )
+                                    ) : (
+                                      <span className="text-slate-300 font-mono text-center block">-</span>
+                                    )}
+                                  </td>
+                                </>
+                              )}
+
+                              <td className="p-3.5 pr-5 text-center">
+                                <IconButton
+                                  label={isExpanded ? 'Tutup detail' : 'Lihat detail'}
+                                  onClick={(e) => { e.stopPropagation(); toggleExpand(m.id_mbkm); }}
+                                  icon={isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                />
+                              </td>
+                            </tr>
+
+                            {/* Detail Expandable Row */}
+                            {isExpanded && (
+                              <tr>
+                                <td colSpan={subTab === 'magang' ? 7 : 9} className="p-0">
+                                  <div className="px-6 pb-4 pt-3 bg-slate-50/90 border-t border-slate-200">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2.5 text-xs">
+                                      {subTab === 'magang' ? (
+                                        <>
+                                          <div className="flex items-center gap-2">
+                                            <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Instansi:</span>
+                                            <span className="font-semibold text-gray-800">{m.tempat_instansi}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Semester:</span>
+                                            <span className="font-semibold text-gray-800">{m.semester}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Periode:</span>
+                                            <span className="font-semibold text-gray-800">{m.periode_magang || '-'}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2 md:col-span-2">
+                                            <BookOpen className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Topik Magang:</span>
+                                            <span className="font-semibold text-gray-800">{m.judul_topik_magang || '-'}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <UserCheck className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Dospem Lapangan:</span>
+                                            <span className="font-semibold text-gray-800">{m.dosen_pembimbing_lapangan || '-'}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <UserCheck className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Dospem UNPAD:</span>
+                                            <span className="font-semibold text-gray-800">{dospemDalam || '-'}</span>
+                                          </div>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <div className="flex items-center gap-2 md:col-span-2">
+                                            <Landmark className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Skema Keterlibatan:</span>
+                                            <span className="font-semibold text-gray-800">{m.keterlibatan || m.tempat_instansi}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Tahun/Periode:</span>
+                                            <span className="font-semibold text-gray-800">{m.semester}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2 md:col-span-3">
+                                            <BookOpen className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Judul Riset:</span>
+                                            <span className="font-semibold text-gray-900">{m.judul_topik_magang || '-'}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <UserCheck className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Ketua Riset (Dosen):</span>
+                                            <span className="font-semibold text-gray-800">{ketuaRiset}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+                                            <span className="text-gray-500">Sumber Dana:</span>
+                                            <span className="font-semibold text-gray-800">{m.sumber_dana || '-'}</span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                            <span className="text-gray-500">Bukti:</span>
+                                            {m.bukti_dokumen ? (
+                                              /^https?:\/\//i.test(m.bukti_dokumen) ? (
+                                                <a
+                                                  href={m.bukti_dokumen}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)] hover:underline truncate max-w-md"
+                                                  title={m.bukti_dokumen}
+                                                >
+                                                  <span className="truncate">{m.bukti_dokumen}</span>
+                                                  <ExternalLink className="w-3.5 h-3.5 shrink-0 ml-0.5" />
+                                                </a>
+                                              ) : (
+                                                <span className="font-semibold text-gray-800">{m.bukti_dokumen}</span>
+                                              )
+                                            ) : (
+                                              <span className="font-semibold text-gray-800">-</span>
+                                            )}
+                                          </div>
+                                        </>
+                                      )}
+                                    </div>
+
+                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200">
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); handleEditClick(m); }}
+                                        aria-label={`Edit data ${subTab === 'magang' ? 'magang' : 'riset'} ${m.npm_mahasiswa}`}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition cursor-pointer"
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" /> Edit
+                                      </button>
+                                      <button
+                                        onClick={(e) => { e.stopPropagation(); m.id_mbkm && onDeleteMbkm(m.id_mbkm); }}
+                                        aria-label={`Hapus data ${subTab === 'magang' ? 'magang' : 'riset'} ${m.npm_mahasiswa}`}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 transition cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" /> Hapus
+                                      </button>
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                      {filteredCurrentData.length === 0 && (
+                        <tr>
+                          <td colSpan={subTab === 'magang' ? 7 : 9} className="text-center py-10 text-gray-400 text-xs">
+                            Tidak ada data yang sesuai dengan filter pencarian.
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   )}
                 </tbody>
               </table>
             </div>
 
-            {filteredCurrentData.length > ROWS_PER_PAGE && (
+            {totalItems > ROWS_PER_PAGE && (
               <div className="flex items-center justify-between p-4 border-t border-gray-100">
                 <span className="text-xs text-[var(--color-text-main)]/50">
-                  Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}–{Math.min(safePage * ROWS_PER_PAGE, filteredCurrentData.length)} dari {filteredCurrentData.length} data
+                  Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}–{Math.min(safePage * ROWS_PER_PAGE, totalItems)} dari {totalItems} {isKelompok ? 'kelompok riset' : 'data'}
                 </span>
                 <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
               </div>
