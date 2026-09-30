@@ -349,8 +349,8 @@ export default function MagangTab({
   };
 
   const getKeterlibatanBadge = (ket?: string) => {
-    if (!ket) return <span className="text-gray-400 text-xs">-</span>;
-    let cls = 'bg-gray-100 text-gray-700 border-gray-200';
+    if (!ket) return <span className="text-slate-400 text-xs">-</span>;
+    let cls = 'bg-slate-100 text-slate-700 border-slate-200';
     let label = ket;
     if (ket.includes('homebase')) {
       cls = 'bg-emerald-50 text-emerald-800 border-emerald-200';
@@ -384,10 +384,10 @@ export default function MagangTab({
             <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">
               {subTab === 'magang' ? 'Magang Industri' : 'Mahasiswa Terlibat Penelitian Dosen'}
             </h2>
-            <p className="text-xs text-[var(--color-text-main)]/55">
+            <p className="text-xs text-[var(--color-text-main)]/70">
               {subTab === 'magang' 
                 ? 'Rekapitulasi magang kerja praktik mahasiswa di dunia usaha dan industri.'
-                : 'Pencatatan keterlibatan mahasiswa dalam riset dosen.'}
+                : 'Pencatatan keterlibatan mahasiswa dalam riset dosen untuk pemenuhan borang Akreditasi LAMSAMA & IKU-2.'}
             </p>
           </div>
 
@@ -453,37 +453,37 @@ export default function MagangTab({
           ) : (
             /* Stat Cards Penelitian Dosen (Sesuai Skema Borang) */
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-gray-100">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-200">
                 <div className="bg-white p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Keterlibatan</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Keterlibatan</p>
                   <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">{fmt(countPenelitian)}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Kegiatan mahasiswa</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Kegiatan mahasiswa</p>
                 </div>
                 <div className="bg-white p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mahasiswa Peneliti</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mahasiswa Peneliti</p>
                   <p className="text-2xl font-bold font-display mt-1 text-purple-700">{fmt(mhsPeneliti)}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">NPM unik terdata</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">NPM unik terdata</p>
                 </div>
                 <div className="bg-white p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Judul Riset</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Judul Riset</p>
                   <p className="text-2xl font-bold font-display mt-1 text-indigo-600">{fmt(judulRisetCount)}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Topik riset terdaftar</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Topik riset terdaftar</p>
                 </div>
                 <div className="bg-white p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Dosen Ketua Riset</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Dosen Ketua Riset</p>
                   <p className="text-2xl font-bold font-display mt-1 text-teal-700">{fmt(dosenRisetCount)}</p>
-                  <p className="text-[10px] text-gray-400 mt-0.5">{sumberDanaCount} skema hibah/dana</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{sumberDanaCount} skema hibah/dana</p>
                 </div>
               </div>
 
               {/* Breakdown Skema Keterlibatan */}
-              <div className="px-4 py-2.5 border-t border-gray-100 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                <span className="font-bold uppercase tracking-wider text-gray-400">Skema:</span>
+              <div className="px-4 py-2.5 border-t border-slate-200 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
+                <span className="font-bold uppercase tracking-wider text-slate-500">Skema:</span>
                 {SKEMA_KETERLIBATAN_OPTIONS.map(skema => {
                   const c = keterlibatanCounts[skema] || 0;
                   if (c === 0) return null;
                   return (
-                    <span key={skema} className="inline-flex items-center gap-1.5 font-medium text-gray-600">
+                    <span key={skema} className="inline-flex items-center gap-1.5 font-medium text-slate-700">
                       {getKeterlibatanBadge(skema)}
                       <b className="text-[var(--color-text-main)]">{c}</b>
                     </span>
@@ -872,12 +872,14 @@ export default function MagangTab({
                                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-200">
                                   <button
                                     onClick={(e) => { e.stopPropagation(); handleEditClick(m); }}
+                                    aria-label={`Edit data ${subTab === 'magang' ? 'magang' : 'riset'} ${m.npm_mahasiswa}`}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition cursor-pointer"
                                   >
                                     <Edit2 className="w-3.5 h-3.5" /> Edit
                                   </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); m.id_mbkm && onDeleteMbkm(m.id_mbkm); }}
+                                    aria-label={`Hapus data ${subTab === 'magang' ? 'magang' : 'riset'} ${m.npm_mahasiswa}`}
                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 transition cursor-pointer"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" /> Hapus
@@ -1099,7 +1101,7 @@ export default function MagangTab({
                           id="riset-judul"
                           required
                           rows={2}
-                          placeholder="Contoh: MONITORING GETARAN TANAH BERBASIS IoT DAN AI..."
+                          placeholder="Contoh: Monitoring Getaran Tanah Berbasis IoT dan AI untuk Mitigasi Bencana..."
                           value={form.judul_topik_magang || ''}
                           onChange={(e) => setForm({...form, judul_topik_magang: e.target.value})}
                           className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
