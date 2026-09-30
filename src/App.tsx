@@ -172,7 +172,7 @@ export default function App() {
     handleSaveMbkm,
     handleDeleteMbkm,
     handleBulkImportMagang
-  } = useMagangActions(dosen, triggerToast, setConfirmAction);
+  } = useMagangActions(dosen, triggerToast, setConfirmAction, mahasiswa, refreshMahasiswa);
 
   const {
     alumni,

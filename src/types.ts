@@ -80,7 +80,7 @@ export interface RiwayatMBKM {
   keterlibatan?: string;
   sumber_dana?: string;
   nama_ketua_riset?: string;
-  bukti_dokumen?: string;
+  bukti_dokumen?: string | null;
 }
 
 export interface TracerStudy {

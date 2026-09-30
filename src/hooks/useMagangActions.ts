@@ -1,13 +1,15 @@
 import { useState, useCallback } from 'react';
 import { academicService } from '../lib/academicService';
-import { RiwayatMBKM, JenisKegiatan, Dosen } from '../types';
+import { RiwayatMBKM, JenisKegiatan, Dosen, Mahasiswa } from '../types';
 import { errMsg } from '../lib/format';
 import { ToastOptions } from '../components/Toast';
 
 export function useMagangActions(
   dosen: Dosen[],
   triggerToast: (opts: ToastOptions) => void,
-  setConfirmAction: (action: { title: string; message: string; detail?: string; onConfirm: () => void } | null) => void
+  setConfirmAction: (action: { title: string; message: string; detail?: string; onConfirm: () => void } | null) => void,
+  mahasiswa?: Mahasiswa[],
+  refreshMahasiswa?: () => Promise<void>
 ) {
   const [mbkm, setMbkm] = useState<RiwayatMBKM[]>([]);
 
@@ -65,7 +67,10 @@ export function useMagangActions(
 
   const handleBulkImportMagang = async (data: Record<string, unknown>[]) => {
     const listToInsert: RiwayatMBKM[] = [];
+    const missingStudentsMap = new Map<string, Mahasiswa>();
+    const existingNpms = new Set((mahasiswa || []).map(m => m.npm.trim()));
     let errors = 0;
+
     for (const row of data) {
       const nr = Object.fromEntries(
         Object.entries(row).map(([k, v]) => [k.trim().toLowerCase(), String(v ?? '').trim()])
@@ -99,7 +104,10 @@ export function useMagangActions(
       const keterlibatanVal = nr['keterlibatan'] || undefined;
       const sumberDanaVal = nr['jenis riset/sumber dana'] || nr['jenis riset'] || nr['sumber dana'] || nr['sumber_dana'] || undefined;
       const ketuaRisetVal = nr['nama ketua riset (dosen)'] || nr['nama ketua riset'] || nr['ketua riset'] || nr['nama_ketua_riset'] || undefined;
-      const buktiVal = nr['bukti'] || nr['bukti_dokumen'] || nr['bukti dokumen'] || undefined;
+      const rawBukti = nr['bukti'] || nr['bukti_dokumen'] || nr['bukti dokumen'];
+      const buktiVal = (rawBukti !== undefined && rawBukti !== null && String(rawBukti).trim() !== '')
+        ? String(rawBukti).trim()
+        : undefined;
       const judulVal = nr['judul riset'] || nr['judul_riset'] || nr['judul topik magang'] || nr['judul_topik_magang'] || nr['judul'] || undefined;
       const semesterVal = nr['tahun/periode'] || nr['tahun_periode'] || nr['periode'] || nr['semester'] || '';
 
@@ -110,6 +118,29 @@ export function useMagangActions(
       if (!npmVal || !instansiVal || !semesterVal) {
         errors++;
         continue;
+      }
+
+      const namaVal = nr['nama mahasiswa'] || nr['nama'] || nr['nama lengkap'] || nr['nama_mahasiswa'] || '';
+
+      // Auto-register mahasiswa ke master data jika belum ada agar memenuhi foreign key
+      if (!existingNpms.has(npmVal) && !missingStudentsMap.has(npmVal)) {
+        let angkatanVal = new Date().getFullYear();
+        if (npmVal.length >= 8) {
+          const rawYear = Number(npmVal.slice(6, 8));
+          if (!isNaN(rawYear) && rawYear >= 10 && rawYear <= 35) {
+            angkatanVal = 2000 + rawYear;
+          }
+        }
+        missingStudentsMap.set(npmVal, {
+          npm: npmVal,
+          nama: namaVal || `Mahasiswa ${npmVal}`,
+          angkatan: angkatanVal,
+          jenis_kelamin: 'L',
+          fakultas: 'FMIPA',
+          prodi: 'Geofisika',
+          status: 'Regulasi Akademik',
+          nip_dosen_wali: null
+        });
       }
 
       const dospemDalamName = nr['dosen pembimbing dalam'] || nr['dosen_pembimbing_dalam'] || ketuaRisetVal || '';
@@ -135,7 +166,7 @@ export function useMagangActions(
         keterlibatan: keterlibatanVal,
         sumber_dana: sumberDanaVal,
         nama_ketua_riset: ketuaRisetVal,
-        bukti_dokumen: buktiVal,
+        bukti_dokumen: isPenelitian ? buktiVal : undefined,
       };
       listToInsert.push(m);
     }
@@ -146,26 +177,41 @@ export function useMagangActions(
         title: 'Import Gagal',
         message: 'Tidak ada data magang valid yang dapat diimport.'
       });
-      throw new Error('Import gagal');
+      throw new Error('Import gagal: tidak ada baris data valid.');
     }
 
     try {
+      // Auto-register mahasiswa baru sebelum insert MBKM agar tidak melanggar foreign key constraint
+      if (missingStudentsMap.size > 0) {
+        const missingStudents = Array.from(missingStudentsMap.values());
+        try {
+          await academicService.bulkInsertMahasiswa(missingStudents);
+          await refreshMahasiswa?.();
+        } catch (studentErr) {
+          console.warn('Peringatan: Gagal mendaftarkan mahasiswa baru otomatis:', studentErr);
+        }
+      }
+
       await academicService.bulkInsertMBKM(listToInsert);
       await refreshMbkm();
       triggerToast({
         kind: 'success',
         title: 'Import Magang Berhasil',
         message: errors > 0
-          ? `${listToInsert.length} data berhasil diimport, ${errors} gagal.`
-          : `Berhasil menambahkan/memperbarui ${listToInsert.length} data magang.`
+          ? `${listToInsert.length} data berhasil diimport (${missingStudentsMap.size} mahasiswa baru didaftarkan), ${errors} gagal.`
+          : `Berhasil menambahkan/memperbarui ${listToInsert.length} data magang${missingStudentsMap.size > 0 ? ` (${missingStudentsMap.size} mahasiswa baru didaftarkan)` : ''}.`
       });
     } catch (err) {
+      const rawMsg = errMsg(err, 'Terjadi kesalahan saat menyimpan data batch magang.');
+      const friendlyMsg = rawMsg.includes('riwayat_mbkm_npm_mahasiswa_fkey')
+        ? 'NPM mahasiswa belum terdaftar di data Mahasiswa. Sistem gagal mendaftarkan mahasiswa tersebut ke data induk.'
+        : rawMsg;
       triggerToast({
         kind: 'error',
         title: 'Import Gagal',
-        message: errMsg(err, 'Terjadi kesalahan saat menyimpan data batch magang.')
+        message: friendlyMsg
       });
-      throw err;
+      throw new Error(friendlyMsg);
     }
   };
 

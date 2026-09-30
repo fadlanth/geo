@@ -265,7 +265,7 @@ export default function MagangTab({
       nama_ketua_riset: subTab === 'penelitian' ? form.nama_ketua_riset : undefined,
       keterlibatan: subTab === 'penelitian' ? form.keterlibatan : undefined,
       sumber_dana: subTab === 'penelitian' ? form.sumber_dana : undefined,
-      bukti_dokumen: subTab === 'penelitian' ? form.bukti_dokumen : undefined
+      bukti_dokumen: subTab === 'penelitian' ? (form.bukti_dokumen?.trim() || null) : null
     };
 
     setIsSubmitting(true);
@@ -1148,12 +1148,12 @@ export default function MagangTab({
 
                       <div className="md:col-span-2">
                         <label htmlFor="riset-bukti" className="block text-xs font-semibold text-slate-700 mb-1">
-                          Bukti Dokumen (Nama File / Surat Keterangan / Laporan)
+                          Bukti Dokumen <span className="text-slate-400 font-normal">(Opsional)</span>
                         </label>
                         <input
                           id="riset-bukti"
                           type="text"
-                          placeholder="Contoh: LAPORAN PENELITIAN KOTA CIMAHI_compresse, Surat Keterangan.pdf"
+                          placeholder="Contoh: LAPORAN PENELITIAN KOTA CIMAHI_compresse, Surat Keterangan.pdf (kosongkan jika belum ada)"
                           value={form.bukti_dokumen || ''}
                           onChange={(e) => setForm({...form, bukti_dokumen: e.target.value})}
                           className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"

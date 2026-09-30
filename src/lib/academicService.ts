@@ -110,16 +110,53 @@ ALTER TABLE public.prestasi ADD CONSTRAINT prestasi_unique UNIQUE (npm_mahasiswa
 ALTER TABLE public.tracer_study ADD CONSTRAINT tracer_unique UNIQUE (npm_mahasiswa, tahun_lulus);
 `;
 
+// Cache kolom yang belum ada di schema database Supabase agar tidak memicu error schema cache
+const unsupportedColumnsCache: Record<string, Set<string>> = {};
+
+function stripUnsupported<T extends Record<string, any>>(table: string, row: T): Record<string, any> {
+  const badCols = unsupportedColumnsCache[table];
+  if (!badCols || badCols.size === 0) return { ...row };
+  const clean: Record<string, any> = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (!badCols.has(k)) {
+      clean[k] = v;
+    }
+  }
+  return clean;
+}
+
 async function chunkedUpsert<T extends Record<string, any>>(
   table: string,
   items: T[],
   onConflict: string,
   chunkSize: number = 100
 ): Promise<void> {
+  if (!unsupportedColumnsCache[table]) unsupportedColumnsCache[table] = new Set();
+
   for (let i = 0; i < items.length; i += chunkSize) {
-    const chunk = items.slice(i, i + chunkSize);
-    const { error } = await supabase.from(table).upsert(chunk as any, { onConflict });
-    if (error) throw new Error(error.message);
+    let chunk = items.slice(i, i + chunkSize).map(item => stripUnsupported(table, item));
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      const { error } = await supabase.from(table).upsert(chunk as any, { onConflict });
+      if (!error) break;
+
+      const match = error.message.match(/Could not find the '([^']+)' column of '([^']+)' in the schema cache/i);
+      if (match) {
+        const missingCol = match[1];
+        unsupportedColumnsCache[table].add(missingCol);
+        chunk = chunk.map(row => {
+          const copy = { ...row };
+          delete copy[missingCol];
+          return copy;
+        });
+        continue;
+      }
+
+      throw new Error(error.message);
+    }
   }
 }
 
@@ -284,14 +321,27 @@ export const academicService = {
   async getMBKM(): Promise<RiwayatMBKM[]> {
     const { data, error } = await supabase.from('riwayat_mbkm').select('*');
     if (error) throw new Error(error.message);
-    return data as RiwayatMBKM[];
+    const KETERLIBATAN_PREFIXES = [
+      'Dengan dosen tetap dari perguruan tinggi homebase',
+      'Dengan lembaga riset yang bereputasi',
+      'Dengan pemerintah/BUMN/BUMD',
+      'Dengan dosen tetap dari perguruan tinggi lain'
+    ];
+    return (data as any[]).map(m => {
+      const isPenelitian = m.jenis_kegiatan === 'Penelitian Dosen' ||
+        KETERLIBATAN_PREFIXES.some(prefix => (m.tempat_instansi || '').startsWith(prefix)) ||
+        Boolean(m.keterlibatan || m.nama_ketua_riset || m.sumber_dana || m.bukti_dokumen);
+      return {
+        ...m,
+        jenis_kegiatan: m.jenis_kegiatan || (isPenelitian ? 'Penelitian Dosen' : 'Magang Industri'),
+        keterlibatan: m.keterlibatan || (isPenelitian ? m.tempat_instansi : undefined),
+        nama_ketua_riset: m.nama_ketua_riset || (isPenelitian ? m.dosen_pembimbing_lapangan : undefined)
+      } as RiwayatMBKM;
+    });
   },
 
   async saveMBKM(mbkm: RiwayatMBKM): Promise<void> {
-    const { error } = await supabase
-      .from('riwayat_mbkm')
-      .upsert(mbkm, { onConflict: 'npm_mahasiswa, tempat_instansi, semester' });
-    if (error) throw new Error(error.message);
+    await chunkedUpsert('riwayat_mbkm', [mbkm], 'npm_mahasiswa, tempat_instansi, semester', 1);
     await this.logAuditChange('riwayat_mbkm', mbkm.id_mbkm ? 'update' : 'insert', mbkm.id_mbkm || `${mbkm.npm_mahasiswa}|${mbkm.tempat_instansi}|${mbkm.semester}`, mbkm);
   },
 
