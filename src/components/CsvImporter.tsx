@@ -84,7 +84,7 @@ export default function CsvImporter({
       reader.onload = (e) => {
         try {
           const data = e.target?.result as ArrayBuffer;
-          const workbook = XLSX.read(data, { type: 'array' });
+          const workbook = XLSX.read(data, { type: 'array', cellFormula: true, cellHTML: true });
         const sheetNames = workbook.SheetNames;
 
         if (sheetNames.length === 0) {
@@ -94,6 +94,58 @@ export default function CsvImporter({
         const allData: { [key: string]: Record<string, unknown>[] } = {};
         sheetNames.forEach((sheetName) => {
           const ws = workbook.Sheets[sheetName];
+          if (!ws || !ws['!ref']) {
+            allData[sheetName] = [];
+            return;
+          }
+
+          // Ekstrak hyperlink dari sel agar link URL (Google Drive, PDF, dsb.) tidak hilang
+          try {
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            const headerMap: { [col: number]: string } = {};
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+              const headerCell = ws[XLSX.utils.encode_cell({ r: range.s.r, c: C })];
+              headerMap[C] = headerCell && headerCell.v ? String(headerCell.v).toLowerCase().trim() : '';
+            }
+
+            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+              for (let C = range.s.c; C <= range.e.c; ++C) {
+                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                const cell = ws[cellAddress];
+                if (!cell) continue;
+
+                let hyperlinkUrl: string | undefined = cell.l?.Target;
+                if (!hyperlinkUrl && typeof cell.f === 'string') {
+                  const match = cell.f.match(/HYPERLINK\s*\(\s*["']([^"']+)["']/i);
+                  if (match && match[1]) {
+                    hyperlinkUrl = match[1];
+                  }
+                }
+
+                if (hyperlinkUrl && typeof hyperlinkUrl === 'string') {
+                  let cleanUrl = hyperlinkUrl.trim();
+                  if (cleanUrl.startsWith('www.')) {
+                    cleanUrl = 'https://' + cleanUrl;
+                  } else if (/^(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|sharepoint\.com)/i.test(cleanUrl)) {
+                    cleanUrl = 'https://' + cleanUrl;
+                  }
+
+                  const headerName = headerMap[C] || '';
+                  const isLinkHeader = /(bukti|link|url|dokumen|file|berkas|lampiran|laporan|sk)/i.test(headerName);
+                  const cellText = cell.v !== undefined && cell.v !== null ? String(cell.v).trim().toLowerCase() : '';
+                  const isGenericText = !cellText || /^(link|buka|lihat|unduh|download|klik|drive|view|pdf|dokumen)$/i.test(cellText);
+
+                  if (/^https?:\/\//i.test(cleanUrl) || isLinkHeader || isGenericText) {
+                    cell.v = cleanUrl;
+                    cell.w = cleanUrl;
+                  }
+                }
+              }
+            }
+          } catch {
+            // Jika decoding koordinat gagal, fallback tetap gunakan data standar
+          }
+
           const jsonData = XLSX.utils.sheet_to_json(ws, { defval: '' });
           allData[sheetName] = jsonData as Record<string, unknown>[];
         });

@@ -104,7 +104,7 @@ export function useMagangActions(
       const keterlibatanVal = nr['keterlibatan'] || undefined;
       const sumberDanaVal = nr['jenis riset/sumber dana'] || nr['jenis riset'] || nr['sumber dana'] || nr['sumber_dana'] || undefined;
       const ketuaRisetVal = nr['nama ketua riset (dosen)'] || nr['nama ketua riset'] || nr['ketua riset'] || nr['nama_ketua_riset'] || undefined;
-      const rawBukti = nr['bukti'] || nr['bukti_dokumen'] || nr['bukti dokumen'];
+      const rawBukti = nr['bukti'] || nr['bukti_dokumen'] || nr['bukti dokumen'] || nr['link bukti'] || nr['link'] || nr['dokumen'] || nr['tautan'];
       const buktiVal = (rawBukti !== undefined && rawBukti !== null && String(rawBukti).trim() !== '')
         ? String(rawBukti).trim()
         : undefined;

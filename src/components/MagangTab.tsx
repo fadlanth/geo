@@ -21,7 +21,8 @@ import {
   DollarSign,
   Landmark,
   X,
-  Microscope
+  Microscope,
+  ExternalLink
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -738,13 +739,28 @@ export default function MagangTab({
                               </td>
                               <td className="p-3.5 text-xs text-slate-700 max-w-[200px]">
                                 {m.bukti_dokumen ? (
-                                  <span
-                                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-mono font-medium max-w-full truncate"
-                                    title={m.bukti_dokumen}
-                                  >
-                                    <FileText className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
-                                    <span className="truncate">{m.bukti_dokumen}</span>
-                                  </span>
+                                  /^https?:\/\//i.test(m.bukti_dokumen) ? (
+                                    <a
+                                      href={m.bukti_dokumen}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-red-50 text-[var(--color-primary)] hover:bg-red-100 hover:text-[#7f2626] border border-red-200 text-[11px] font-medium transition cursor-pointer max-w-full group shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
+                                      title={`Buka dokumen: ${m.bukti_dokumen}`}
+                                    >
+                                      <FileText className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
+                                      <span className="truncate">Buka Dokumen</span>
+                                      <ExternalLink className="w-3 h-3 opacity-70 group-hover:opacity-100 shrink-0" />
+                                    </a>
+                                  ) : (
+                                    <span
+                                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 text-slate-700 border border-slate-200 text-[11px] font-mono font-medium max-w-full truncate"
+                                      title={m.bukti_dokumen}
+                                    >
+                                      <FileText className="w-3 h-3 text-[var(--color-primary)] shrink-0" />
+                                      <span className="truncate">{m.bukti_dokumen}</span>
+                                    </span>
+                                  )
                                 ) : (
                                   <span className="text-slate-300 font-mono text-center block">-</span>
                                 )}
@@ -828,9 +844,26 @@ export default function MagangTab({
                                         <span className="font-semibold text-gray-800">{m.sumber_dana || '-'}</span>
                                       </div>
                                       <div className="flex items-center gap-2">
-                                        <FileText className="w-3.5 h-3.5 text-gray-400" />
+                                        <FileText className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                                         <span className="text-gray-500">Bukti:</span>
-                                        <span className="font-semibold text-gray-800">{m.bukti_dokumen || '-'}</span>
+                                        {m.bukti_dokumen ? (
+                                          /^https?:\/\//i.test(m.bukti_dokumen) ? (
+                                            <a
+                                              href={m.bukti_dokumen}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-primary)] hover:underline truncate max-w-md"
+                                              title={m.bukti_dokumen}
+                                            >
+                                              <span className="truncate">{m.bukti_dokumen}</span>
+                                              <ExternalLink className="w-3.5 h-3.5 shrink-0 ml-0.5" />
+                                            </a>
+                                          ) : (
+                                            <span className="font-semibold text-gray-800">{m.bukti_dokumen}</span>
+                                          )
+                                        ) : (
+                                          <span className="font-semibold text-gray-800">-</span>
+                                        )}
                                       </div>
                                     </>
                                   )}
@@ -1153,11 +1186,14 @@ export default function MagangTab({
                         <input
                           id="riset-bukti"
                           type="text"
-                          placeholder="Contoh: LAPORAN PENELITIAN KOTA CIMAHI_compresse, Surat Keterangan.pdf (kosongkan jika belum ada)"
+                          placeholder="Contoh: https://drive.google.com/... atau nama berkas PDF (opsional)"
                           value={form.bukti_dokumen || ''}
                           onChange={(e) => setForm({...form, bukti_dokumen: e.target.value})}
                           className="w-full text-sm p-2.5 border border-slate-300 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 focus-visible:border-[var(--color-primary)] text-slate-800 placeholder:text-slate-400"
                         />
+                        <p className="text-[11px] text-slate-400 mt-1">
+                          Dapat berupa tautan berkas online (Google Drive / OneDrive / repositori) agar bisa diklik langsung dari tabel.
+                        </p>
                       </div>
                     </div>
                   </div>
