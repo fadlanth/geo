@@ -463,15 +463,15 @@ export default function MagangTab({
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-bold uppercase tracking-wider">
-              <Briefcase className="w-3 h-3" /> MHS Berkegiatan di Luar Prodi
+              <Briefcase className="w-3 h-3" /> Kegiatan Luar Program Studi
             </div>
             <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">
               {subTab === 'magang' ? 'Magang Industri' : 'Mahasiswa Terlibat Penelitian Dosen'}
             </h2>
             <p className="text-xs text-[var(--color-text-main)]/70">
               {subTab === 'magang' 
-                ? 'Rekapitulasi magang kerja praktik mahasiswa di dunia usaha dan industri.'
-                : 'Pencatatan keterlibatan mahasiswa dalam riset dosen untuk pemenuhan borang Akreditasi LAMSAMA & IKU-2.'}
+                ? 'Rekapitulasi magang kerja praktik mahasiswa di dunia usaha dan industri mitra.'
+                : 'Data keterlibatan mahasiswa dalam riset dosen untuk pemenuhan borang Akreditasi LAMSAMA & IKU-2.'}
             </p>
           </div>
 
@@ -519,50 +519,53 @@ export default function MagangTab({
           {subTab === 'magang' ? (
             /* Stat Cards Magang */
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-gray-100">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-slate-200">
                 <div className="bg-white p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Total Magang</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Magang</p>
                   <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">{fmt(countMagang)}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Riwayat kegiatan</p>
                 </div>
                 <div className="bg-white p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mahasiswa Peserta</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mahasiswa Peserta</p>
                   <p className="text-2xl font-bold font-display mt-1 text-[var(--color-primary)]">{fmt(mhsMagang)}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Orang mahasiswa</p>
                 </div>
                 <div className="bg-white p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Mitra Instansi</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mitra Instansi</p>
                   <p className="text-2xl font-bold font-display mt-1 text-emerald-600">{fmt(instansiMagang)}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Instansi tempat magang</p>
                 </div>
               </div>
             </div>
           ) : (
-            /* Stat Cards Penelitian Dosen (Sesuai Skema Borang) */
+            /* Stat Cards Penelitian Dosen (Sesuai Skema Borang LAMSAMA) */
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-200">
                 <div className="bg-white p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Total Keterlibatan</p>
                   <p className="text-2xl font-bold font-display mt-1 text-[var(--color-text-main)]">{fmt(countPenelitian)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Kegiatan mahasiswa</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Riwayat kegiatan</p>
                 </div>
                 <div className="bg-white p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mahasiswa Peneliti</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Mahasiswa Terlibat</p>
                   <p className="text-2xl font-bold font-display mt-1 text-purple-700">{fmt(mhsPeneliti)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">NPM unik terdata</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Orang mahasiswa</p>
                 </div>
                 <div className="bg-white p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Judul Riset</p>
                   <p className="text-2xl font-bold font-display mt-1 text-indigo-600">{fmt(judulRisetCount)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">Topik riset terdaftar</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">Topik penelitian</p>
                 </div>
                 <div className="bg-white p-4">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Dosen Ketua Riset</p>
                   <p className="text-2xl font-bold font-display mt-1 text-teal-700">{fmt(dosenRisetCount)}</p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">{sumberDanaCount} skema hibah/dana</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{sumberDanaCount} skema pendanaan</p>
                 </div>
               </div>
 
               {/* Breakdown Skema Keterlibatan */}
               <div className="px-4 py-2.5 border-t border-slate-200 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs">
-                <span className="font-bold uppercase tracking-wider text-slate-500">Skema:</span>
+                <span className="font-bold uppercase tracking-wider text-slate-500">Skema Kerja Sama:</span>
                 {SKEMA_KETERLIBATAN_OPTIONS.map(skema => {
                   const c = keterlibatanCounts[skema] || 0;
                   if (c === 0) return null;
