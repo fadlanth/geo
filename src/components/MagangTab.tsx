@@ -471,7 +471,7 @@ export default function MagangTab({
             <p className="text-xs text-[var(--color-text-main)]/70">
               {subTab === 'magang' 
                 ? 'Rekapitulasi magang kerja praktik mahasiswa di dunia usaha dan industri mitra.'
-                : 'Data keterlibatan mahasiswa dalam riset dosen untuk pemenuhan borang Akreditasi LAMSAMA & IKU-2.'}
+                : 'Data keterlibatan mahasiswa dalam riset dosen.'}
             </p>
           </div>
 
