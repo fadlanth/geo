@@ -63,6 +63,14 @@ body {
   background-color: var(--color-slate);
 }
 
+/* ACCESSIBILITY: Visible, high-contrast focus indicator for all form controls (WCAG 1.4.11 / R-32, R-34) */
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-primary) !important;
+  outline-offset: 1px !important;
+}
+
 /* Accessibility notes: ensure text on backgrounds meets WCAG.
    - Body text (`--color-text-main` on `--color-base`) meets large/small text contrast.
    - Primary buttons use `--color-on-primary` (white) which has ~5.08:1 contrast on --color-primary.

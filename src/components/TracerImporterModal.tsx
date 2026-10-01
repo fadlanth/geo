@@ -15,7 +15,7 @@ import {
   Filter
 } from 'lucide-react';
 import Button from './Button';
-import { useEscapeClose } from '../lib/hooks';
+import { useEscapeClose, useFocusTrap } from '../lib/hooks';
 import { parseTracerFile, TracerParseResult } from '../lib/tracerParser';
 import { academicService } from '../lib/academicService';
 import { ToastOptions } from './Toast';
@@ -33,7 +33,9 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
   onSuccess,
   triggerToast
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
   useEscapeClose(isOpen, onClose);
+  useFocusTrap(isOpen, modalRef);
 
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [filterGeofisika, setFilterGeofisika] = useState<boolean>(true);
@@ -139,8 +141,15 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-stone-200 flex flex-col max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose}>
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="tracer-autopilot-title"
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-stone-200 flex flex-col max-h-[90vh] overflow-hidden"
+      >
         
         {/* Header Modal */}
         <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
@@ -149,7 +158,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-extrabold text-[#241f20]">
+              <h3 id="tracer-autopilot-title" className="text-base sm:text-lg font-extrabold text-[#241f20]">
                 Auto-Pilot Importer (Tracer Study Pusat)
               </h3>
               <p className="text-xs text-[#241f20]/60">
@@ -159,7 +168,8 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-xl transition cursor-pointer"
+            aria-label="Tutup modal import"
+            className="p-2 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-xl transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
           >
             <X className="w-5 h-5" />
           </button>

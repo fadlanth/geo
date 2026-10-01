@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Mahasiswa, Dosen } from '../types';
 import { validators, val, JENIS_STATUS_MAHASISWA } from '../lib/validators';
-import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { useDebounce, useEscapeClose, useFocusTrap } from '../lib/hooks';
 import { fmt } from '../lib/format';
 import StatCard from './StatCard';
 import CsvImporter from './CsvImporter';
@@ -55,9 +55,11 @@ export default function MahasiswaTab({
 
   const [showAddMhs, setShowAddMhs] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const mhsModalRef = useRef<HTMLDivElement>(null);
 
   useEscapeClose(showAddMhs, () => setShowAddMhs(false));
   useEscapeClose(showImport, () => setShowImport(false));
+  useFocusTrap(showAddMhs, mhsModalRef);
 
   useEffect(() => {
     if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -118,7 +120,6 @@ export default function MahasiswaTab({
     });
     triggerToast?.({ kind: 'success', title: 'Berhasil', message: `Mahasiswa ${mhsForm.nama} tersimpan.` });
 
-    // Reset
     setErrors({});
     setMhsForm({
       npm: '',
@@ -405,10 +406,17 @@ export default function MahasiswaTab({
 
       {/* MODAL: ADD / EDIT STUDENT */}
       {showAddMhs && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 max-w-md w-full p-6 space-y-4 shadow-xl">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowAddMhs(false); setEditingMhs(null); }}>
+          <div
+            ref={mhsModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mhs-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl border border-[var(--color-primary)]/10 max-w-md w-full p-6 space-y-4 shadow-xl"
+          >
             <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-              <h3 className="font-display font-extrabold text-[var(--color-text-main)] text-base">
+              <h3 id="mhs-modal-title" className="font-display font-extrabold text-[var(--color-text-main)] text-base">
                 {editingMhs ? 'Edit Profil Mahasiswa' : 'Registrasi Mahasiswa Baru'}
               </h3>
               <IconButton

@@ -128,7 +128,7 @@ export default function Sidebar({
 
             <div className="flex items-center gap-2">
               <button 
-                className="p-2 rounded-full transition hidden lg:inline-flex hover:bg-[var(--color-accent-dark)]/20"
+                className="p-2 rounded-full transition hidden lg:inline-flex hover:bg-[var(--color-accent-dark)]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-accent)]"
                 onClick={() => setCollapsed(prev => !prev)}
                 aria-label={collapsed ? 'Buka Sidebar' : 'Tutup Sidebar'}
                 title={collapsed ? 'Buka Sidebar' : 'Tutup Sidebar'}
@@ -138,7 +138,7 @@ export default function Sidebar({
               </button>
 
               <button 
-                className="lg:hidden p-2 rounded-full transition hover:bg-[var(--color-accent-dark)]/20"
+                className="lg:hidden p-2 rounded-full transition hover:bg-[var(--color-accent-dark)]/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-accent)]"
                 onClick={() => setIsMobileOpen(false)}
                 aria-label="Tutup menu"
                 title="Tutup menu"
@@ -163,7 +163,7 @@ export default function Sidebar({
                       setActiveTab(item.id, subItems ? (activeSubTab || 'magang') : undefined);
                       if (!subItems) setIsMobileOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3.5 rounded-xl font-medium text-sm transition-all duration-200 ${isActive ? 'shadow-md shadow-[var(--color-accent)]/15 font-semibold scale-[1.01]' : 'text-[var(--sidebar-text)]/75 hover:text-white hover:bg-white/10'}`}
+                    className={`w-full flex items-center gap-3.5 rounded-xl font-medium text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-accent)] ${isActive ? 'shadow-md shadow-[var(--color-accent)]/15 font-semibold scale-[1.01]' : 'text-[var(--sidebar-text)]/75 hover:text-white hover:bg-white/10'}`}
                     style={{ 
                       padding: collapsed ? '0.55rem' : '0.7rem 1rem', 
                       justifyContent: collapsed ? 'center' : 'flex-start',
@@ -187,7 +187,7 @@ export default function Sidebar({
                               setActiveTab(item.id, sub.id);
                               setIsMobileOpen(false);
                             }}
-                            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                            className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--color-accent)] ${
                               isSubActive
                                 ? 'bg-white/20 text-white font-bold shadow-xs'
                                 : 'text-[var(--sidebar-text)]/70 hover:text-white hover:bg-white/10'

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Users, 
   Award, 
@@ -23,7 +23,7 @@ import {
   Cell 
 } from 'recharts';
 import { Mahasiswa, Dosen, Prestasi, TracerStudy, RiwayatMBKM } from '../types';
-import { useEscapeClose } from '../lib/hooks';
+import { useEscapeClose, useFocusTrap } from '../lib/hooks';
 import { fmt } from '../lib/format';
 import { renderDonutLabel, DonutCenterTotal } from '../lib/chartUtils';
 import { SkeletonCard, SkeletonChart } from './Skeleton';
@@ -68,7 +68,7 @@ export default function OverviewTab({
   setActiveTab
 }: OverviewTabProps) {
 
-  // 1. Calculate Stats
+  // Agregasi ringkasan metrik utama
   const totalMhs = mahasiswa.length;
   const mhsRegulasi = mahasiswa.filter(m => m.status === 'Regulasi Akademik').length;
   const mhsLulus = mahasiswa.filter(m => m.status === 'Lulus').length;
@@ -96,12 +96,13 @@ export default function OverviewTab({
   const countMagang = mbkm.filter(m => (m.jenis_kegiatan || 'Magang Industri') === 'Magang Industri').length;
   const countPenelitian = mbkm.filter(m => m.jenis_kegiatan === 'Penelitian Dosen').length;
 
-  // Modal state for per-angkatan detail
   const [showAngkatanDetail, setShowAngkatanDetail] = useState(false);
   // Drill-down: klik sel angka -> tampilkan daftar mahasiswa per angkatan / status
   const [drillFilter, setDrillFilter] = useState<{ angkatan?: number; status?: string } | null>(null);
+  const angkatanModalRef = useRef<HTMLDivElement>(null);
 
   useEscapeClose(showAngkatanDetail, () => setShowAngkatanDetail(false));
+  useFocusTrap(showAngkatanDetail, angkatanModalRef);
 
   // Map NIP -> nama dosen (resolve dosen wali pada drill-down)
   const dosenMap = new Map(dosen.map(d => [d.nip, d.nama]));
@@ -160,7 +161,7 @@ export default function OverviewTab({
     .map(Number)
     .sort((a, b) => b - a);
 
-  // 2. Data Rekap Angkatan (Bar Chart Stacked)
+  // Data rekapitulasi status per angkatan (grafik batang)
   const angkatanMap = mahasiswa.reduce<Record<number, ChartAngkatanRow>>((acc, m) => {
     if (!acc[m.angkatan]) acc[m.angkatan] = { name: m.angkatan.toString(), 'Regulasi Akademik': 0, Lulus: 0, 'Alih Prodi': 0, 'Undur Diri': 0 };
     if (m.status === 'Regulasi Akademik') acc[m.angkatan]['Regulasi Akademik']++;
@@ -421,12 +422,16 @@ export default function OverviewTab({
       {showAngkatanDetail && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAngkatanDetail(false)}>
           <div 
+            ref={angkatanModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="angkatan-modal-title"
             className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-xl max-h-[80vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center pb-4 border-b border-gray-100">
               <div>
-                <h3 className="font-display font-extrabold text-[var(--color-text-main)] text-lg">
+                <h3 id="angkatan-modal-title" className="font-display font-extrabold text-[var(--color-text-main)] text-lg">
                   {drillFilter?.angkatan
                     ? `Mahasiswa Angkatan ${drillFilter.angkatan}`
                     : (drillFilter
@@ -508,7 +513,7 @@ export default function OverviewTab({
                         <td className="p-3 pl-0 font-bold text-[var(--color-text-main)]">
                           <button
                             onClick={(e) => { e.stopPropagation(); setDrillFilter({ angkatan: row.angkatan }); }}
-                            className="text-[var(--color-text-main)] hover:text-[var(--color-primary)] hover:underline text-left"
+                            className="text-[var(--color-text-main)] hover:text-[var(--color-primary)] hover:underline text-left rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
                             title={`Lihat seluruh mahasiswa angkatan ${row.angkatan}`}
                           >
                             {row.angkatan}

@@ -161,7 +161,7 @@ async function chunkedUpsert<T extends Record<string, any>>(
 }
 
 export const academicService = {
-  // --- AUDIT LOG (best-effort) ---
+  // Audit log
   async logAuditChange(
     entitas: string,
     aksi: 'insert' | 'update' | 'delete',
@@ -182,7 +182,7 @@ export const academicService = {
     }
   },
 
-  // --- DOSEN ---
+  // Entitas dosen
   async getDosen(): Promise<Dosen[]> {
     const { data, error } = await supabase.from('dosen').select('*').order('nama', { ascending: true });
     if (error) throw new Error(error.message);
@@ -225,7 +225,7 @@ export const academicService = {
     await this.logAuditChange('dosen', 'insert', `bulk_${data.length}`, { count: data.length });
   },
 
-  // --- MAHASISWA ---
+  // Entitas mahasiswa
   async getMahasiswa(): Promise<Mahasiswa[]> {
     const { data, error } = await supabase.from('mahasiswa').select('*').order('npm', { ascending: true });
     if (error) throw new Error(error.message);
@@ -260,7 +260,7 @@ export const academicService = {
     await this.logAuditChange('mahasiswa', 'delete', npm, { npm });
   },
 
-  // --- PRESTASI ---
+  // Entitas prestasi
   async getPrestasi(): Promise<Prestasi[]> {
     const { data, error } = await supabase.from('prestasi').select('*');
     if (error) throw new Error(error.message);
@@ -286,7 +286,7 @@ export const academicService = {
     await this.logAuditChange('prestasi', 'delete', id_prestasi, { id_prestasi });
   },
 
-  // --- ANGGOTA PRESTASI ---
+  // Entitas anggota prestasi
   async getAnggotaPrestasi(): Promise<AnggotaPrestasi[]> {
     const { data, error } = await supabase.from('anggota_prestasi').select('*');
     if (error) throw new Error(error.message);
@@ -317,7 +317,7 @@ export const academicService = {
     await this.logAuditChange('anggota_prestasi', 'replace', id_prestasi, { count: anggota.length, id_prestasi });
   },
 
-  // --- MBKM ---
+  // Entitas MBKM & riset dosen
   async getMBKM(): Promise<RiwayatMBKM[]> {
     const { data, error } = await supabase.from('riwayat_mbkm').select('*');
     if (error) throw new Error(error.message);
@@ -356,7 +356,7 @@ export const academicService = {
     await this.logAuditChange('riwayat_mbkm', 'delete', id_mbkm, { id_mbkm });
   },
 
-  // --- TRACER ALUMNI ---
+  // Entitas tracer alumni
   async getTracerAlumni(): Promise<TracerStudy[]> {
     const { data, error } = await supabase.from('tracer_study').select('*');
     if (error) throw new Error(error.message);

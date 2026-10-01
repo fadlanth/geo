@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, CheckCircle2, AlertCircle, FileText, X } from 'lucide-react';
 import Button from './Button';
-import { useEscapeClose } from '../lib/hooks';
+import { useEscapeClose, useFocusTrap } from '../lib/hooks';
 import { errMsg } from '../lib/format';
 
 const getXLSX = async () => import('xlsx');
@@ -25,7 +25,9 @@ export default function CsvImporter({
   templateCsv,
   templateData
 }: CsvImporterProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
   useEscapeClose(true, onClose);
+  useFocusTrap(true, modalRef);
   const [dragActive, setDragActive] = useState(false);
   const [status, setStatus] = useState<'idle' | 'parsing' | 'preview' | 'importing' | 'success' | 'error'>('idle');
   const [parsedData, setParsedData] = useState<Record<string, unknown>[]>([]);
@@ -298,11 +300,18 @@ export default function CsvImporter({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+      <div
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="csv-modal-title"
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+      >
         <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-[var(--color-primary)] text-white shrink-0">
           <div>
-            <h3 className="font-display font-bold text-lg">Import CSV: {title}</h3>
+            <h3 id="csv-modal-title" className="font-display font-bold text-lg">Import CSV: {title}</h3>
             <p className="text-xs opacity-80 mt-0.5">Unggah data massal berkas .csv atau .xlsx</p>
           </div>
           <button onClick={onClose} aria-label="Tutup" className="p-2 hover:bg-white/10 rounded-xl transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">

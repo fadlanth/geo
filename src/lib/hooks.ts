@@ -50,3 +50,60 @@ export function useEscapeClose(open: boolean, onClose: () => void) {
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
 }
+
+/**
+ * Menjaga fokus keyboard tetap berada di dalam modal/dialog saat terbuka (Focus Trap).
+ * Otomatis memfokuskan elemen interaktif pertama dan mengembalikan fokus saat ditutup.
+ */
+export function useFocusTrap(open: boolean, containerRef: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!open || !containerRef.current) return;
+    const container = containerRef.current;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+
+    const getFocusables = (): HTMLElement[] => {
+      return Array.from(
+        container.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(el => el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0);
+    };
+
+    const focusables = getFocusables();
+    if (focusables.length > 0) {
+      // Tunggu hingga render DOM stabil sebelum focus
+      const timer = setTimeout(() => {
+        focusables[0]?.focus();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const currentFocusables = getFocusables();
+      if (currentFocusables.length === 0) return;
+
+      const firstEl = currentFocusables[0];
+      const lastEl = currentFocusables[currentFocusables.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    };
+
+    container.addEventListener('keydown', handleKeyDown);
+    return () => {
+      container.removeEventListener('keydown', handleKeyDown);
+      previouslyFocused?.focus?.();
+    };
+  }, [open, containerRef]);
+}
+

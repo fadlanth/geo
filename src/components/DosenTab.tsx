@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Dosen, Mahasiswa } from '../types';
 import { validators, val } from '../lib/validators';
-import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { useDebounce, useEscapeClose, useFocusTrap } from '../lib/hooks';
 import { fmt } from '../lib/format';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
@@ -53,9 +53,11 @@ export default function DosenTab({
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingDosen, setEditingDosen] = useState<Dosen | null>(null);
+  const dosenModalRef = useRef<HTMLDivElement>(null);
 
   useEscapeClose(showAddModal, () => setShowAddModal(false));
   useEscapeClose(showImport, () => setShowImport(false));
+  useFocusTrap(showAddModal, dosenModalRef);
 
   useEffect(() => {
     if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -102,7 +104,7 @@ export default function DosenTab({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // --- Validasi client ---
+    // Validasi client
     const errs: Record<string, string> = {};
     if (!editingDosen) errs.npm = val(validators.nip(form.nip));
     errs.nama = val(validators.nama(form.nama));
@@ -430,10 +432,17 @@ export default function DosenTab({
 
       {/* MODAL: ADD / EDIT DOSEN */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl w-full max-w-lg p-6 space-y-4 shadow-2xl border border-[var(--color-primary)]/10">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => { setShowAddModal(false); setEditingDosen(null); }}>
+          <div
+            ref={dosenModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dosen-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl w-full max-w-lg p-6 space-y-4 shadow-2xl border border-[var(--color-primary)]/10"
+          >
             <div className="flex justify-between items-center pb-3 border-b border-gray-100">
-              <h3 className="font-display font-bold text-[var(--color-text-main)] text-lg">
+              <h3 id="dosen-modal-title" className="font-display font-bold text-[var(--color-text-main)] text-lg">
                 {editingDosen ? 'Edit Profil Dosen' : 'Registrasi Dosen Baru'}
               </h3>
               <IconButton

@@ -24,7 +24,7 @@ import {
   X
 } from 'lucide-react';
 import { Prestasi, Mahasiswa, AnggotaPrestasi, getPrestasiNamaMahasiswa } from '../types';
-import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { useDebounce, useEscapeClose, useFocusTrap } from '../lib/hooks';
 import { fmt } from '../lib/format';
 import { exportToExcel, exportPrestasiRekapToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
@@ -82,9 +82,11 @@ export default function PrestasiTab({
   const [showImport, setShowImport] = useState(false);
   const [editingPrestasi, setEditingPrestasi] = useState<Prestasi | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const prestasiModalRef = useRef<HTMLDivElement>(null);
 
   useEscapeClose(showAddModal, () => setShowAddModal(false));
   useEscapeClose(showImport, () => setShowImport(false));
+  useFocusTrap(showAddModal, prestasiModalRef);
 
   useEffect(() => {
     if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -720,13 +722,13 @@ export default function PrestasiTab({
                                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--color-primary)]/10">
                                   <button
                                     onClick={(e) => { e.stopPropagation(); handleEditClick(p); }}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-200 transition"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-blue-600 hover:bg-blue-50 hover:border-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] transition"
                                   >
                                     <Edit2 className="w-3.5 h-3.5" /> Edit
                                   </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); p.id_prestasi && onDeletePrestasi(p.id_prestasi); }}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 transition"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] transition"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" /> Hapus
                                   </button>
@@ -764,10 +766,17 @@ export default function PrestasiTab({
 
       {/* Add / Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 max-w-2xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowAddModal(false); resetForm(); }}>
+          <div
+            ref={prestasiModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="prestasi-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl border border-[var(--color-primary)]/10 max-w-2xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-display font-bold text-lg">
+              <h3 id="prestasi-modal-title" className="font-display font-bold text-lg">
                 {editingPrestasi ? 'Edit Prestasi' : 'Catat Prestasi Baru'}
               </h3>
               <IconButton

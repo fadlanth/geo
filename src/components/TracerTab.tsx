@@ -47,7 +47,7 @@ import {
   YAxis
 } from 'recharts';
 import { TracerStudy, Mahasiswa, Dosen, getMasaTungguKategori, getGajiKategori } from '../types';
-import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { useDebounce, useEscapeClose, useFocusTrap } from '../lib/hooks';
 import { fmt } from '../lib/format';
 import { renderDonutLabel } from '../lib/chartUtils';
 import StatCard from './StatCard';
@@ -103,21 +103,22 @@ export default function TracerTab({
   const [isCopiedUntracked, setIsCopiedUntracked] = useState(false);
   const ROWS_PER_PAGE = 25;
 
-  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showDiktiImporter, setShowDiktiImporter] = useState(false);
   const [editingAlumni, setEditingAlumni] = useState<TracerStudy | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const tracerModalRef = useRef<HTMLDivElement>(null);
 
   useEscapeClose(showAddModal, () => setShowAddModal(false));
   useEscapeClose(showImport, () => setShowImport(false));
+  useEscapeClose(showDiktiImporter, () => setShowDiktiImporter(false));
+  useFocusTrap(showAddModal, tracerModalRef);
 
   useEffect(() => {
     if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [page]);
 
-  // Form State
   const [form, setForm] = useState<TracerStudy>({
     npm_mahasiswa: '',
     tahun_lulus: new Date().getFullYear(),
@@ -237,7 +238,7 @@ export default function TracerTab({
     safeUntrackedPage * ROWS_PER_PAGE
   );
 
-  // === Computed Analytics untuk Cohort Terpilih ===
+  // Agregasi analitik cohort terpilih
   const statusMap = cohortAlumni.reduce((acc: Record<string, number>, a) => {
     acc[a.status_lulusan] = (acc[a.status_lulusan] || 0) + 1;
     return acc;
@@ -269,7 +270,7 @@ export default function TracerTab({
     .filter(k => (tungguKategoriMap[k] || 0) > 0)
     .map(k => ({ label: k, count: tungguKategoriMap[k] || 0 }));
 
-  // === Rekap Gaji per Tahun Lulus (alumni Bekerja & Wiraswasta) ===
+  // Rekapitulasi kategori gaji per tahun lulus
   const berpenghasilan = cohortAlumni.filter(a => a.status_lulusan === 'Bekerja' || a.status_lulusan === 'Wiraswasta');
   const GAJI_KATEGORI = ['0-5jt', '>5-10jt', '>10jt'] as const;
   const sortedTahun = Array.from(new Set(cohortAlumni.map(a => a.tahun_lulus))).sort((a, b) => b - a);
@@ -293,7 +294,7 @@ export default function TracerTab({
     return acc;
   }, { '0-5jt': 0, '>5-10jt': 0, '>10jt': 0 } as Record<typeof GAJI_KATEGORI[number], number>);
 
-  // === Matriks Akreditasi LAMSAMA / IKU-1 Tahunan ===
+  // Matriks akreditasi LAMSAMA / IKU-1 tahunan
   const akreditasiMatrix = useMemo(() => {
     return tahunOptions.map(th => {
       const lulusanTh = mahasiswa.filter(m => {
@@ -343,7 +344,6 @@ export default function TracerTab({
     });
   }, [tahunOptions, mahasiswa, alumni]);
 
-  // === Handlers ===
   const handleEditClick = (a: TracerStudy) => {
     setEditingAlumni(a);
     setForm({
@@ -585,7 +585,6 @@ export default function TracerTab({
 
   return (
     <div className="space-y-6">
-      {/* 1. Header Halaman */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-md bg-[var(--color-primary)]/10 text-[var(--color-primary)] text-[10px] font-bold uppercase tracking-wider">
@@ -632,7 +631,7 @@ export default function TracerTab({
         </div>
       </div>
 
-      {/* 2. Cohort Selector (Tahun Kelulusan) */}
+      {/* Filter cohort tahun kelulusan */}
       <div className="bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider pl-1">
           <Calendar className="w-4 h-4 text-[var(--color-primary)]" />
@@ -642,7 +641,7 @@ export default function TracerTab({
         <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto py-1">
           <button
             onClick={() => { setFilterTahun('All'); setPage(1); setUntrackedPage(1); }}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 ${
               filterTahun === 'All'
                 ? 'bg-[var(--color-primary)] text-white shadow-xs'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200/70'
@@ -658,7 +657,7 @@ export default function TracerTab({
               <button
                 key={th}
                 onClick={() => { setFilterTahun(th.toString()); setPage(1); setUntrackedPage(1); }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 ${
                   isSelected
                     ? 'bg-[var(--color-primary)] text-white shadow-xs'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200/70'
@@ -687,7 +686,7 @@ export default function TracerTab({
         </div>
       ) : (
         <>
-          {/* 3. Kartu KPI & Keterlacakan (Response Rate Banner) */}
+          {/* Status keterlacakan & response rate */}
           <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs space-y-5">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-gray-100">
               <div>
@@ -738,7 +737,7 @@ export default function TracerTab({
               </div>
             </div>
 
-            {/* 4 Kartu Metrik Komparasi */}
+            {/* Metrik komparasi alumni */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
               <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
                 <div className="flex items-center gap-2 text-xs font-bold text-gray-500 mb-1">
@@ -780,11 +779,11 @@ export default function TracerTab({
             </div>
           </div>
 
-          {/* 4. Tab Navigasi Sub-View */}
+          {/* Navigasi sub-view */}
           <div className="flex items-center gap-2 border-b border-gray-200/80 pb-1">
             <button
               onClick={() => setActiveSubView('terlacak')}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 font-display font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 font-display font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 ${
                 activeSubView === 'terlacak'
                   ? 'bg-[var(--color-primary)] text-white shadow-xs'
                   : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200/60'
@@ -796,7 +795,7 @@ export default function TracerTab({
 
             <button
               onClick={() => setActiveSubView('belum_terlacak')}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 font-display font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 font-display font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-1 ${
                 activeSubView === 'belum_terlacak'
                   ? 'bg-rose-700 text-white shadow-xs'
                   : 'bg-white text-rose-700 hover:bg-rose-50 border border-rose-200'
@@ -808,7 +807,7 @@ export default function TracerTab({
 
             <button
               onClick={() => setActiveSubView('akreditasi')}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 font-display font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 font-display font-bold text-xs sm:text-sm rounded-xl transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-1 ${
                 activeSubView === 'akreditasi'
                   ? 'bg-indigo-700 text-white shadow-xs'
                   : 'bg-white text-indigo-700 hover:bg-indigo-50 border border-indigo-200'
@@ -819,9 +818,7 @@ export default function TracerTab({
             </button>
           </div>
 
-          {/* ========================================================================= */}
-          {/* SUB-VIEW 1: DATA ALUMNI TERLACAK */}
-          {/* ========================================================================= */}
+          {/* Sub-view: Data alumni terlacak */}
           {activeSubView === 'terlacak' && (
             <div className="space-y-6">
               {/* Filter Row */}
@@ -1099,9 +1096,7 @@ export default function TracerTab({
             </div>
           )}
 
-          {/* ========================================================================= */}
-          {/* SUB-VIEW 2: ALUMNI BELUM TERLACAK (GAP ANALYSIS) */}
-          {/* ========================================================================= */}
+          {/* Sub-view: Alumni belum terlacak (gap analysis) */}
           {activeSubView === 'belum_terlacak' && (
             <div className="space-y-6">
               {/* Banner Info Gap Analysis */}
@@ -1238,9 +1233,7 @@ export default function TracerTab({
             </div>
           )}
 
-          {/* ========================================================================= */}
-          {/* SUB-VIEW 3: MATRIKS BORANG AKREDITASI (LKPS LAMSAMA / IKU-1) */}
-          {/* ========================================================================= */}
+          {/* Sub-view: Matriks borang akreditasi (LKPS LAMSAMA / IKU-1) */}
           {activeSubView === 'akreditasi' && (
             <div className="space-y-6">
               {/* Header Box Matriks */}
@@ -1389,10 +1382,17 @@ export default function TracerTab({
 
       {/* MODAL: ADD / EDIT TRACER STUDY */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl border border-[var(--color-primary)]/10 max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowAddModal(false); resetForm(); }}>
+          <div
+            ref={tracerModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tracer-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl border border-[var(--color-primary)]/10 max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+          >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-display font-bold text-lg">
+              <h3 id="tracer-modal-title" className="font-display font-bold text-lg">
                 {editingAlumni ? 'Edit Data Tracer' : 'Tambah Data Tracer'}
               </h3>
               <IconButton

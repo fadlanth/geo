@@ -56,8 +56,8 @@ export default function Toast({ toast, onClose }: ToastProps) {
         </div>
         <button
           onClick={() => onClose(id)}
-          className="p-1 rounded-md hover:bg-black/5 transition"
-          aria-label="Close"
+          className="p-1 rounded-lg hover:bg-black/5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
+          aria-label="Tutup notifikasi"
         >
           <X className="w-4 h-4" />
         </button>

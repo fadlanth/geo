@@ -37,7 +37,7 @@ import {
   CartesianGrid
 } from 'recharts';
 import { RiwayatMBKM, Mahasiswa, Dosen } from '../types';
-import { useDebounce, useEscapeClose } from '../lib/hooks';
+import { useDebounce, useEscapeClose, useFocusTrap } from '../lib/hooks';
 import { fmt } from '../lib/format';
 import { exportToExcel } from '../lib/exportUtils';
 import { ToastOptions } from './Toast';
@@ -125,15 +125,16 @@ export default function MagangTab({
   const [showImport, setShowImport] = useState(false);
   const [editingMbkm, setEditingMbkm] = useState<RiwayatMBKM | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const magangModalRef = useRef<HTMLDivElement>(null);
 
   useEscapeClose(showAddModal, () => setShowAddModal(false));
   useEscapeClose(showImport, () => setShowImport(false));
+  useFocusTrap(showAddModal, magangModalRef);
 
   useEffect(() => {
     if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [page]);
 
-  // Form state
   const [form, setForm] = useState<RiwayatMBKM>({
     npm_mahasiswa: '',
     jenis_kegiatan: 'Magang Industri',
@@ -1230,11 +1231,18 @@ export default function MagangTab({
 
       {/* Add / Edit Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-xl shadow-xl max-h-[90vh] overflow-y-auto border border-slate-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => { setShowAddModal(false); resetForm(); }}>
+          <div
+            ref={magangModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="magang-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl p-6 w-full max-w-xl shadow-xl max-h-[90vh] overflow-y-auto border border-slate-200"
+          >
             <div className="flex items-start justify-between pb-4 border-b border-slate-100 mb-4">
               <div>
-                <h3 className="font-display font-bold text-lg text-[var(--color-text-main)]">
+                <h3 id="magang-modal-title" className="font-display font-bold text-lg text-[var(--color-text-main)]">
                   {editingMbkm
                     ? (subTab === 'magang' ? 'Edit Data Magang Industri' : 'Edit Keterlibatan Penelitian Dosen')
                     : (subTab === 'magang' ? 'Catat Magang Industri Baru' : 'Catat Keterlibatan Penelitian Dosen Baru')}
