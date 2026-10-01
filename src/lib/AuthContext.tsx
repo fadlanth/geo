@@ -50,7 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile({ id: uid, email: email ?? '', role: 'guest', nama: email?.split('@')[0] ?? 'Pengguna' });
       }
     } catch (err) {
-      // Profil belum ada (mis. migrasi 0001 belum dijalankan) → fallback aman.
+      console.error('[AuthContext] Gagal memuat profil pengguna:', err);
+      // Profil belum ada atau RLS error → fallback aman.
       setProfile({ id: uid, email: email ?? '', role: 'guest', nama: email?.split('@')[0] ?? 'Pengguna' });
     }
   };

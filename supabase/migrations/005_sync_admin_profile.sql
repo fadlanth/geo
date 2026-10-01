@@ -1,5 +1,5 @@
 -- ==============================================================================
--- GEO INFO — SYNC AUTH USERS KE PROFILES & SET ROLE ADMIN
+-- GEO INFO — FIX REKURSI RLS PROFILES, SYNC AUTH USERS & SET ROLE ADMIN
 -- File: supabase/migrations/005_sync_admin_profile.sql
 -- ==============================================================================
 
@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 -- 2. INSERT atau UPDATE seluruh akun dari auth.users ke public.profiles sebagai 'admin'
--- Ini mengatasi masalah akun yang dibuat sebelum trigger ada (sehingga tabel profiles kosong)
 INSERT INTO public.profiles (id, email, role, nama)
 SELECT 
   id, 
@@ -25,20 +24,29 @@ FROM auth.users
 ON CONFLICT (id) DO UPDATE 
 SET role = 'admin';
 
--- 3. Pastikan RLS pada profiles mengizinkan user yang login membaca profilnya sendiri
+-- 3. PERBAIKI POLICY RLS PROFILES (Mencegah Infinite Recursion)
+-- PENTING: Policy SELECT pada profiles DILARANG memanggil get_current_role()
+-- karena get_current_role() membaca profiles, yang menyebabkan infinite recursion di Postgres!
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
-CREATE POLICY "Users can view own profile" ON public.profiles
-  FOR SELECT TO authenticated 
-  USING (id = auth.uid() OR public.get_current_role() = 'admin');
-
+DROP POLICY IF EXISTS "Admin can manage profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
-CREATE POLICY "Users can insert own profile" ON public.profiles
-  FOR INSERT TO authenticated 
+DROP POLICY IF EXISTS "Allow authenticated read profiles" ON public.profiles;
+DROP POLICY IF EXISTS "Allow user update own profile" ON public.profiles;
+
+-- Izin baca bebas rekursi untuk seluruh user login
+CREATE POLICY "Allow authenticated read profiles" ON public.profiles
+  FOR SELECT TO authenticated 
+  USING (true);
+
+-- Izin update profil milik sendiri
+CREATE POLICY "Allow user update own profile" ON public.profiles
+  FOR UPDATE TO authenticated 
+  USING (id = auth.uid())
   WITH CHECK (id = auth.uid());
 
-DROP POLICY IF EXISTS "Admin can manage profiles" ON public.profiles;
-CREATE POLICY "Admin can manage profiles" ON public.profiles
-  FOR ALL TO authenticated 
-  USING (public.get_current_role() = 'admin');
+-- Izin insert profil milik sendiri jika belum ada
+CREATE POLICY "Allow user insert own profile" ON public.profiles
+  FOR INSERT TO authenticated 
+  WITH CHECK (id = auth.uid());
