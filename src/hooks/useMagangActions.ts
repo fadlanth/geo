@@ -16,11 +16,16 @@ export function useMagangActions(
   const refreshMbkm = useCallback(async () => {
     try {
       const data = await academicService.getMBKM();
-      setMbkm(data);
+      setMbkm(data || []);
     } catch (err) {
-      console.error('Gagal memuat MBKM:', err);
+      console.error('[MBKM Error] Gagal memuat MBKM:', err);
+      triggerToast({
+        kind: 'error',
+        title: 'Gagal Memuat Data Magang/MBKM',
+        message: errMsg(err, 'Terjadi kendala saat membaca data kegiatan luar prodi dari server.')
+      });
     }
-  }, []);
+  }, [triggerToast]);
 
   const handleSaveMbkm = async (m: RiwayatMBKM) => {
     try {

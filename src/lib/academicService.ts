@@ -321,6 +321,7 @@ export const academicService = {
   async getMBKM(): Promise<RiwayatMBKM[]> {
     const { data, error } = await supabase.from('riwayat_mbkm').select('*');
     if (error) throw new Error(error.message);
+    if (!data || !Array.isArray(data)) return [];
     const KETERLIBATAN_PREFIXES = [
       'Dengan dosen tetap dari perguruan tinggi homebase',
       'Dengan lembaga riset yang bereputasi',
