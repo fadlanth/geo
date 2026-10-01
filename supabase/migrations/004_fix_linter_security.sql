@@ -75,7 +75,7 @@ BEGIN
   END IF;
 END $$;
 
--- 3. HAPUS POLICY LAMA OVERLY PERMISSIVE & PASANG POLICY AMAN PADA TRACER_STUDY
+-- 3. HAPUS POLICY LAMA OVERLY PERMISSIVE & PASANG POLICY AMAN PADA SEMUA TABEL
 DROP POLICY IF EXISTS "anggota_prestasi_all" ON public.anggota_prestasi;
 DROP POLICY IF EXISTS "dosen_all" ON public.dosen;
 DROP POLICY IF EXISTS "mahasiswa_all" ON public.mahasiswa;
@@ -83,17 +83,29 @@ DROP POLICY IF EXISTS "prestasi_all" ON public.prestasi;
 DROP POLICY IF EXISTS "riwayat_mbkm_all" ON public.riwayat_mbkm;
 DROP POLICY IF EXISTS "Akses Admin Tracer" ON public.tracer_study;
 
--- Pasang policy berbasis peran standar pada tracer_study (mengatasi rls_enabled_no_policy)
-DROP POLICY IF EXISTS "Staff read tracer_study" ON public.tracer_study;
-CREATE POLICY "Staff read tracer_study" ON public.tracer_study
-  FOR SELECT TO authenticated
-  USING (public.get_current_role() IN ('admin', 'operator', 'dosen'));
+-- Pasang policy berbasis peran standar pada SEMUA tabel yang policy-nya dihapus di atas
+DO $$
+DECLARE
+  tbl TEXT;
+BEGIN
+  FOREACH tbl IN ARRAY ARRAY['mahasiswa', 'dosen', 'prestasi', 'anggota_prestasi', 'riwayat_mbkm', 'tracer_study']
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS "Staff read %1$I" ON public.%1$I;', tbl);
+    EXECUTE format('
+      CREATE POLICY "Staff read %1$I" ON public.%1$I
+        FOR SELECT TO authenticated
+        USING (public.get_current_role() IN (''admin'', ''operator'', ''dosen''));
+    ', tbl);
 
-DROP POLICY IF EXISTS "Operator/Admin write tracer_study" ON public.tracer_study;
-CREATE POLICY "Operator/Admin write tracer_study" ON public.tracer_study
-  FOR ALL TO authenticated
-  USING (public.get_current_role() IN ('admin', 'operator'))
-  WITH CHECK (public.get_current_role() IN ('admin', 'operator'));
+    EXECUTE format('DROP POLICY IF EXISTS "Operator/Admin write %1$I" ON public.%1$I;', tbl);
+    EXECUTE format('
+      CREATE POLICY "Operator/Admin write %1$I" ON public.%1$I
+        FOR ALL TO authenticated
+        USING (public.get_current_role() IN (''admin'', ''operator''))
+        WITH CHECK (public.get_current_role() IN (''admin'', ''operator''));
+    ', tbl);
+  END LOOP;
+END $$;
 
 -- 4. CATATAN TENTANG VIEW v_publik_rekap (ERROR: security_definer_view)
 -- View public.v_publik_rekap secara intensional berjalan dengan hak pembuat (definer)
