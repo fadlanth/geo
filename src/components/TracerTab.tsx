@@ -53,6 +53,7 @@ import {
   getMasaTungguKategori,
   getGajiKategori,
 } from "../types";
+import { useTracerFormState } from "../hooks/useTracerFormState";
 import { useDebounce, useEscapeClose, useFocusTrap } from "../lib/hooks";
 import {
   buildDosenMap,
@@ -130,36 +131,18 @@ export default function TracerTab({
   const [isCopiedUntracked, setIsCopiedUntracked] = useState(false);
   const ROWS_PER_PAGE = 25;
 
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showDiktiImporter, setShowDiktiImporter] = useState(false);
-  const [editingAlumni, setEditingAlumni] = useState<TracerStudy | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const tracerModalRef = useRef<HTMLDivElement>(null);
 
-  useEscapeClose(showAddModal, () => setShowAddModal(false));
   useEscapeClose(showImport, () => setShowImport(false));
   useEscapeClose(showDiktiImporter, () => setShowDiktiImporter(false));
-  useFocusTrap(showAddModal, tracerModalRef);
 
   useEffect(() => {
     if (page > 1)
       tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [page]);
 
-  const [form, setForm] = useState<TracerStudy>({
-    npm_mahasiswa: "",
-    tahun_lulus: new Date().getFullYear(),
-    status_lulusan: "Bekerja",
-    masa_tunggu_bulan: 0,
-    instansi_pekerjaan: "",
-    jabatan: "",
-    tingkat_perusahaan: undefined,
-    gaji_pekerjaan: undefined,
-    universitas_tujuan: "",
-    program_studi: "",
-    bidang_usaha: "",
-  });
 
   // Map Dosen Wali (NIP -> Nama)
   const dosenMap = useMemo(() => buildDosenMap(dosen), [dosen]);
@@ -167,6 +150,26 @@ export default function TracerTab({
   // Helper resolusi Tahun Lulus Mahasiswa
   const getMahasiswaTahunLulus = (m: Mahasiswa): number =>
     getMahasiswaTahunLulusCore(alumni, m);
+
+  const {
+    showAddModal,
+    setShowAddModal,
+    editingAlumni,
+    setEditingAlumni,
+    isSubmitting,
+    setIsSubmitting,
+    form,
+    setForm,
+    resetForm,
+    handleEditClick,
+    handleQuickInputTracer,
+  } = useTracerFormState({
+    filterTahun,
+    resolveTahunLulus: getMahasiswaTahunLulus,
+  });
+  useEscapeClose(showAddModal, () => setShowAddModal(false));
+  useFocusTrap(showAddModal, tracerModalRef);
+
 
   // Kumpulan Tahun Kelulusan yang terdeteksi
   const tahunOptions = useMemo(
@@ -417,41 +420,7 @@ export default function TracerTab({
     });
   }, [tahunOptions, mahasiswa, alumni]);
 
-  const handleEditClick = (a: TracerStudy) => {
-    setEditingAlumni(a);
-    setForm({
-      npm_mahasiswa: a.npm_mahasiswa,
-      tahun_lulus: a.tahun_lulus,
-      status_lulusan: a.status_lulusan,
-      masa_tunggu_bulan: a.masa_tunggu_bulan,
-      instansi_pekerjaan: a.instansi_pekerjaan || "",
-      jabatan: a.jabatan || "",
-      tingkat_perusahaan: a.tingkat_perusahaan,
-      gaji_pekerjaan: a.gaji_pekerjaan,
-      universitas_tujuan: a.universitas_tujuan || "",
-      program_studi: a.program_studi || "",
-      bidang_usaha: a.bidang_usaha || "",
-    });
-    setShowAddModal(true);
-  };
 
-  const handleQuickInputTracer = (m: Mahasiswa) => {
-    setEditingAlumni(null);
-    setForm({
-      npm_mahasiswa: m.npm,
-      tahun_lulus: getMahasiswaTahunLulus(m),
-      status_lulusan: "Bekerja",
-      masa_tunggu_bulan: 0,
-      instansi_pekerjaan: "",
-      jabatan: "",
-      tingkat_perusahaan: undefined,
-      gaji_pekerjaan: undefined,
-      universitas_tujuan: "",
-      program_studi: "",
-      bidang_usaha: "",
-    });
-    setShowAddModal(true);
-  };
 
   const handleCopyUntrackedList = () => {
     if (untrackedAlumniList.length === 0) return;
@@ -540,23 +509,6 @@ export default function TracerTab({
     }
   };
 
-  const resetForm = () => {
-    setForm({
-      npm_mahasiswa: "",
-      tahun_lulus:
-        filterTahun !== "All" ? Number(filterTahun) : new Date().getFullYear(),
-      status_lulusan: "Bekerja",
-      masa_tunggu_bulan: 0,
-      instansi_pekerjaan: "",
-      jabatan: "",
-      tingkat_perusahaan: undefined,
-      gaji_pekerjaan: undefined,
-      universitas_tujuan: "",
-      program_studi: "",
-      bidang_usaha: "",
-    });
-    setEditingAlumni(null);
-  };
 
   const handleBulkImport = async (rawData: Record<string, unknown>[]) => {
     if (!onBulkImportAlumni || rawData.length === 0) return;
