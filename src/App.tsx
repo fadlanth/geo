@@ -161,6 +161,12 @@ export default function App() {
   }, []);
 
   // Hooks per-entitas
+  const refreshRefs = useRef({
+    refreshPrestasi: async () => {},
+    refreshMbkm: async () => {},
+    refreshAlumni: async () => {},
+  });
+
   const {
     mahasiswa,
     refreshMahasiswa,
@@ -168,7 +174,11 @@ export default function App() {
     handleBulkImportMahasiswa,
     handleDeleteMahasiswa,
   } = useMahasiswaActions(triggerToast, setConfirmAction, async () => {
-    await Promise.all([refreshPrestasi(), refreshMbkm(), refreshAlumni()]);
+    await Promise.all([
+      refreshRefs.current.refreshPrestasi(),
+      refreshRefs.current.refreshMbkm(),
+      refreshRefs.current.refreshAlumni(),
+    ]);
   });
 
   const {
@@ -218,6 +228,10 @@ export default function App() {
     handleDeleteAlumni,
     handleBulkImportAlumni,
   } = useTracerActions(triggerToast, setConfirmAction);
+
+  useEffect(() => {
+    refreshRefs.current = { refreshPrestasi, refreshMbkm, refreshAlumni };
+  }, [refreshPrestasi, refreshMbkm, refreshAlumni]);
 
   // Loading State
   const [initialLoading, setInitialLoading] = useState(true);

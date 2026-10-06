@@ -75,10 +75,6 @@ export default function OverviewTab({
   const pctRegulasi =
     totalMhs > 0 ? Math.round((mhsRegulasi / totalMhs) * 100) : 0;
 
-  const totalDosenWaliOnly = dosen.filter(
-    (d) => d.is_dosen_wali !== false,
-  ).length;
-
   const totalPrestasi = prestasi.length;
   const juara1Count = prestasi.filter((p) => p.juara_ke === 1).length;
   const totalNasionalIntl = prestasi.filter((p) =>

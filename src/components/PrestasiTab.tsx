@@ -766,9 +766,6 @@ export default function PrestasiTab({
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {paginatedPrestasi.map((p, idx) => {
-                    const mhs = mahasiswa.find(
-                      (m) => m.npm === p.npm_mahasiswa,
-                    );
                     const isExpanded = expandedId === p.id_prestasi;
                     const details = detailItems(p);
                     const anggota = anggotaPrestasi.filter(

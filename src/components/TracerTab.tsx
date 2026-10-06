@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import CsvImporter from "./CsvImporter";
 import TracerImporterModal from "./TracerImporterModal";
 import Pagination from "./Pagination";
@@ -22,7 +22,6 @@ import {
   TrendingUp,
   Download,
   X,
-  Sparkles,
   DollarSign,
   CheckCircle2,
   AlertCircle,
@@ -148,14 +147,15 @@ export default function TracerTab({
   const dosenMap = useMemo(() => buildDosenMap(dosen), [dosen]);
 
   // Helper resolusi Tahun Lulus Mahasiswa
-  const getMahasiswaTahunLulus = (m: Mahasiswa): number =>
-    getMahasiswaTahunLulusCore(alumni, m);
+  const getMahasiswaTahunLulus = useCallback(
+    (m: Mahasiswa): number => getMahasiswaTahunLulusCore(alumni, m),
+    [alumni],
+  );
 
   const {
     showAddModal,
     setShowAddModal,
     editingAlumni,
-    setEditingAlumni,
     isSubmitting,
     setIsSubmitting,
     form,
@@ -418,7 +418,7 @@ export default function TracerTab({
         gajiDiatasUMR,
       };
     });
-  }, [tahunOptions, mahasiswa, alumni]);
+  }, [tahunOptions, mahasiswa, alumni, getMahasiswaTahunLulus]);
 
 
 

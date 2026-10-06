@@ -32,7 +32,7 @@ export default function ComboboxMahasiswa({
   // Sync inputValue when value changes externally (editing)
   useEffect(() => {
     setInputValue(selected ? `${selected.nama} (${selected.npm})` : "");
-  }, [value]);
+  }, [value, selected]);
 
   const filtered = mahasiswa.filter((m) => {
     const q = inputValue.toLowerCase();

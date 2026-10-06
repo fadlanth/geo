@@ -32,16 +32,14 @@ export default function Sidebar({
   setIsMobileOpen,
   role,
 }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState<boolean>(false);
-
-  useEffect(() => {
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem("siakad_sidebar_collapsed");
-      if (stored !== null) setCollapsed(stored === "1");
+      return stored !== null ? stored === "1" : false;
     } catch {
-      // localStorage tidak tersedia (mode privat); abaikan
+      return false;
     }
-  }, []);
+  });
 
   useEffect(() => {
     try {

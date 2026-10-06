@@ -112,6 +112,16 @@ export default function MagangTab({
   useEscapeClose(showAddModal, () => setShowAddModal(false));
   useFocusTrap(showAddModal, magangModalRef);
 
+
+  const [query, setQuery] = useState("");
+  const searchQuery = useDebounce(query, 350);
+  const [filterSemester, setFilterSemester] = useState("All");
+  const [filterKeterlibatan, setFilterKeterlibatan] = useState("All");
+  const [page, setPage] = useState(1);
+  const tableRef = useRef<HTMLDivElement | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const ROWS_PER_PAGE = 25;
+
   useEffect(() => {
     if (activeSubTab === "magang" || activeSubTab === "penelitian") {
       setSubTab(activeSubTab);
@@ -123,15 +133,6 @@ export default function MagangTab({
       setExpandedId(null);
     }
   }, [activeSubTab]);
-
-  const [query, setQuery] = useState("");
-  const searchQuery = useDebounce(query, 350);
-  const [filterSemester, setFilterSemester] = useState("All");
-  const [filterKeterlibatan, setFilterKeterlibatan] = useState("All");
-  const [page, setPage] = useState(1);
-  const tableRef = useRef<HTMLDivElement | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const ROWS_PER_PAGE = 25;
 
   const [showImport, setShowImport] = useState(false);
 
@@ -245,7 +246,7 @@ export default function MagangTab({
       const sem = (m.semester || "").trim().toLowerCase();
       const key = judul
         ? `${judul.toLowerCase()}:::${ketua}:::${sem}`
-        : m.id_mbkm || Math.random().toString();
+        : m.id_mbkm || `${m.npm_mahasiswa}|${sem}`;
       const mhs = mahasiswa.find((s) => s.npm === m.npm_mahasiswa);
       const nama = mhs ? mhs.nama : "N/A";
 
