@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 /**
  * Hook sederhana untuk menunda perubahan nilai (debounce).
@@ -25,7 +25,7 @@ export function useDebounce<T>(value: T, delay: number = 350): T {
  * Cocok untuk tabel yang pakai filter/search + pagination client-side.
  */
 export function useSearch(initialPage: (page: number) => void) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const debounced = useDebounce(query, 350);
 
   useEffect(() => {
@@ -44,10 +44,10 @@ export function useEscapeClose(open: boolean, onClose: () => void) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 }
 
@@ -55,7 +55,10 @@ export function useEscapeClose(open: boolean, onClose: () => void) {
  * Menjaga fokus keyboard tetap berada di dalam modal/dialog saat terbuka (Focus Trap).
  * Otomatis memfokuskan elemen interaktif pertama dan mengembalikan fokus saat ditutup.
  */
-export function useFocusTrap(open: boolean, containerRef: React.RefObject<HTMLElement | null>) {
+export function useFocusTrap(
+  open: boolean,
+  containerRef: React.RefObject<HTMLElement | null>,
+) {
   useEffect(() => {
     if (!open || !containerRef.current) return;
     const container = containerRef.current;
@@ -64,9 +67,14 @@ export function useFocusTrap(open: boolean, containerRef: React.RefObject<HTMLEl
     const getFocusables = (): HTMLElement[] => {
       return Array.from(
         container.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        )
-      ).filter(el => el.offsetWidth > 0 || el.offsetHeight > 0 || el.getClientRects().length > 0);
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter(
+        (el) =>
+          el.offsetWidth > 0 ||
+          el.offsetHeight > 0 ||
+          el.getClientRects().length > 0,
+      );
     };
 
     const focusables = getFocusables();
@@ -79,7 +87,7 @@ export function useFocusTrap(open: boolean, containerRef: React.RefObject<HTMLEl
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') return;
+      if (e.key !== "Tab") return;
       const currentFocusables = getFocusables();
       if (currentFocusables.length === 0) return;
 
@@ -99,11 +107,10 @@ export function useFocusTrap(open: boolean, containerRef: React.RefObject<HTMLEl
       }
     };
 
-    container.addEventListener('keydown', handleKeyDown);
+    container.addEventListener("keydown", handleKeyDown);
     return () => {
-      container.removeEventListener('keydown', handleKeyDown);
+      container.removeEventListener("keydown", handleKeyDown);
       previouslyFocused?.focus?.();
     };
   }, [open, containerRef]);
 }
-

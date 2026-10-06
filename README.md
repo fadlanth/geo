@@ -26,7 +26,7 @@ akses publik hanya menyajikan angka agregat, sedangkan data riil dilindungi Row 
 
 ## Teknologi & Arsitektur
 
-- **Frontend**: React 18, TypeScript, Tailwind CSS
+- **Frontend**: React 19, TypeScript, Tailwind CSS
 - **Build Tool**: Vite dengan optimasi `manualChunks` (pemisahan vendor bundle XLSX, Recharts, Supabase, Lucide)
 - **Backend & Database**: Supabase (PostgreSQL, Row Level Security, RPC Security Definer)
 - **Icons**: Lucide React
@@ -53,6 +53,8 @@ Perintah lain yang tersedia:
 - `npm run build`: Kompilasi aset produksi ke folder `dist/`
 - `npm run preview`: Uji coba bundle produksi secara lokal
 - `npm run lint`: Pemeriksaan standar kualitas kode
+- `npm test`: Menjalankan unit test (Vitest)
+- `npm run test:watch`: Mode watch unit test
 
 ## Setup Database Supabase
 

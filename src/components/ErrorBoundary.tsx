@@ -1,5 +1,5 @@
-import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import React from "react";
+import { AlertTriangle } from "lucide-react";
 
 interface Props {
   children: React.ReactNode;
@@ -21,7 +21,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
-    console.error('ErrorBoundary:', error, info);
+    console.error("ErrorBoundary:", error, info);
   }
 
   render() {
@@ -30,9 +30,12 @@ export default class ErrorBoundary extends React.Component<Props, State> {
         <div className="min-h-screen bg-[var(--color-base)] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 max-w-lg w-full text-center">
             <AlertTriangle className="w-10 h-10 mx-auto text-[var(--color-primary)] mb-4" />
-            <h1 className="font-display font-extrabold text-lg text-[var(--color-text-main)]">Terjadi Kesalahan</h1>
+            <h1 className="font-display font-extrabold text-lg text-[var(--color-text-main)]">
+              Terjadi Kesalahan
+            </h1>
             <p className="text-sm text-[var(--color-text-main)]/55 mt-2">
-              Aplikasi mengalami error yang tidak terduga. Muat ulang halaman untuk melanjutkan.
+              Aplikasi mengalami error yang tidak terduga. Muat ulang halaman
+              untuk melanjutkan.
             </p>
             {this.state.error?.message && (
               <pre className="mt-4 p-3 bg-red-50 text-red-700 text-xs font-mono rounded-lg text-left overflow-x-auto border border-red-200">

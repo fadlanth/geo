@@ -1,39 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root {
-  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  --font-sans:
+    "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial;
   --font-display: "Plus Jakarta Sans", "Inter", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   /* Tech-Driven Academy Palette */
-  --color-base: #FAFAFC; /* Ghost White */
+  --color-base: #fafafc; /* Ghost White */
   --color-text-main: #202938; /* Charcoal */
-  --color-primary: #9C3434; /* Primary red for actions */
-  --color-primary-light: #D38484;
+  --color-primary: #9c3434; /* Primary red for actions */
+  --color-primary-light: #d38484;
   --color-primary-dark: #772424;
-  --color-primary-soft: #F7D4D3;
-  --color-primary-muted: color-mix(in srgb, var(--color-primary) 25%, var(--color-base));
-  --color-accent: #7B2B2B; /* Sidebar harmony red */
-  --color-accent-light: color-mix(in srgb, var(--color-accent) 25%, var(--color-base));
+  --color-primary-soft: #f7d4d3;
+  --color-primary-muted: color-mix(
+    in srgb,
+    var(--color-primary) 25%,
+    var(--color-base)
+  );
+  --color-accent: #7b2b2b; /* Sidebar harmony red */
+  --color-accent-light: color-mix(
+    in srgb,
+    var(--color-accent) 25%,
+    var(--color-base)
+  );
   --color-accent-dark: #652222;
-  --color-slate: #E4E7EB; /* Light Slate for table backgrounds */
+  --color-slate: #e4e7eb; /* Light Slate for table backgrounds */
   --color-muted: #94a3b8;
-  --color-muted-text: #5B6B7F;
-  --color-success: #10B981;
-  --color-warning: #F59E0B;
-  --color-info: #2563EB; /* Status regulasi / aktif (blue) */
-  --color-danger: #DC2626; /* Status undur diri / hapus (red) */
-  --color-violet: #7C3AED; /* Kategori internasional */
-  --color-juara1: #CA8A04; /* Gold */
-  --color-juara2: #64748B; /* Silver */
-  --color-juara3: #B45309; /* Bronze */
-  --color-border-muted: #D9DCE4;
-  --color-on-primary: #FFFFFF; /* Text color placed on primary backgrounds (WCAG checked) */
+  --color-muted-text: #5b6b7f;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-info: #2563eb; /* Status regulasi / aktif (blue) */
+  --color-danger: #dc2626; /* Status undur diri / hapus (red) */
+  --color-violet: #7c3aed; /* Kategori internasional */
+  --color-juara1: #ca8a04; /* Gold */
+  --color-juara2: #64748b; /* Silver */
+  --color-juara3: #b45309; /* Bronze */
+  --color-border-muted: #d9dce4;
+  --color-on-primary: #ffffff; /* Text color placed on primary backgrounds (WCAG checked) */
   --color-primary-contrast-ratio: 5.08; /* Approx contrast ratio of white on --color-primary */
   --sidebar-bg: var(--color-accent);
   --sidebar-bg-compact: var(--color-accent-dark);
-  --sidebar-text: #FFFFFF; /* Ensure readable on sidebar background */
+  --sidebar-text: #ffffff; /* Ensure readable on sidebar background */
 }
 
 body {
@@ -100,89 +110,153 @@ textarea:focus-visible {
 
 /* status variants using accessible contrast tokens */
 .status-regulasi {
-  background-color: color-mix(in srgb, var(--color-info) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-info) 10%,
+    var(--color-base)
+  );
   color: var(--color-info);
   border: 1px solid color-mix(in srgb, var(--color-info) 22%, transparent);
 }
 .status-lulus {
-  background-color: color-mix(in srgb, var(--color-success) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-success) 10%,
+    var(--color-base)
+  );
   color: var(--color-success);
   border: 1px solid color-mix(in srgb, var(--color-success) 22%, transparent);
 }
 .status-alih {
-  background-color: color-mix(in srgb, var(--color-warning) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-warning) 10%,
+    var(--color-base)
+  );
   color: var(--color-warning);
   border: 1px solid color-mix(in srgb, var(--color-warning) 22%, transparent);
 }
 .status-undur {
-  background-color: color-mix(in srgb, var(--color-danger) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-danger) 10%,
+    var(--color-base)
+  );
   color: var(--color-danger);
   border: 1px solid color-mix(in srgb, var(--color-danger) 22%, transparent);
 }
 .status-neutral {
-  background-color: color-mix(in srgb, var(--color-muted-text) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-muted-text) 10%,
+    var(--color-base)
+  );
   color: var(--color-muted-text);
   border: 1px solid color-mix(in srgb, var(--color-muted-text) 18%, transparent);
 }
 
 /* Tracer / alumni statuses */
 .status-bekerja {
-  background-color: color-mix(in srgb, var(--color-success) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-success) 10%,
+    var(--color-base)
+  );
   color: var(--color-success);
   border: 1px solid color-mix(in srgb, var(--color-success) 22%, transparent);
 }
 .status-studi {
-  background-color: color-mix(in srgb, var(--color-info) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-info) 10%,
+    var(--color-base)
+  );
   color: var(--color-info);
   border: 1px solid color-mix(in srgb, var(--color-info) 22%, transparent);
 }
 .status-wira {
-  background-color: color-mix(in srgb, var(--color-warning) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-warning) 10%,
+    var(--color-base)
+  );
   color: var(--color-warning);
   border: 1px solid color-mix(in srgb, var(--color-warning) 22%, transparent);
 }
 .status-belumbekerja {
-  background-color: color-mix(in srgb, var(--color-muted-text) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-muted-text) 10%,
+    var(--color-base)
+  );
   color: var(--color-muted-text);
   border: 1px solid color-mix(in srgb, var(--color-muted-text) 18%, transparent);
 }
 
 /* Tingkat prestasi (category color) */
 .status-tingkat-nasional {
-  background-color: color-mix(in srgb, var(--color-primary) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-primary) 10%,
+    var(--color-base)
+  );
   color: var(--color-primary);
   border: 1px solid color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 .status-tingkat-internasional {
-  background-color: color-mix(in srgb, var(--color-violet) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-violet) 10%,
+    var(--color-base)
+  );
   color: var(--color-violet);
   border: 1px solid color-mix(in srgb, var(--color-violet) 22%, transparent);
 }
 .status-tingkat-wilayah {
-  background-color: color-mix(in srgb, var(--color-muted-text) 10%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-muted-text) 10%,
+    var(--color-base)
+  );
   color: var(--color-muted-text);
   border: 1px solid color-mix(in srgb, var(--color-muted-text) 18%, transparent);
 }
 
 /* Juara badges — warna merit */
 .status-juara1 {
-  background-color: color-mix(in srgb, var(--color-juara1) 12%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-juara1) 12%,
+    var(--color-base)
+  );
   color: var(--color-juara1);
   border: 1px solid color-mix(in srgb, var(--color-juara1) 26%, transparent);
 }
 .status-juara2 {
-  background-color: color-mix(in srgb, var(--color-juara2) 12%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-juara2) 12%,
+    var(--color-base)
+  );
   color: var(--color-juara2);
   border: 1px solid color-mix(in srgb, var(--color-juara2) 26%, transparent);
 }
 .status-juara3 {
-  background-color: color-mix(in srgb, var(--color-juara3) 12%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-juara3) 12%,
+    var(--color-base)
+  );
   color: var(--color-juara3);
   border: 1px solid color-mix(in srgb, var(--color-juara3) 26%, transparent);
 }
 
 .select-unassigned {
-  background-color: color-mix(in srgb, var(--color-warning) 8%, var(--color-base));
+  background-color: color-mix(
+    in srgb,
+    var(--color-warning) 8%,
+    var(--color-base)
+  );
   color: var(--color-warning);
   border: 1px solid color-mix(in srgb, var(--color-warning) 18%, transparent);
 }

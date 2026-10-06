@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Search, Check, ChevronDown } from 'lucide-react';
-import { Mahasiswa } from '../types';
+import React, { useState, useRef, useEffect } from "react";
+import { Search, Check, ChevronDown } from "lucide-react";
+import { Mahasiswa } from "../types";
 
 interface ComboboxMahasiswaProps {
   id?: string;
@@ -17,24 +17,24 @@ export default function ComboboxMahasiswa({
   mahasiswa,
   value,
   onChange,
-  placeholder = 'Cari mahasiswa...',
+  placeholder = "Cari mahasiswa...",
   required,
-  disabled
+  disabled,
 }: ComboboxMahasiswaProps) {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const selected = mahasiswa.find(m => m.npm === value);
+  const selected = mahasiswa.find((m) => m.npm === value);
 
   // Sync inputValue when value changes externally (editing)
   useEffect(() => {
-    setInputValue(selected ? `${selected.nama} (${selected.npm})` : '');
+    setInputValue(selected ? `${selected.nama} (${selected.npm})` : "");
   }, [value]);
 
-  const filtered = mahasiswa.filter(m => {
+  const filtered = mahasiswa.filter((m) => {
     const q = inputValue.toLowerCase();
     return m.nama.toLowerCase().includes(q) || m.npm.includes(q);
   });
@@ -51,22 +51,22 @@ export default function ComboboxMahasiswa({
     setShowDropdown(true);
     setHighlightIdx(0);
     if (!e.target.value) {
-      onChange('');
+      onChange("");
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!showDropdown) return;
-    if (e.key === 'ArrowDown') {
+    if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightIdx(i => Math.min(i + 1, filtered.length - 1));
-    } else if (e.key === 'ArrowUp') {
+      setHighlightIdx((i) => Math.min(i + 1, filtered.length - 1));
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightIdx(i => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter' && filtered[highlightIdx]) {
+      setHighlightIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === "Enter" && filtered[highlightIdx]) {
       e.preventDefault();
       handleSelect(filtered[highlightIdx]);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setShowDropdown(false);
     }
   };
@@ -74,15 +74,18 @@ export default function ComboboxMahasiswa({
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(e.target as Node)
+      ) {
         setShowDropdown(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const listboxId = id ? `${id}-listbox` : 'combobox-mhs-listbox';
+  const listboxId = id ? `${id}-listbox` : "combobox-mhs-listbox";
 
   return (
     <div ref={wrapperRef} className="relative">
@@ -97,11 +100,22 @@ export default function ComboboxMahasiswa({
           aria-expanded={showDropdown}
           aria-haspopup="listbox"
           aria-controls={listboxId}
-          aria-activedescendant={showDropdown && filtered[highlightIdx] ? `mhs-opt-${filtered[highlightIdx].npm}` : undefined}
+          aria-activedescendant={
+            showDropdown && filtered[highlightIdx]
+              ? `mhs-opt-${filtered[highlightIdx].npm}`
+              : undefined
+          }
           value={inputValue}
           onChange={handleInputChange}
-          onFocus={(e) => { setShowDropdown(true); setHighlightIdx(0); (e.target as HTMLInputElement).select(); }}
-          onClick={(e) => { setShowDropdown(true); (e.target as HTMLInputElement).select(); }}
+          onFocus={(e) => {
+            setShowDropdown(true);
+            setHighlightIdx(0);
+            (e.target as HTMLInputElement).select();
+          }}
+          onClick={(e) => {
+            setShowDropdown(true);
+            (e.target as HTMLInputElement).select();
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           required={required}
@@ -133,18 +147,22 @@ export default function ComboboxMahasiswa({
                   onMouseEnter={() => setHighlightIdx(i)}
                   className={`w-full text-left px-3 py-2.5 flex items-center gap-2 text-sm transition cursor-pointer ${
                     isHighlighted
-                      ? 'bg-[var(--color-primary)] text-white'
+                      ? "bg-[var(--color-primary)] text-white"
                       : isSelected
-                        ? 'bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold'
-                        : 'text-[var(--color-text-main)] hover:bg-gray-50'
+                        ? "bg-[var(--color-primary)]/10 text-[var(--color-primary)] font-semibold"
+                        : "text-[var(--color-text-main)] hover:bg-gray-50"
                   }`}
                 >
                   {isSelected && (
-                    <Check className={`w-3.5 h-3.5 shrink-0 ${isHighlighted ? 'text-white' : 'text-[var(--color-primary)]'}`} />
+                    <Check
+                      className={`w-3.5 h-3.5 shrink-0 ${isHighlighted ? "text-white" : "text-[var(--color-primary)]"}`}
+                    />
                   )}
                   <div className="flex-1 min-w-0">
                     <span className="block truncate font-medium">{m.nama}</span>
-                    <span className={`block text-[10px] font-mono truncate ${isHighlighted ? 'text-white/85' : 'text-gray-500'}`}>
+                    <span
+                      className={`block text-[10px] font-mono truncate ${isHighlighted ? "text-white/85" : "text-gray-500"}`}
+                    >
                       {m.npm} · {m.angkatan}
                     </span>
                   </div>

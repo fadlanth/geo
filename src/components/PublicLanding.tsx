@@ -1,8 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { Users, BookOpen, Award, GraduationCap, ShieldCheck, ArrowRight, Database, Sparkles, RefreshCw } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { fmt } from '../lib/format';
-import PublicTracerDashboard from './PublicTracerDashboard';
+import React, { useEffect, useState } from "react";
+import {
+  Users,
+  BookOpen,
+  Award,
+  GraduationCap,
+  ShieldCheck,
+  ArrowRight,
+  Database,
+  Sparkles,
+  RefreshCw,
+} from "lucide-react";
+import { supabase } from "../lib/supabase";
+import { fmt } from "../lib/format";
+import PublicTracerDashboard from "./PublicTracerDashboard";
 
 interface PublicLandingProps {
   onLogin: () => void;
@@ -31,11 +41,17 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
   const loadRekap = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.from('v_publik_rekap').select('*').limit(1);
+      const { data, error } = await supabase
+        .from("v_publik_rekap")
+        .select("*")
+        .limit(1);
       if (error) throw error;
       if (data && data[0]) setRekap(data[0] as RekapPublik);
     } catch (err) {
-      console.warn('Agregat publik belum tersedia (jalankan migrasi 001_security.sql):', err);
+      console.warn(
+        "Agregat publik belum tersedia (jalankan migrasi 001_security.sql):",
+        err,
+      );
     } finally {
       setLoading(false);
     }
@@ -46,11 +62,15 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
   }, []);
 
   const stats = [
-    { label: 'Mahasiswa Aktif', value: rekap.total_mahasiswa, icon: Users },
-    { label: 'Dosen', value: rekap.total_dosen, icon: BookOpen },
-    { label: 'Prestasi Mahasiswa', value: rekap.total_prestasi, icon: Award },
-    { label: 'Riwayat Magang/MBKM', value: rekap.total_mbkm, icon: Database },
-    { label: 'Alumni Terlacak', value: rekap.total_alumni, icon: GraduationCap },
+    { label: "Mahasiswa Aktif", value: rekap.total_mahasiswa, icon: Users },
+    { label: "Dosen", value: rekap.total_dosen, icon: BookOpen },
+    { label: "Prestasi Mahasiswa", value: rekap.total_prestasi, icon: Award },
+    { label: "Riwayat Magang/MBKM", value: rekap.total_mbkm, icon: Database },
+    {
+      label: "Alumni Terlacak",
+      value: rekap.total_alumni,
+      icon: GraduationCap,
+    },
   ];
 
   return (
@@ -71,8 +91,9 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
                 Geofisika UNPAD
               </h1>
               <p className="text-sm sm:text-base text-[var(--color-base)]/80 font-normal leading-relaxed max-w-xl">
-                Portal data akademik Program Studi Geofisika — dari Bumi untuk Negeri.
-                Halaman ini menampilkan ringkasan umum; data rinci hanya untuk pengelola internal.
+                Portal data akademik Program Studi Geofisika — dari Bumi untuk
+                Negeri. Halaman ini menampilkan ringkasan umum; data rinci hanya
+                untuk pengelola internal.
               </p>
             </div>
 
@@ -103,7 +124,10 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse h-28" />
+              <div
+                key={i}
+                className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse h-28"
+              />
             ))}
           </div>
         ) : (
@@ -121,7 +145,9 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
                   <p className="text-3xl font-bold font-display text-[var(--color-text-main)]">
                     {fmt(s.value)}
                   </p>
-                  <p className="text-xs text-[var(--color-text-main)]/60 font-medium mt-1">{s.label}</p>
+                  <p className="text-xs text-[var(--color-text-main)]/60 font-medium mt-1">
+                    {s.label}
+                  </p>
                 </div>
               );
             })}
@@ -137,17 +163,22 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
         <div className="mt-10 flex items-start gap-3 p-5 rounded-2xl border border-[var(--color-success)]/20 bg-white">
           <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5 text-[var(--color-success)]" />
           <div className="text-sm">
-            <p className="font-bold text-[var(--color-text-main)]">Aman &amp; Terlindungi</p>
+            <p className="font-bold text-[var(--color-text-main)]">
+              Aman &amp; Terlindungi
+            </p>
             <p className="mt-1 text-[var(--color-text-main)]/60 leading-relaxed">
-              Yang tampil di sini hanya angka agregat tanpa data pribadi (NPM, NIP, riwayat, dan nama).
-              Nama, data mahasiswa &amp; dosen, prestasi, dan tracer study hanya dapat diakses pengelola
-              yang telah terautentikasi dengan akun resmi — dilindungi kebijakan akses berlapis (Row Level Security).
+              Yang tampil di sini hanya angka agregat tanpa data pribadi (NPM,
+              NIP, riwayat, dan nama). Nama, data mahasiswa &amp; dosen,
+              prestasi, dan tracer study hanya dapat diakses pengelola yang
+              telah terautentikasi dengan akun resmi — dilindungi kebijakan
+              akses berlapis (Row Level Security).
             </p>
           </div>
         </div>
 
         <div className="text-center mt-12 text-xs text-[var(--color-text-main)]/40 font-mono">
-          &copy; {new Date().getFullYear()} Program Studi Geofisika, Fakultas MIPA, Universitas Padjadjaran.
+          &copy; {new Date().getFullYear()} Program Studi Geofisika, Fakultas
+          MIPA, Universitas Padjadjaran.
         </div>
       </div>
     </div>

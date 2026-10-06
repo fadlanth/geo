@@ -8,70 +8,99 @@ const THIS_YEAR = new Date().getFullYear();
 
 export const validators = {
   npm: (value: string): Validation => {
-    const v = (value || '').trim();
-    if (!v) return { ok: false, message: 'NPM tidak boleh kosong.' };
-    if (!/^\d{6,20}$/.test(v)) return { ok: false, message: 'NPM harus 6–20 angka.' };
+    const v = (value || "").trim();
+    if (!v) return { ok: false, message: "NPM tidak boleh kosong." };
+    if (!/^\d{6,20}$/.test(v))
+      return { ok: false, message: "NPM harus 6–20 angka." };
     return { ok: true };
   },
 
-   nip: (value: string): Validation => {
-     const v = (value || '').replace(/\s+/g, '');
-     if (!v) return { ok: false, message: 'NIP tidak boleh kosong.' };
-     if (!/^\d{9,20}$/.test(v)) return { ok: false, message: 'NIP harus 9–20 angka (tanpa spasi).' };
-     return { ok: true };
-   },
+  nip: (value: string): Validation => {
+    const v = (value || "").replace(/\s+/g, "");
+    if (!v) return { ok: false, message: "NIP tidak boleh kosong." };
+    if (!/^\d{9,20}$/.test(v))
+      return { ok: false, message: "NIP harus 9–20 angka (tanpa spasi)." };
+    return { ok: true };
+  },
 
   nama: (value: string): Validation => {
-    const v = (value || '').trim();
-    if (!v) return { ok: false, message: 'Nama tidak boleh kosong.' };
-    if (v.length > 120) return { ok: false, message: 'Nama terlalu panjang (maks 120 karakter).' };
+    const v = (value || "").trim();
+    if (!v) return { ok: false, message: "Nama tidak boleh kosong." };
+    if (v.length > 120)
+      return {
+        ok: false,
+        message: "Nama terlalu panjang (maks 120 karakter).",
+      };
     return { ok: true };
   },
 
   sandi: (value: string): Validation => {
-    const v = (value || '').trim();
+    const v = (value || "").trim();
     if (!v) return { ok: true };
-    if (v.length < 4) return { ok: false, message: 'Sandi minimal 4 karakter.' };
-    if (v.length > 50) return { ok: false, message: 'Sandi terlalu panjang (maks 50 karakter).' };
+    if (v.length < 4)
+      return { ok: false, message: "Sandi minimal 4 karakter." };
+    if (v.length > 50)
+      return {
+        ok: false,
+        message: "Sandi terlalu panjang (maks 50 karakter).",
+      };
     return { ok: true };
   },
 
   angkatan: (value: number | string): Validation => {
     const n = Number(value);
-    if (!n || isNaN(n)) return { ok: false, message: 'Angkatan tidak valid.' };
+    if (!n || isNaN(n)) return { ok: false, message: "Angkatan tidak valid." };
     if (n < 2000 || n > THIS_YEAR + 2) {
-      return { ok: false, message: `Angkatan harus antara 2000 dan ${THIS_YEAR + 2}.` };
+      return {
+        ok: false,
+        message: `Angkatan harus antara 2000 dan ${THIS_YEAR + 2}.`,
+      };
     }
     return { ok: true };
   },
 
-  tahunLulus: (value: number | string | undefined, angkatan: number): Validation => {
+  tahunLulus: (
+    value: number | string | undefined,
+    angkatan: number,
+  ): Validation => {
     const raw = Number(value);
-    if (!value) return { ok: false, message: 'Tahun lulus tidak boleh kosong.' };
-    if (isNaN(raw)) return { ok: false, message: 'Tahun lulus harus angka.' };
-    if (raw < angkatan) return { ok: false, message: 'Tahun lulus tidak boleh lebih awal dari angkatan.' };
-    if (raw > THIS_YEAR + 2) return { ok: false, message: 'Tahun lulus terlalu jauh di masa depan.' };
+    if (!value)
+      return { ok: false, message: "Tahun lulus tidak boleh kosong." };
+    if (isNaN(raw)) return { ok: false, message: "Tahun lulus harus angka." };
+    if (raw < angkatan)
+      return {
+        ok: false,
+        message: "Tahun lulus tidak boleh lebih awal dari angkatan.",
+      };
+    if (raw > THIS_YEAR + 2)
+      return { ok: false, message: "Tahun lulus terlalu jauh di masa depan." };
     return { ok: true };
   },
 
   juaraKe: (value: number): Validation => {
-    if (!value || value < 1) return { ok: false, message: 'Juara ke harus ≥ 1.' };
+    if (!value || value < 1)
+      return { ok: false, message: "Juara ke harus ≥ 1." };
     return { ok: true };
   },
 
   email: (value: string): Validation => {
-    const v = (value || '').trim().toLowerCase();
-    if (!v) return { ok: false, message: 'Email tidak boleh kosong.' };
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return { ok: false, message: 'Format email tidak valid.' };
+    const v = (value || "").trim().toLowerCase();
+    if (!v) return { ok: false, message: "Email tidak boleh kosong." };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
+      return { ok: false, message: "Format email tidak valid." };
     return { ok: true };
   },
 
   requiredSelect: (value: string): Validation => {
-    if (!value) return { ok: false, message: 'Harap pilih salah satu.' };
+    if (!value) return { ok: false, message: "Harap pilih salah satu." };
     return { ok: true };
   },
 
-  enum: <T extends string>(value: string, allowed: readonly T[], label = 'Nilai'): Validation => {
+  enum: <T extends string>(
+    value: string,
+    allowed: readonly T[],
+    label = "Nilai",
+  ): Validation => {
     if (!allowed.includes(value as T)) {
       return { ok: false, message: `${label} pilihan tidak valid.` };
     }
@@ -84,7 +113,8 @@ export const validators = {
     (Object.keys(checks) as Array<keyof typeof checks>).forEach((field) => {
       const res = checks[field]();
       // res: {ok:true} | {ok:false, message} -> hanya simpan bila gagal
-      if (res.ok === false) errors[field] = (res as { ok: false; message: string }).message;
+      if (res.ok === false)
+        errors[field] = (res as { ok: false; message: string }).message;
     });
     return errors;
   },
@@ -96,6 +126,16 @@ export function val(res: Validation): string | undefined {
   return undefined;
 }
 
-export const JENIS_STATUS_MAHASISWA = ['Regulasi Akademik', 'Lulus', 'Alih Prodi', 'Undur Diri'] as const;
-export const JENIS_TINGKAT_PRESTASI = ['Internasional', 'Nasional', 'Wilayah', 'Universitas'] as const;
-export const JENIS_PESERTA_PRESTASI = ['Individu', 'Kelompok'];
+export const JENIS_STATUS_MAHASISWA = [
+  "Regulasi Akademik",
+  "Lulus",
+  "Alih Prodi",
+  "Undur Diri",
+] as const;
+export const JENIS_TINGKAT_PRESTASI = [
+  "Internasional",
+  "Nasional",
+  "Wilayah",
+  "Universitas",
+] as const;
+export const JENIS_PESERTA_PRESTASI = ["Individu", "Kelompok"];

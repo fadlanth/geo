@@ -1,10 +1,16 @@
-import React, { useState, useRef } from 'react';
-import { UploadCloud, CheckCircle2, AlertCircle, FileText, X } from 'lucide-react';
-import Button from './Button';
-import { useEscapeClose, useFocusTrap } from '../lib/hooks';
-import { errMsg } from '../lib/format';
+import React, { useState, useRef } from "react";
+import {
+  UploadCloud,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  X,
+} from "lucide-react";
+import Button from "./Button";
+import { useEscapeClose, useFocusTrap } from "../lib/hooks";
+import { errMsg } from "../lib/format";
 
-const getXLSX = async () => import('xlsx');
+const getXLSX = async () => import("xlsx");
 
 interface CsvImporterProps {
   title: string;
@@ -23,29 +29,36 @@ export default function CsvImporter({
   onImport,
   onClose,
   templateCsv,
-  templateData
+  templateData,
 }: CsvImporterProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   useEscapeClose(true, onClose);
   useFocusTrap(true, modalRef);
   const [dragActive, setDragActive] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'parsing' | 'preview' | 'importing' | 'success' | 'error'>('idle');
+  const [status, setStatus] = useState<
+    "idle" | "parsing" | "preview" | "importing" | "success" | "error"
+  >("idle");
   const [parsedData, setParsedData] = useState<Record<string, unknown>[]>([]);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [sheets, setSheets] = useState<string[]>([]); // For Excel files with multiple sheets
-  const [selectedSheet, setSelectedSheet] = useState<string>('');
-  const [allSheetData, setAllSheetData] = useState<{ [key: string]: Record<string, unknown>[] }>({});
+  const [selectedSheet, setSelectedSheet] = useState<string>("");
+  const [allSheetData, setAllSheetData] = useState<{
+    [key: string]: Record<string, unknown>[];
+  }>({});
 
   // Normalize header for flexible matching
   const normalizeHeader = (h: string) => h.trim().toLowerCase();
 
   // Get headers missing from rows (only required ones, not optional)
-  const getMissingRequiredHeaders = (rows: Record<string, unknown>[]): string[] => {
-    if (rows.length === 0) return expectedHeaders.filter(h => !optionalHeaders.includes(h));
+  const getMissingRequiredHeaders = (
+    rows: Record<string, unknown>[],
+  ): string[] => {
+    if (rows.length === 0)
+      return expectedHeaders.filter((h) => !optionalHeaders.includes(h));
     const fileHeaders = Object.keys(rows[0]).map(normalizeHeader);
-    return expectedHeaders.filter(h => {
+    return expectedHeaders.filter((h) => {
       if (optionalHeaders.includes(h)) return false;
       return !fileHeaders.includes(normalizeHeader(h));
     });
@@ -54,23 +67,28 @@ export default function CsvImporter({
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   };
 
   const processFile = (selectedFile: File) => {
-    const isExcel = selectedFile.name.endsWith('.xlsx') || selectedFile.name.endsWith('.xls') || selectedFile.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-    const isCsv = selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv');
+    const isExcel =
+      selectedFile.name.endsWith(".xlsx") ||
+      selectedFile.name.endsWith(".xls") ||
+      selectedFile.type ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    const isCsv =
+      selectedFile.type === "text/csv" || selectedFile.name.endsWith(".csv");
 
     if (!isCsv && !isExcel) {
-      setErrorMsg('Harap unggah file dengan format .csv atau .xlsx');
-      setStatus('error');
+      setErrorMsg("Harap unggah file dengan format .csv atau .xlsx");
+      setStatus("error");
       return;
     }
-    setStatus('parsing');
+    setStatus("parsing");
 
     if (isExcel) {
       processExcelFile(selectedFile);
@@ -86,92 +104,120 @@ export default function CsvImporter({
       reader.onload = (e) => {
         try {
           const data = e.target?.result as ArrayBuffer;
-          const workbook = XLSX.read(data, { type: 'array', cellFormula: true, cellHTML: true });
-        const sheetNames = workbook.SheetNames;
+          const workbook = XLSX.read(data, {
+            type: "array",
+            cellFormula: true,
+            cellHTML: true,
+          });
+          const sheetNames = workbook.SheetNames;
 
-        if (sheetNames.length === 0) {
-          throw new Error('File Excel tidak memiliki sheet data.');
-        }
-
-        const allData: { [key: string]: Record<string, unknown>[] } = {};
-        sheetNames.forEach((sheetName) => {
-          const ws = workbook.Sheets[sheetName];
-          if (!ws || !ws['!ref']) {
-            allData[sheetName] = [];
-            return;
+          if (sheetNames.length === 0) {
+            throw new Error("File Excel tidak memiliki sheet data.");
           }
 
-          // Ekstrak hyperlink dari sel agar link URL (Google Drive, PDF, dsb.) tidak hilang
-          try {
-            const range = XLSX.utils.decode_range(ws['!ref']);
-            const headerMap: { [col: number]: string } = {};
-            for (let C = range.s.c; C <= range.e.c; ++C) {
-              const headerCell = ws[XLSX.utils.encode_cell({ r: range.s.r, c: C })];
-              headerMap[C] = headerCell && headerCell.v ? String(headerCell.v).toLowerCase().trim() : '';
+          const allData: { [key: string]: Record<string, unknown>[] } = {};
+          sheetNames.forEach((sheetName) => {
+            const ws = workbook.Sheets[sheetName];
+            if (!ws || !ws["!ref"]) {
+              allData[sheetName] = [];
+              return;
             }
 
-            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+            // Ekstrak hyperlink dari sel agar link URL (Google Drive, PDF, dsb.) tidak hilang
+            try {
+              const range = XLSX.utils.decode_range(ws["!ref"]);
+              const headerMap: { [col: number]: string } = {};
               for (let C = range.s.c; C <= range.e.c; ++C) {
-                const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-                const cell = ws[cellAddress];
-                if (!cell) continue;
+                const headerCell =
+                  ws[XLSX.utils.encode_cell({ r: range.s.r, c: C })];
+                headerMap[C] =
+                  headerCell && headerCell.v
+                    ? String(headerCell.v).toLowerCase().trim()
+                    : "";
+              }
 
-                let hyperlinkUrl: string | undefined = cell.l?.Target;
-                if (!hyperlinkUrl && typeof cell.f === 'string') {
-                  const match = cell.f.match(/HYPERLINK\s*\(\s*["']([^"']+)["']/i);
-                  if (match && match[1]) {
-                    hyperlinkUrl = match[1];
+              for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                  const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                  const cell = ws[cellAddress];
+                  if (!cell) continue;
+
+                  let hyperlinkUrl: string | undefined = cell.l?.Target;
+                  if (!hyperlinkUrl && typeof cell.f === "string") {
+                    const match = cell.f.match(
+                      /HYPERLINK\s*\(\s*["']([^"']+)["']/i,
+                    );
+                    if (match && match[1]) {
+                      hyperlinkUrl = match[1];
+                    }
                   }
-                }
 
-                if (hyperlinkUrl && typeof hyperlinkUrl === 'string') {
-                  let cleanUrl = hyperlinkUrl.trim();
-                  if (cleanUrl.startsWith('www.')) {
-                    cleanUrl = 'https://' + cleanUrl;
-                  } else if (/^(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|sharepoint\.com)/i.test(cleanUrl)) {
-                    cleanUrl = 'https://' + cleanUrl;
-                  }
+                  if (hyperlinkUrl && typeof hyperlinkUrl === "string") {
+                    let cleanUrl = hyperlinkUrl.trim();
+                    if (cleanUrl.startsWith("www.")) {
+                      cleanUrl = "https://" + cleanUrl;
+                    } else if (
+                      /^(drive\.google\.com|docs\.google\.com|onedrive\.live\.com|sharepoint\.com)/i.test(
+                        cleanUrl,
+                      )
+                    ) {
+                      cleanUrl = "https://" + cleanUrl;
+                    }
 
-                  const headerName = headerMap[C] || '';
-                  const isLinkHeader = /(bukti|link|url|dokumen|file|berkas|lampiran|laporan|sk)/i.test(headerName);
-                  const cellText = cell.v !== undefined && cell.v !== null ? String(cell.v).trim().toLowerCase() : '';
-                  const isGenericText = !cellText || /^(link|buka|lihat|unduh|download|klik|drive|view|pdf|dokumen)$/i.test(cellText);
+                    const headerName = headerMap[C] || "";
+                    const isLinkHeader =
+                      /(bukti|link|url|dokumen|file|berkas|lampiran|laporan|sk)/i.test(
+                        headerName,
+                      );
+                    const cellText =
+                      cell.v !== undefined && cell.v !== null
+                        ? String(cell.v).trim().toLowerCase()
+                        : "";
+                    const isGenericText =
+                      !cellText ||
+                      /^(link|buka|lihat|unduh|download|klik|drive|view|pdf|dokumen)$/i.test(
+                        cellText,
+                      );
 
-                  if (/^https?:\/\//i.test(cleanUrl) || isLinkHeader || isGenericText) {
-                    cell.v = cleanUrl;
-                    cell.w = cleanUrl;
+                    if (
+                      /^https?:\/\//i.test(cleanUrl) ||
+                      isLinkHeader ||
+                      isGenericText
+                    ) {
+                      cell.v = cleanUrl;
+                      cell.w = cleanUrl;
+                    }
                   }
                 }
               }
+            } catch {
+              // Jika decoding koordinat gagal, fallback tetap gunakan data standar
             }
-          } catch {
-            // Jika decoding koordinat gagal, fallback tetap gunakan data standar
+
+            const jsonData = XLSX.utils.sheet_to_json(ws, { defval: "" });
+            allData[sheetName] = jsonData as Record<string, unknown>[];
+          });
+
+          setAllSheetData(allData);
+          setSheets(sheetNames);
+          setSelectedSheet(sheetNames[0]);
+
+          const firstSheetData = allData[sheetNames[0]];
+          if (firstSheetData.length === 0) {
+            throw new Error("Sheet tidak memiliki data baris.");
           }
 
-          const jsonData = XLSX.utils.sheet_to_json(ws, { defval: '' });
-          allData[sheetName] = jsonData as Record<string, unknown>[];
-        });
-
-        setAllSheetData(allData);
-        setSheets(sheetNames);
-        setSelectedSheet(sheetNames[0]);
-
-        const firstSheetData = allData[sheetNames[0]];
-        if (firstSheetData.length === 0) {
-          throw new Error('Sheet tidak memiliki data baris.');
+          setParsedData(firstSheetData);
+          setStatus("preview");
+        } catch (err) {
+          setErrorMsg(errMsg(err, "Gagal memproses file Excel."));
+          setStatus("error");
         }
-
-        setParsedData(firstSheetData);
-        setStatus('preview');
-      } catch (err) {
-        setErrorMsg(errMsg(err, 'Gagal memproses file Excel.'));
-        setStatus('error');
-      }
-    };
-    reader.readAsArrayBuffer(selectedFile);
+      };
+      reader.readAsArrayBuffer(selectedFile);
     } catch (err) {
-      setErrorMsg(errMsg(err, 'Gagal memuat modul pengolah Excel.'));
-      setStatus('error');
+      setErrorMsg(errMsg(err, "Gagal memuat modul pengolah Excel."));
+      setStatus("error");
     }
   };
 
@@ -180,38 +226,45 @@ export default function CsvImporter({
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        const rows = text.split('\n').map(row => row.trim()).filter(row => row.length > 0);
-        
+        const rows = text
+          .split("\n")
+          .map((row) => row.trim())
+          .filter((row) => row.length > 0);
+
         if (rows.length < 2) {
-          throw new Error('File CSV kosong atau tidak memiliki data baris (hanya header).');
+          throw new Error(
+            "File CSV kosong atau tidak memiliki data baris (hanya header).",
+          );
         }
 
-        const headers = rows[0].split(',').map(h => h.trim());
+        const headers = rows[0].split(",").map((h) => h.trim());
         const headersNorm = headers.map(normalizeHeader);
 
-        const missingHeaders = expectedHeaders.filter(eh => {
+        const missingHeaders = expectedHeaders.filter((eh) => {
           if (optionalHeaders.includes(eh)) return false;
           return !headersNorm.includes(normalizeHeader(eh));
         });
         if (missingHeaders.length > 0) {
-          throw new Error(`Kolom hilang: ${missingHeaders.join(', ')}. Pastikan format sesuai template.`);
+          throw new Error(
+            `Kolom hilang: ${missingHeaders.join(", ")}. Pastikan format sesuai template.`,
+          );
         }
 
         const data: Record<string, unknown>[] = [];
         for (let i = 1; i < rows.length; i++) {
-          const values = rows[i].split(',').map(v => v.trim());
+          const values = rows[i].split(",").map((v) => v.trim());
           const obj: Record<string, unknown> = {};
           headers.forEach((header, index) => {
-            obj[header] = values[index] !== undefined ? values[index] : '';
+            obj[header] = values[index] !== undefined ? values[index] : "";
           });
           data.push(obj);
         }
 
         setParsedData(data);
-        setStatus('preview');
+        setStatus("preview");
       } catch (err) {
-        setErrorMsg(errMsg(err, 'Gagal memproses file CSV.'));
-        setStatus('error');
+        setErrorMsg(errMsg(err, "Gagal memproses file CSV."));
+        setStatus("error");
       }
     };
     reader.readAsText(selectedFile);
@@ -222,25 +275,27 @@ export default function CsvImporter({
     const sheetData = allSheetData[newSheet] || [];
     const missingRequired = getMissingRequiredHeaders(sheetData);
     if (missingRequired.length > 0) {
-      setErrorMsg(`Kolom wajib hilang di sheet "${newSheet}": ${missingRequired.join(', ')}. Pastikan format sesuai template.`);
+      setErrorMsg(
+        `Kolom wajib hilang di sheet "${newSheet}": ${missingRequired.join(", ")}. Pastikan format sesuai template.`,
+      );
       setParsedData([]);
-      setStatus('error');
+      setStatus("error");
       return;
     }
     if (sheetData.length === 0) {
       setErrorMsg(`Sheet "${newSheet}" tidak memiliki data baris.`);
       setParsedData([]);
-      setStatus('error');
+      setStatus("error");
       return;
     }
     setParsedData(sheetData);
-    setStatus('preview');
+    setStatus("preview");
   };
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       processFile(e.dataTransfer.files[0]);
     }
@@ -256,17 +311,21 @@ export default function CsvImporter({
   const handleExecuteImport = async () => {
     const missingRequired = getMissingRequiredHeaders(parsedData);
     if (missingRequired.length > 0) {
-      setErrorMsg(`Kolom wajib hilang: ${missingRequired.join(', ')}. Pastikan format sesuai template.`);
-      setStatus('error');
+      setErrorMsg(
+        `Kolom wajib hilang: ${missingRequired.join(", ")}. Pastikan format sesuai template.`,
+      );
+      setStatus("error");
       return;
     }
-    setStatus('importing');
+    setStatus("importing");
     try {
       await onImport(parsedData);
-      setStatus('success');
+      setStatus("success");
     } catch (err) {
-      setErrorMsg(errMsg(err, 'Terjadi kesalahan saat menyimpan data ke server.'));
-      setStatus('error');
+      setErrorMsg(
+        errMsg(err, "Terjadi kesalahan saat menyimpan data ke server."),
+      );
+      setStatus("error");
     }
   };
 
@@ -279,20 +338,23 @@ export default function CsvImporter({
         const XLSX = await getXLSX();
         const ws = XLSX.utils.json_to_sheet(templateData);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Template');
-        XLSX.writeFile(wb, `template_${title.toLowerCase().replace(/\s+/g, '_')}.xlsx`);
+        XLSX.utils.book_append_sheet(wb, ws, "Template");
+        XLSX.writeFile(
+          wb,
+          `template_${title.toLowerCase().replace(/\s+/g, "_")}.xlsx`,
+        );
         return;
       } catch (err) {
-        console.error('Failed to generate template Excel:', err);
+        console.error("Failed to generate template Excel:", err);
       }
     }
 
     // Fallback: create CSV file
-    const blob = new Blob([templateCsv], { type: 'text/csv' });
+    const blob = new Blob([templateCsv], { type: "text/csv" });
     const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `template_${title.toLowerCase().replace(/\s+/g, '_')}.csv`;
+    a.download = `template_${title.toLowerCase().replace(/\s+/g, "_")}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -300,7 +362,10 @@ export default function CsvImporter({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose}>
+    <div
+      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
       <div
         ref={modalRef}
         role="dialog"
@@ -311,26 +376,43 @@ export default function CsvImporter({
       >
         <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-[var(--color-primary)] text-white shrink-0">
           <div>
-            <h3 id="csv-modal-title" className="font-display font-bold text-lg">Import CSV: {title}</h3>
-            <p className="text-xs opacity-80 mt-0.5">Unggah data massal berkas .csv atau .xlsx</p>
+            <h3 id="csv-modal-title" className="font-display font-bold text-lg">
+              Import CSV: {title}
+            </h3>
+            <p className="text-xs opacity-80 mt-0.5">
+              Unggah data massal berkas .csv atau .xlsx
+            </p>
           </div>
-          <button onClick={onClose} aria-label="Tutup" className="p-2 hover:bg-white/10 rounded-xl transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="p-2 hover:bg-white/10 rounded-xl transition cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         <div className="p-6 overflow-y-auto flex-1">
           {/* STATE: IDLE OR ERROR (SHOW UPLOAD) */}
-          {(status === 'idle' || status === 'error') && (
+          {(status === "idle" || status === "error") && (
             <div className="space-y-4">
-              {status === 'error' && (
-                <div className="p-4 rounded-xl text-sm flex gap-3 items-start" style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary) 8%, var(--color-base))', border: '1px solid color-mix(in srgb, var(--color-primary) 12%, transparent)', color: 'var(--color-primary)' }}>
+              {status === "error" && (
+                <div
+                  className="p-4 rounded-xl text-sm flex gap-3 items-start"
+                  style={{
+                    backgroundColor:
+                      "color-mix(in srgb, var(--color-primary) 8%, var(--color-base))",
+                    border:
+                      "1px solid color-mix(in srgb, var(--color-primary) 12%, transparent)",
+                    color: "var(--color-primary)",
+                  }}
+                >
                   <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-bold">Import Gagal</p>
                     <p className="text-xs mt-1">{errorMsg}</p>
-                    <button 
-                      onClick={() => setStatus('idle')}
+                    <button
+                      onClick={() => setStatus("idle")}
                       className="mt-2 text-xs font-bold hover:underline"
                     >
                       Coba Lagi
@@ -340,19 +422,29 @@ export default function CsvImporter({
               )}
 
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-xs text-blue-900 font-semibold mb-2">Format Kolom yang Diperlukan:</p>
+                <p className="text-xs text-blue-900 font-semibold mb-2">
+                  Format Kolom yang Diperlukan:
+                </p>
                 <div className="text-xs text-blue-800 space-y-1">
-                  <p><span className="font-mono bg-white px-2 py-1 rounded mr-2">{expectedHeaders.join(', ')}</span></p>
-                  <p className="mt-2">Pastikan nama kolom sesuai dengan format di atas.</p>
+                  <p>
+                    <span className="font-mono bg-white px-2 py-1 rounded mr-2">
+                      {expectedHeaders.join(", ")}
+                    </span>
+                  </p>
+                  <p className="mt-2">
+                    Pastikan nama kolom sesuai dengan format di atas.
+                  </p>
                   <p>Gunakan template resmi bila diperlukan.</p>
                 </div>
               </div>
 
-              <div 
+              <div
                 role="button"
                 tabIndex={0}
                 className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
-                  dragActive ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5' : 'border-gray-200 hover:border-[var(--color-primary)]/50 hover:bg-gray-50'
+                  dragActive
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
+                    : "border-gray-200 hover:border-[var(--color-primary)]/50 hover:bg-gray-50"
                 }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -360,7 +452,7 @@ export default function CsvImporter({
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
+                  if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
                     fileInputRef.current?.click();
                   }
@@ -370,30 +462,42 @@ export default function CsvImporter({
                 <input
                   ref={fileInputRef}
                   type="file"
-                   accept=".csv,.xlsx,.xls"
+                  accept=".csv,.xlsx,.xls"
                   className="hidden"
                   onChange={handleChange}
                 />
                 <div className="mx-auto w-16 h-16 bg-[var(--color-primary)]/10 text-[var(--color-primary)] rounded-full flex items-center justify-center mb-4">
                   <UploadCloud className="w-8 h-8" />
                 </div>
-                <h4 className="font-bold text-[var(--color-text-main)] mb-1">Klik atau Tarik file CSV ke sini</h4>
-                  <p className="text-xs text-gray-500">Format: .csv atau .xlsx | Maksimal: 5MB</p>
-                
+                <h4 className="font-bold text-[var(--color-text-main)] mb-1">
+                  Klik atau Tarik file CSV ke sini
+                </h4>
+                <p className="text-xs text-gray-500">
+                  Format: .csv atau .xlsx | Maksimal: 5MB
+                </p>
+
                 {templateCsv && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadTemplate();
+                    }}
                     className="mt-6 inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary-soft)] hover:bg-[var(--color-primary-muted)] text-[var(--color-primary-dark)] text-xs font-semibold rounded-lg transition"
                   >
-                      <FileText className="w-4 h-4" /> Download Template {templateData ? 'Excel' : 'CSV'}
+                    <FileText className="w-4 h-4" /> Download Template{" "}
+                    {templateData ? "Excel" : "CSV"}
                   </button>
                 )}
                 {templateData && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); downloadTemplate(); }}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      downloadTemplate();
+                    }}
                     className="mt-6 inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--color-primary-soft)] hover:bg-[var(--color-primary-muted)] text-[var(--color-primary-dark)] text-xs font-semibold rounded-lg transition"
                   >
-                    <FileText className="w-4 h-4" /> Download Template Excel (.xlsx)
+                    <FileText className="w-4 h-4" /> Download Template Excel
+                    (.xlsx)
                   </button>
                 )}
               </div>
@@ -401,45 +505,51 @@ export default function CsvImporter({
           )}
 
           {/* STATE: PARSING OR IMPORTING */}
-          {(status === 'parsing' || status === 'importing') && (
+          {(status === "parsing" || status === "importing") && (
             <div className="py-12 flex flex-col items-center justify-center space-y-4">
               <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
               <p className="text-sm font-bold text-[var(--color-text-main)]">
-                  {status === 'parsing' ? 'Menganalisis file...' : 'Menyimpan data ke server...'}
+                {status === "parsing"
+                  ? "Menganalisis file..."
+                  : "Menyimpan data ke server..."}
               </p>
             </div>
           )}
 
           {/* STATE: PREVIEW */}
-          {status === 'preview' && (
+          {status === "preview" && (
             <div className="space-y-4">
-                {sheets.length > 1 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                    <p className="text-xs text-blue-900 font-semibold mb-2">📊 Pilih Sheet:</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {sheets.map((sheet) => (
-                        <button
-                          key={sheet}
-                          onClick={() => handleSheetChange(sheet)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
-                            selectedSheet === sheet
-                              ? 'bg-[var(--color-primary)] text-white'
-                              : 'bg-white border border-blue-200 text-blue-900 hover:bg-blue-100'
-                          }`}
-                        >
-                          {sheet}
-                        </button>
-                      ))}
-                    </div>
+              {sheets.length > 1 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                  <p className="text-xs text-blue-900 font-semibold mb-2">
+                    📊 Pilih Sheet:
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    {sheets.map((sheet) => (
+                      <button
+                        key={sheet}
+                        onClick={() => handleSheetChange(sheet)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                          selectedSheet === sheet
+                            ? "bg-[var(--color-primary)] text-white"
+                            : "bg-white border border-blue-200 text-blue-900 hover:bg-blue-100"
+                        }`}
+                      >
+                        {sheet}
+                      </button>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
               <div className="flex justify-between items-end">
                 <div>
                   <h4 className="font-bold text-sm">Preview Data</h4>
-                  <p className="text-xs text-gray-500">Ditemukan {parsedData.length} baris data yang siap diimpor.</p>
+                  <p className="text-xs text-gray-500">
+                    Ditemukan {parsedData.length} baris data yang siap diimpor.
+                  </p>
                 </div>
-                <button 
-                  onClick={() => setStatus('idle')}
+                <button
+                  onClick={() => setStatus("idle")}
                   className="text-xs font-bold text-gray-500 hover:text-gray-700"
                 >
                   Ganti File
@@ -450,18 +560,32 @@ export default function CsvImporter({
                 <table className="w-full text-left text-xs whitespace-nowrap">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="p-2 border-b border-gray-200 w-10 text-center">#</th>
-                      {expectedHeaders.map(h => (
-                        <th key={h} className="p-2 border-b border-gray-200 font-bold">{h}</th>
+                      <th className="p-2 border-b border-gray-200 w-10 text-center">
+                        #
+                      </th>
+                      {expectedHeaders.map((h) => (
+                        <th
+                          key={h}
+                          className="p-2 border-b border-gray-200 font-bold"
+                        >
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {parsedData.slice(0, 5).map((row, idx) => (
-                      <tr key={idx} className="border-b border-gray-100 last:border-0">
-                        <td className="p-2 text-center text-gray-400">{idx + 1}</td>
-                        {expectedHeaders.map(h => (
-                          <td key={h} className="p-2">{String(row[h] ?? '')}</td>
+                      <tr
+                        key={idx}
+                        className="border-b border-gray-100 last:border-0"
+                      >
+                        <td className="p-2 text-center text-gray-400">
+                          {idx + 1}
+                        </td>
+                        {expectedHeaders.map((h) => (
+                          <td key={h} className="p-2">
+                            {String(row[h] ?? "")}
+                          </td>
                         ))}
                       </tr>
                     ))}
@@ -478,27 +602,34 @@ export default function CsvImporter({
                 <Button variant="secondary" onClick={onClose}>
                   Batal
                 </Button>
-                <Button onClick={handleExecuteImport}>
-                  Mulai Import Data
-                </Button>
+                <Button onClick={handleExecuteImport}>Mulai Import Data</Button>
               </div>
             </div>
           )}
 
           {/* STATE: SUCCESS */}
-          {status === 'success' && (
+          {status === "success" && (
             <div className="py-8 flex flex-col items-center justify-center space-y-4 text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mb-2" style={{ backgroundColor: 'color-mix(in srgb, var(--color-success) 12%, var(--color-base))', color: 'var(--color-success)' }}>
+              <div
+                className="w-16 h-16 rounded-full flex items-center justify-center mb-2"
+                style={{
+                  backgroundColor:
+                    "color-mix(in srgb, var(--color-success) 12%, var(--color-base))",
+                  color: "var(--color-success)",
+                }}
+              >
                 <CheckCircle2 className="w-10 h-10" />
               </div>
               <div>
-                <h4 className="font-bold text-lg text-[var(--color-text-main)]">Import Berhasil!</h4>
-                <p className="text-sm text-gray-500 mt-1">Sebanyak {parsedData.length} baris data telah ditambahkan ke sistem.</p>
+                <h4 className="font-bold text-lg text-[var(--color-text-main)]">
+                  Import Berhasil!
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">
+                  Sebanyak {parsedData.length} baris data telah ditambahkan ke
+                  sistem.
+                </p>
               </div>
-              <Button
-                onClick={onClose}
-                className="mt-6"
-              >
+              <Button onClick={onClose} className="mt-6">
                 Selesai
               </Button>
             </div>

@@ -1,7 +1,7 @@
-import React, { useRef } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
-import Button from './Button';
-import { useEscapeClose, useFocusTrap } from '../lib/hooks';
+import React, { useRef } from "react";
+import { AlertTriangle, X } from "lucide-react";
+import Button from "./Button";
+import { useEscapeClose, useFocusTrap } from "../lib/hooks";
 
 interface ConfirmDialogProps {
   title: string;
@@ -12,13 +12,23 @@ interface ConfirmDialogProps {
   onCancel: () => void;
 }
 
-export default function ConfirmDialog({ title, message, detail, confirmLabel = 'Hapus', onConfirm, onCancel }: ConfirmDialogProps) {
+export default function ConfirmDialog({
+  title,
+  message,
+  detail,
+  confirmLabel = "Hapus",
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   useEscapeClose(true, onCancel);
   useFocusTrap(true, dialogRef);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={onCancel}>
+    <div
+      className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+      onClick={onCancel}
+    >
       <div
         ref={dialogRef}
         role="dialog"
@@ -40,16 +50,30 @@ export default function ConfirmDialog({ title, message, detail, confirmLabel = '
             <AlertTriangle className="w-5 h-5 text-[var(--color-primary)]" />
           </div>
           <div className="space-y-2 flex-1">
-            <h3 id="confirm-dialog-title" className="text-sm font-bold text-[var(--color-text-main)]">{title}</h3>
-            <p id="confirm-dialog-desc" className="text-xs text-gray-600 leading-relaxed">{message}</p>
+            <h3
+              id="confirm-dialog-title"
+              className="text-sm font-bold text-[var(--color-text-main)]"
+            >
+              {title}
+            </h3>
+            <p
+              id="confirm-dialog-desc"
+              className="text-xs text-gray-600 leading-relaxed"
+            >
+              {message}
+            </p>
             {detail && (
               <p className="text-[11px] font-semibold text-[var(--color-primary)] bg-red-50 border border-[var(--color-primary)]/15 rounded-lg p-2.5 leading-relaxed">
                 {detail}
               </p>
             )}
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="secondary" size="sm" onClick={onCancel}>Batal</Button>
-              <Button size="sm" onClick={onConfirm}>{confirmLabel}</Button>
+              <Button variant="secondary" size="sm" onClick={onCancel}>
+                Batal
+              </Button>
+              <Button size="sm" onClick={onConfirm}>
+                {confirmLabel}
+              </Button>
             </div>
           </div>
         </div>

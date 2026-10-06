@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from "react";
 import {
   UploadCloud,
   FileCheck,
@@ -12,13 +12,13 @@ import {
   Clock,
   Sparkles,
   Loader2,
-  Filter
-} from 'lucide-react';
-import Button from './Button';
-import { useEscapeClose, useFocusTrap } from '../lib/hooks';
-import { parseTracerFile, TracerParseResult } from '../lib/tracerParser';
-import { academicService } from '../lib/academicService';
-import { ToastOptions } from './Toast';
+  Filter,
+} from "lucide-react";
+import Button from "./Button";
+import { useEscapeClose, useFocusTrap } from "../lib/hooks";
+import { parseTracerFile, TracerParseResult } from "../lib/tracerParser";
+import { academicService } from "../lib/academicService";
+import { ToastOptions } from "./Toast";
 
 interface TracerImporterModalProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
   isOpen,
   onClose,
   onSuccess,
-  triggerToast
+  triggerToast,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
   useEscapeClose(isOpen, onClose);
@@ -39,9 +39,13 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
 
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [filterGeofisika, setFilterGeofisika] = useState<boolean>(true);
-  const [fileName, setFileName] = useState<string>('');
-  const [fileRawData, setFileRawData] = useState<ArrayBuffer | string | null>(null);
-  const [parseResult, setParseResult] = useState<TracerParseResult | null>(null);
+  const [fileName, setFileName] = useState<string>("");
+  const [fileRawData, setFileRawData] = useState<ArrayBuffer | string | null>(
+    null,
+  );
+  const [parseResult, setParseResult] = useState<TracerParseResult | null>(
+    null,
+  );
   const [parsing, setParsing] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -62,8 +66,9 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
       const result = parseTracerFile(buffer, onlyGeofisika);
       setParseResult(result);
     } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error('Format file tidak valid.');
-      console.error('[TracerImporter] Parse error:', errorObj);
+      const errorObj =
+        err instanceof Error ? err : new Error("Format file tidak valid.");
+      console.error("[TracerImporter] Parse error:", errorObj);
       setErrorMessage(errorObj.message);
       setParseResult(null);
     } finally {
@@ -89,9 +94,9 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   };
@@ -118,22 +123,24 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
       setSubmitting(true);
       setErrorMessage(null);
 
-      const { mahasiswaCount, tracerCount } = await academicService.importTracerBundle(
-        parseResult.mahasiswaList,
-        parseResult.tracerList
-      );
+      const { mahasiswaCount, tracerCount } =
+        await academicService.importTracerBundle(
+          parseResult.mahasiswaList,
+          parseResult.tracerList,
+        );
 
       triggerToast?.({
-        kind: 'success',
-        title: 'Import Tracer Sukses!',
-        message: `Berhasil mengimpor ${tracerCount} data tracer alumni. (${mahasiswaCount} mahasiswa baru otomatis didaftarkan ke database).`
+        kind: "success",
+        title: "Import Tracer Sukses!",
+        message: `Berhasil mengimpor ${tracerCount} data tracer alumni. (${mahasiswaCount} mahasiswa baru otomatis didaftarkan ke database).`,
       });
 
       await onSuccess();
       onClose();
     } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error('Gagal menyimpan ke database.');
-      console.error('[TracerImporter] Save error:', errorObj);
+      const errorObj =
+        err instanceof Error ? err : new Error("Gagal menyimpan ke database.");
+      console.error("[TracerImporter] Save error:", errorObj);
       setErrorMessage(errorObj.message);
     } finally {
       setSubmitting(false);
@@ -141,7 +148,10 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      onClick={onClose}
+    >
       <div
         ref={modalRef}
         role="dialog"
@@ -150,7 +160,6 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl border border-stone-200 flex flex-col max-h-[90vh] overflow-hidden"
       >
-        
         {/* Header Modal */}
         <div className="px-6 py-5 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
           <div className="flex items-center gap-3">
@@ -158,11 +167,15 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 id="tracer-autopilot-title" className="text-base sm:text-lg font-extrabold text-[#241f20]">
+              <h3
+                id="tracer-autopilot-title"
+                className="text-base sm:text-lg font-extrabold text-[#241f20]"
+              >
                 Auto-Pilot Importer (Tracer Study Pusat)
               </h3>
               <p className="text-xs text-[#241f20]/60">
-                Otomatis saring Geofisika, bersihkan kolom kuesioner, dan daftarkan mahasiswa baru tanpa error database.
+                Otomatis saring Geofisika, bersihkan kolom kuesioner, dan
+                daftarkan mahasiswa baru tanpa error database.
               </p>
             </div>
           </div>
@@ -177,13 +190,16 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto space-y-6 flex-1">
-          
           {/* Opsi Filter Prodi */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-stone-50 rounded-2xl border border-stone-200/80 text-xs">
             <div className="flex items-center gap-2">
               <Filter className="w-4 h-4 text-[var(--color-primary)]" />
-              <span className="font-semibold text-[#241f20]">Penyaringan Otomatis:</span>
-              <span className="text-[#241f20]/70">Hanya ambil mahasiswa Geofisika (abaikan jurusan lain)</span>
+              <span className="font-semibold text-[#241f20]">
+                Penyaringan Otomatis:
+              </span>
+              <span className="text-[#241f20]/70">
+                Hanya ambil mahasiswa Geofisika (abaikan jurusan lain)
+              </span>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
@@ -206,7 +222,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 fileInputRef.current?.click();
               }
@@ -214,8 +230,8 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
             aria-label="Pilih berkas tracer study atau seret berkas ke sini"
             className={`border-2 border-dashed rounded-3xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
               dragActive
-                ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/5'
-                : 'border-stone-300 hover:border-[var(--color-primary)]/50 bg-stone-50/40'
+                ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
+                : "border-stone-300 hover:border-[var(--color-primary)]/50 bg-stone-50/40"
             }`}
           >
             <input
@@ -233,7 +249,8 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
                 Klik untuk memilih file tracer study atau tarik file ke sini
               </p>
               <p className="text-xs text-stone-500 mt-0.5">
-                Mendukung file Excel (.xlsx, .xls), CSV, dan XML Spreadsheet dari berbagai tahun survei
+                Mendukung file Excel (.xlsx, .xls), CSV, dan XML Spreadsheet
+                dari berbagai tahun survei
               </p>
             </div>
             {fileName && (
@@ -259,14 +276,15 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
           {parsing && (
             <div className="py-8 flex flex-col items-center justify-center gap-2 text-[var(--color-primary)]">
               <Loader2 className="w-6 h-6 animate-spin" />
-              <p className="text-xs font-medium">Menganalisis baris kuesioner tracer study...</p>
+              <p className="text-xs font-medium">
+                Menganalisis baris kuesioner tracer study...
+              </p>
             </div>
           )}
 
           {/* HASIL PARSING & PREVIEW */}
           {parseResult && !parsing && (
             <div className="space-y-5 animate-in fade-in duration-300">
-              
               {/* Ringkasan Ekstraksi */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="p-4 bg-stone-50 rounded-2xl border border-stone-200/70">
@@ -309,16 +327,20 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
               {/* Status Breakdown Chips */}
               <div className="flex flex-wrap gap-2 pt-1">
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-100/70 text-emerald-800">
-                  <Briefcase className="w-3.5 h-3.5" /> Bekerja: {parseResult.breakdown.bekerja}
+                  <Briefcase className="w-3.5 h-3.5" /> Bekerja:{" "}
+                  {parseResult.breakdown.bekerja}
                 </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-teal-100/70 text-teal-800">
-                  <BookOpen className="w-3.5 h-3.5" /> Studi Lanjut: {parseResult.breakdown.studiLanjut}
+                  <BookOpen className="w-3.5 h-3.5" /> Studi Lanjut:{" "}
+                  {parseResult.breakdown.studiLanjut}
                 </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-100/70 text-amber-800">
-                  <Store className="w-3.5 h-3.5" /> Wiraswasta: {parseResult.breakdown.wiraswasta}
+                  <Store className="w-3.5 h-3.5" /> Wiraswasta:{" "}
+                  {parseResult.breakdown.wiraswasta}
                 </span>
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-stone-200 text-stone-700">
-                  <Clock className="w-3.5 h-3.5" /> Belum Bekerja: {parseResult.breakdown.belumBekerja}
+                  <Clock className="w-3.5 h-3.5" /> Belum Bekerja:{" "}
+                  {parseResult.breakdown.belumBekerja}
                 </span>
               </div>
 
@@ -326,9 +348,12 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-bold text-[#241f20]">
-                    Pratinjau Hasil Bersih ({parseResult.tracerList.length} data):
+                    Pratinjau Hasil Bersih ({parseResult.tracerList.length}{" "}
+                    data):
                   </p>
-                  <span className="text-[10px] text-stone-400">Menampilkan hingga 5 sampel</span>
+                  <span className="text-[10px] text-stone-400">
+                    Menampilkan hingga 5 sampel
+                  </span>
                 </div>
                 <div className="overflow-x-auto border border-stone-200 rounded-2xl max-h-56">
                   <table className="w-full text-left text-xs">
@@ -351,17 +376,25 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
                           </td>
                           <td className="py-2 px-3">{row.tahun_lulus}</td>
                           <td className="py-2 px-3">
-                            <span className="font-semibold text-stone-800">{row.status_lulusan}</span>
-                          </td>
-                          <td className="py-2 px-3">{row.masa_tunggu_bulan} bln</td>
-                          <td className="py-2 px-3">
-                            {row.instansi_pekerjaan || row.universitas_tujuan || '-'}
+                            <span className="font-semibold text-stone-800">
+                              {row.status_lulusan}
+                            </span>
                           </td>
                           <td className="py-2 px-3">
-                            {row.jabatan || row.program_studi || '-'}
+                            {row.masa_tunggu_bulan} bln
                           </td>
                           <td className="py-2 px-3">
-                            {row.gaji_pekerjaan ? `Rp ${row.gaji_pekerjaan.toLocaleString('id-ID')}` : '-'}
+                            {row.instansi_pekerjaan ||
+                              row.universitas_tujuan ||
+                              "-"}
+                          </td>
+                          <td className="py-2 px-3">
+                            {row.jabatan || row.program_studi || "-"}
+                          </td>
+                          <td className="py-2 px-3">
+                            {row.gaji_pekerjaan
+                              ? `Rp ${row.gaji_pekerjaan.toLocaleString("id-ID")}`
+                              : "-"}
                           </td>
                         </tr>
                       ))}
@@ -369,10 +402,8 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
                   </table>
                 </div>
               </div>
-
             </div>
           )}
-
         </div>
 
         {/* Footer Actions */}
@@ -389,17 +420,26 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
           <Button
             type="button"
             onClick={handleSaveToDatabase}
-            disabled={!parseResult || parseResult.tracerList.length === 0 || submitting}
-            icon={submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+            disabled={
+              !parseResult || parseResult.tracerList.length === 0 || submitting
+            }
+            icon={
+              submitting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4" />
+              )
+            }
           >
             {submitting ? (
               <span>Menyimpan ke Database...</span>
             ) : (
-              <span>Simpan {parseResult?.tracerList.length || 0} Data ke Database</span>
+              <span>
+                Simpan {parseResult?.tracerList.length || 0} Data ke Database
+              </span>
             )}
           </Button>
         </div>
-
       </div>
     </div>
   );

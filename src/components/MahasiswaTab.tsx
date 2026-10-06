@@ -1,27 +1,27 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Users, 
-  UserPlus, 
-  Search, 
-  Trash2, 
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Users,
+  UserPlus,
+  Search,
+  Trash2,
   SlidersHorizontal,
   Edit2,
-  X
-} from 'lucide-react';
-import { Mahasiswa, Dosen } from '../types';
-import { validators, val, JENIS_STATUS_MAHASISWA } from '../lib/validators';
-import { useDebounce, useEscapeClose, useFocusTrap } from '../lib/hooks';
-import { fmt } from '../lib/format';
-import StatCard from './StatCard';
-import CsvImporter from './CsvImporter';
-import Pagination from './Pagination';
-import DataActions from './DataActions';
-import Button from './Button';
-import IconButton from './IconButton';
-import StatusChip from './StatusChip';
-import { exportToExcel } from '../lib/exportUtils';
-import { ToastOptions } from './Toast';
-import { SkeletonTable } from './Skeleton';
+  X,
+} from "lucide-react";
+import { Mahasiswa, Dosen } from "../types";
+import { validators, val, JENIS_STATUS_MAHASISWA } from "../lib/validators";
+import { useDebounce, useEscapeClose, useFocusTrap } from "../lib/hooks";
+import { fmt } from "../lib/format";
+import StatCard from "./StatCard";
+import CsvImporter from "./CsvImporter";
+import Pagination from "./Pagination";
+import DataActions from "./DataActions";
+import Button from "./Button";
+import IconButton from "./IconButton";
+import StatusChip from "./StatusChip";
+import { exportToExcel } from "../lib/exportUtils";
+import { ToastOptions } from "./Toast";
+import { SkeletonTable } from "./Skeleton";
 
 interface MahasiswaTabProps {
   mahasiswa: Mahasiswa[];
@@ -41,13 +41,12 @@ export default function MahasiswaTab({
   onSaveMahasiswa,
   onDeleteMahasiswa,
   onBulkImportMahasiswa,
-  triggerToast
+  triggerToast,
 }: MahasiswaTabProps) {
-
-   // Search & Filter state (searchQuery pakai debounce agar tak rerender tiap ketik)
-  const [rawSearch, setRawSearch] = useState('');
-  const [filterAngkatan, setFilterAngkatan] = useState('All');
-  const [filterStatus, setFilterStatus] = useState('All');
+  // Search & Filter state (searchQuery pakai debounce agar tak rerender tiap ketik)
+  const [rawSearch, setRawSearch] = useState("");
+  const [filterAngkatan, setFilterAngkatan] = useState("All");
+  const [filterStatus, setFilterStatus] = useState("All");
   const [page, setPage] = useState(1);
   const tableRef = useRef<HTMLDivElement | null>(null);
   const ROWS_PER_PAGE = 25;
@@ -62,38 +61,44 @@ export default function MahasiswaTab({
   useFocusTrap(showAddMhs, mhsModalRef);
 
   useEffect(() => {
-    if (page > 1) tableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (page > 1)
+      tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [page]);
 
   const [editingMhs, setEditingMhs] = useState<Mahasiswa | null>(null);
 
   const [mhsForm, setMhsForm] = useState<Mahasiswa>({
-    npm: '',
-    nama: '',
+    npm: "",
+    nama: "",
     angkatan: new Date().getFullYear(),
-    jenis_kelamin: 'L',
-    fakultas: 'FMIPA',
-    prodi: 'Geofisika',
-    status: 'Regulasi Akademik',
-    nip_dosen_wali: '',
-    tahun_lulus: undefined
+    jenis_kelamin: "L",
+    fakultas: "FMIPA",
+    prodi: "Geofisika",
+    status: "Regulasi Akademik",
+    nip_dosen_wali: "",
+    tahun_lulus: undefined,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const filteredMahasiswa = mahasiswa.filter(m => {
-    const matchesSearch = m.nama.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          m.npm.includes(searchQuery);
-    
-    const matchesAngkatan = filterAngkatan === 'All' || m.angkatan.toString() === filterAngkatan;
-    const matchesStatus = filterStatus === 'All' || m.status === filterStatus;
+  const filteredMahasiswa = mahasiswa.filter((m) => {
+    const matchesSearch =
+      m.nama.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.npm.includes(searchQuery);
+
+    const matchesAngkatan =
+      filterAngkatan === "All" || m.angkatan.toString() === filterAngkatan;
+    const matchesStatus = filterStatus === "All" || m.status === filterStatus;
 
     return matchesSearch && matchesAngkatan && matchesStatus;
   });
 
   const totalPages = Math.ceil(filteredMahasiswa.length / ROWS_PER_PAGE);
   const safePage = Math.min(page, Math.max(1, totalPages));
-  const paginatedMahasiswa = filteredMahasiswa.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+  const paginatedMahasiswa = filteredMahasiswa.slice(
+    (safePage - 1) * ROWS_PER_PAGE,
+    safePage * ROWS_PER_PAGE,
+  );
 
   const handleAddMhsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,35 +107,47 @@ export default function MahasiswaTab({
     errs.nama = val(validators.nama(mhsForm.nama));
     if (!editingMhs) errs.npm = val(validators.npm(mhsForm.npm));
     errs.angkatan = val(validators.angkatan(mhsForm.angkatan));
-    errs.status = val(validators.enum(mhsForm.status, JENIS_STATUS_MAHASISWA, 'Status'));
-    if (mhsForm.status === 'Lulus') {
-      errs.tahun_lulus = val(validators.tahunLulus(mhsForm.tahun_lulus, mhsForm.angkatan));
+    errs.status = val(
+      validators.enum(mhsForm.status, JENIS_STATUS_MAHASISWA, "Status"),
+    );
+    if (mhsForm.status === "Lulus") {
+      errs.tahun_lulus = val(
+        validators.tahunLulus(mhsForm.tahun_lulus, mhsForm.angkatan),
+      );
     }
     // Bersihkan nilai undefined
     for (const k in errs) if (errs[k] === undefined) delete errs[k];
     setErrors(errs);
     if (Object.keys(errs).length > 0) {
-      triggerToast?.({ kind: 'error', title: 'Validasi Gagal', message: 'Perbaiki isian yang ditandai.' });
+      triggerToast?.({
+        kind: "error",
+        title: "Validasi Gagal",
+        message: "Perbaiki isian yang ditandai.",
+      });
       return;
     }
 
     onSaveMahasiswa({
       ...mhsForm,
-      nip_dosen_wali: mhsForm.nip_dosen_wali || null
+      nip_dosen_wali: mhsForm.nip_dosen_wali || null,
     });
-    triggerToast?.({ kind: 'success', title: 'Berhasil', message: `Mahasiswa ${mhsForm.nama} tersimpan.` });
+    triggerToast?.({
+      kind: "success",
+      title: "Berhasil",
+      message: `Mahasiswa ${mhsForm.nama} tersimpan.`,
+    });
 
     setErrors({});
     setMhsForm({
-      npm: '',
-      nama: '',
+      npm: "",
+      nama: "",
       angkatan: new Date().getFullYear(),
-      jenis_kelamin: 'L',
-      fakultas: 'FMIPA',
-      prodi: 'Geofisika',
-      status: 'Regulasi Akademik',
-      nip_dosen_wali: '',
-      tahun_lulus: undefined
+      jenis_kelamin: "L",
+      fakultas: "FMIPA",
+      prodi: "Geofisika",
+      status: "Regulasi Akademik",
+      nip_dosen_wali: "",
+      tahun_lulus: undefined,
     });
     setShowAddMhs(false);
     setEditingMhs(null);
@@ -141,72 +158,80 @@ export default function MahasiswaTab({
     setEditingMhs(m);
     setMhsForm({
       ...m,
-      nip_dosen_wali: m.nip_dosen_wali || '',
-      tahun_lulus: m.tahun_lulus || undefined
+      nip_dosen_wali: m.nip_dosen_wali || "",
+      tahun_lulus: m.tahun_lulus || undefined,
     });
     setShowAddMhs(true);
   };
 
   // Fast reassignment
   const handleQuickAssignDosen = (npm: string, dosenNip: string) => {
-    const student = mahasiswa.find(m => m.npm === npm);
+    const student = mahasiswa.find((m) => m.npm === npm);
     if (student) {
       onSaveMahasiswa({
         ...student,
-        nip_dosen_wali: dosenNip === 'unassigned' ? null : dosenNip
+        nip_dosen_wali: dosenNip === "unassigned" ? null : dosenNip,
       });
     }
   };
 
   const handleExportMhs = () => {
-    const dataToExport = mahasiswa.map(m => ({
-      'NPM': m.npm,
-      'Nama': m.nama,
-      'Angkatan': m.angkatan,
-      'Jenis Kelamin': m.jenis_kelamin === 'L' ? 'Laki-laki' : 'Perempuan',
-      'Fakultas': m.fakultas,
-      'Prodi': m.prodi,
-      'Status': m.status,
-      'Tahun Lulus': m.tahun_lulus || '',
-      'NIP Dosen Wali': m.nip_dosen_wali || ''
+    const dataToExport = mahasiswa.map((m) => ({
+      NPM: m.npm,
+      Nama: m.nama,
+      Angkatan: m.angkatan,
+      "Jenis Kelamin": m.jenis_kelamin === "L" ? "Laki-laki" : "Perempuan",
+      Fakultas: m.fakultas,
+      Prodi: m.prodi,
+      Status: m.status,
+      "Tahun Lulus": m.tahun_lulus || "",
+      "NIP Dosen Wali": m.nip_dosen_wali || "",
     }));
-    exportToExcel(dataToExport, 'data_mahasiswa_geofisika', 'Mahasiswa');
+    exportToExcel(dataToExport, "data_mahasiswa_geofisika", "Mahasiswa");
     if (triggerToast) {
       triggerToast({
-        kind: 'success',
-        title: 'Ekspor Berhasil',
-        message: `Berhasil mengunduh ${dataToExport.length} data mahasiswa ke Excel.`
+        kind: "success",
+        title: "Ekspor Berhasil",
+        message: `Berhasil mengunduh ${dataToExport.length} data mahasiswa ke Excel.`,
       });
     }
   };
 
   const totalMahasiswa = mahasiswa.length;
-  const aktifMahasiswa = mahasiswa.filter(m => m.status === 'Regulasi Akademik').length;
-  const lulusMahasiswa = mahasiswa.filter(m => m.status === 'Lulus').length;
+  const aktifMahasiswa = mahasiswa.filter(
+    (m) => m.status === "Regulasi Akademik",
+  ).length;
+  const lulusMahasiswa = mahasiswa.filter((m) => m.status === "Lulus").length;
 
   return (
     <div className="space-y-6">
       {/* Header Actions */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
         <div className="space-y-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">Data Akademik</p>
-          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">Data Mahasiswa</h2>
-          <p className="text-xs text-[var(--color-text-main)]/55">Direktori dan plotting dosen wali mahasiswa Geofisika</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--color-primary)]/75">
+            Data Akademik
+          </p>
+          <h2 className="font-display font-extrabold text-xl sm:text-2xl text-[var(--color-text-main)]">
+            Data Mahasiswa
+          </h2>
+          <p className="text-xs text-[var(--color-text-main)]/55">
+            Direktori dan plotting dosen wali mahasiswa Geofisika
+          </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
           <Button
             onClick={() => {
               setEditingMhs(null);
               setMhsForm({
-                npm: '',
-                nama: '',
+                npm: "",
+                nama: "",
                 angkatan: new Date().getFullYear(),
-                jenis_kelamin: 'L',
-                fakultas: 'FMIPA',
-                prodi: 'Geofisika',
-                status: 'Regulasi Akademik',
-                nip_dosen_wali: '',
-                tahun_lulus: undefined
+                jenis_kelamin: "L",
+                fakultas: "FMIPA",
+                prodi: "Geofisika",
+                status: "Regulasi Akademik",
+                nip_dosen_wali: "",
+                tahun_lulus: undefined,
               });
               setShowAddMhs(true);
             }}
@@ -226,8 +251,12 @@ export default function MahasiswaTab({
       {!loading && mahasiswa.length === 0 ? (
         <div className="bg-white p-6 sm:p-12 rounded-2xl border border-slate-200 shadow-sm text-center">
           <Users className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-[var(--color-primary)]/20 mb-3" />
-          <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">Belum ada data mahasiswa</h3>
-          <p className="text-xs text-[var(--color-text-main)]/30 mt-1">Klik "Mahasiswa Baru" atau import CSV/Excel untuk menambahkan data</p>
+          <h3 className="font-bold text-sm text-[var(--color-text-main)]/50">
+            Belum ada data mahasiswa
+          </h3>
+          <p className="text-xs text-[var(--color-text-main)]/50 mt-1">
+            Klik "Mahasiswa Baru" atau import CSV/Excel untuk menambahkan data
+          </p>
         </div>
       ) : (
         <>
@@ -248,12 +277,18 @@ export default function MahasiswaTab({
                     placeholder="Cari nama atau NPM mahasiswa"
                     aria-label="Cari mahasiswa"
                     value={rawSearch}
-                    onChange={(e) => { setRawSearch(e.target.value); setPage(1); }}
+                    onChange={(e) => {
+                      setRawSearch(e.target.value);
+                      setPage(1);
+                    }}
                     className="w-full pl-10 pr-9 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
                   />
                   {rawSearch && (
                     <button
-                      onClick={() => { setRawSearch(''); setPage(1); }}
+                      onClick={() => {
+                        setRawSearch("");
+                        setPage(1);
+                      }}
                       className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
                       aria-label="Bersihkan pencarian"
                     >
@@ -270,26 +305,46 @@ export default function MahasiswaTab({
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 <div>
-                  <label htmlFor="mhs-filter-angkatan" className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Angkatan</label>
+                  <label
+                    htmlFor="mhs-filter-angkatan"
+                    className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1"
+                  >
+                    Angkatan
+                  </label>
                   <select
                     id="mhs-filter-angkatan"
                     value={filterAngkatan}
-                    onChange={(e) => { setFilterAngkatan(e.target.value); setPage(1); }}
+                    onChange={(e) => {
+                      setFilterAngkatan(e.target.value);
+                      setPage(1);
+                    }}
                     className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
                   >
                     <option value="All">Semua Angkatan</option>
-                    {[...new Set(mahasiswa.map(m => m.angkatan))].sort((a, b) => b - a).map(y => (
-                      <option key={y} value={y.toString()}>{y}</option>
-                    ))}
+                    {[...new Set(mahasiswa.map((m) => m.angkatan))]
+                      .sort((a, b) => b - a)
+                      .map((y) => (
+                        <option key={y} value={y.toString()}>
+                          {y}
+                        </option>
+                      ))}
                   </select>
                 </div>
 
                 <div>
-                  <label htmlFor="mhs-filter-status" className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1">Status Akademik</label>
+                  <label
+                    htmlFor="mhs-filter-status"
+                    className="block text-[10px] uppercase tracking-wider font-bold text-[var(--color-text-main)]/50 mb-1"
+                  >
+                    Status Akademik
+                  </label>
                   <select
                     id="mhs-filter-status"
                     value={filterStatus}
-                    onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                    onChange={(e) => {
+                      setFilterStatus(e.target.value);
+                      setPage(1);
+                    }}
                     className="w-full p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[var(--color-primary)] shadow-sm"
                   >
                     <option value="All">Semua Status</option>
@@ -321,11 +376,18 @@ export default function MahasiswaTab({
                     <tbody className="divide-y divide-gray-100 text-sm">
                       {paginatedMahasiswa.map((student) => {
                         return (
-                          <tr key={student.npm} className="hover:bg-gray-50/30 transition">
+                          <tr
+                            key={student.npm}
+                            className="hover:bg-gray-50/30 transition"
+                          >
                             <td className="p-4 pl-6">
                               <div className="flex flex-col">
-                                <span className="font-bold text-[var(--color-text-main)]">{student.nama}</span>
-                                <span className="text-xs text-[var(--color-text-main)]/50 font-mono mt-0.5">{student.npm}</span>
+                                <span className="font-bold text-[var(--color-text-main)]">
+                                  {student.nama}
+                                </span>
+                                <span className="text-xs text-[var(--color-text-main)]/50 font-mono mt-0.5">
+                                  {student.npm}
+                                </span>
                               </div>
                             </td>
                             <td className="p-4 text-[var(--color-text-main)]/70 font-medium">
@@ -342,20 +404,29 @@ export default function MahasiswaTab({
                             <td className="p-4">
                               <div className="flex items-center gap-1.5">
                                 <select
-                                  value={student.nip_dosen_wali || 'unassigned'}
-                                  onChange={(e) => handleQuickAssignDosen(student.npm, e.target.value)}
+                                  value={student.nip_dosen_wali || "unassigned"}
+                                  onChange={(e) =>
+                                    handleQuickAssignDosen(
+                                      student.npm,
+                                      e.target.value,
+                                    )
+                                  }
                                   className={`text-xs p-1.5 border rounded-lg focus:outline-none focus:border-[var(--color-primary)] max-w-[200px] truncate ${
-                                    !student.nip_dosen_wali 
-                                      ? 'select-unassigned' 
-                                      : 'border-gray-200 bg-white text-[var(--color-text-main)]/80'
+                                    !student.nip_dosen_wali
+                                      ? "select-unassigned"
+                                      : "border-gray-200 bg-white text-[var(--color-text-main)]/80"
                                   }`}
                                 >
-                                  <option value="unassigned">⚠️ Belum Diplot</option>
-                                  {dosen.filter(d => d.is_dosen_wali !== false).map(d => (
-                                    <option key={d.nip} value={d.nip}>
-                                      {d.nama}
-                                    </option>
-                                  ))}
+                                  <option value="unassigned">
+                                    ⚠️ Belum Diplot
+                                  </option>
+                                  {dosen
+                                    .filter((d) => d.is_dosen_wali !== false)
+                                    .map((d) => (
+                                      <option key={d.nip} value={d.nip}>
+                                        {d.nama}
+                                      </option>
+                                    ))}
                                 </select>
                               </div>
                             </td>
@@ -380,7 +451,10 @@ export default function MahasiswaTab({
                       })}
                       {filteredMahasiswa.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="text-center py-12 text-sm text-gray-400">
+                          <td
+                            colSpan={6}
+                            className="text-center py-12 text-sm text-gray-400"
+                          >
                             Data mahasiswa tidak ditemukan.
                           </td>
                         </tr>
@@ -391,10 +465,19 @@ export default function MahasiswaTab({
                 {filteredMahasiswa.length > ROWS_PER_PAGE && (
                   <div className="flex items-center justify-between px-6 py-3 border-t border-gray-100 bg-gray-50/30">
                     <span className="text-xs text-gray-500">
-                      Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-{Math.min(safePage * ROWS_PER_PAGE, filteredMahasiswa.length)} dari {filteredMahasiswa.length} mahasiswa
+                      Menampilkan {(safePage - 1) * ROWS_PER_PAGE + 1}-
+                      {Math.min(
+                        safePage * ROWS_PER_PAGE,
+                        filteredMahasiswa.length,
+                      )}{" "}
+                      dari {filteredMahasiswa.length} mahasiswa
                     </span>
                     <div className="flex gap-2">
-                      <Pagination page={safePage} totalPages={totalPages} onChange={setPage} />
+                      <Pagination
+                        page={safePage}
+                        totalPages={totalPages}
+                        onChange={setPage}
+                      />
                     </div>
                   </div>
                 )}
@@ -406,7 +489,13 @@ export default function MahasiswaTab({
 
       {/* MODAL: ADD / EDIT STUDENT */}
       {showAddMhs && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setShowAddMhs(false); setEditingMhs(null); }}>
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={() => {
+            setShowAddMhs(false);
+            setEditingMhs(null);
+          }}
+        >
           <div
             ref={mhsModalRef}
             role="dialog"
@@ -416,8 +505,13 @@ export default function MahasiswaTab({
             className="bg-white rounded-2xl border border-[var(--color-primary)]/10 max-w-md w-full p-6 space-y-4 shadow-xl"
           >
             <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-              <h3 id="mhs-modal-title" className="font-display font-extrabold text-[var(--color-text-main)] text-base">
-                {editingMhs ? 'Edit Profil Mahasiswa' : 'Registrasi Mahasiswa Baru'}
+              <h3
+                id="mhs-modal-title"
+                className="font-display font-extrabold text-[var(--color-text-main)] text-base"
+              >
+                {editingMhs
+                  ? "Edit Profil Mahasiswa"
+                  : "Registrasi Mahasiswa Baru"}
               </h3>
               <IconButton
                 label="Tutup"
@@ -431,55 +525,98 @@ export default function MahasiswaTab({
 
             <form onSubmit={handleAddMhsSubmit} className="space-y-4">
               <div>
-                <label htmlFor="mhs-nama" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Nama Lengkap</label>
-                <input 
+                <label
+                  htmlFor="mhs-nama"
+                  className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5"
+                >
+                  Nama Lengkap
+                </label>
+                <input
                   id="mhs-nama"
-                  type="text" 
+                  type="text"
                   required
                   placeholder="Contoh: Andi Pratama"
                   value={mhsForm.nama}
-                  onChange={(e) => { setMhsForm({...mhsForm, nama: e.target.value}); if (errors.nama) setErrors({...errors, nama: undefined}); }}
-                  className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 ${errors.nama ? 'border-red-400' : ''}`}
+                  onChange={(e) => {
+                    setMhsForm({ ...mhsForm, nama: e.target.value });
+                    if (errors.nama) setErrors({ ...errors, nama: undefined });
+                  }}
+                  className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 ${errors.nama ? "border-red-400" : ""}`}
                 />
-                {errors.nama && <p className="mt-1 text-[10px] text-red-600">{errors.nama}</p>}
+                {errors.nama && (
+                  <p className="mt-1 text-[10px] text-red-600">{errors.nama}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="mhs-npm" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">NPM</label>
-                  <input 
+                  <label
+                    htmlFor="mhs-npm"
+                    className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5"
+                  >
+                    NPM
+                  </label>
+                  <input
                     id="mhs-npm"
-                    type="text" 
+                    type="text"
                     required
                     disabled={!!editingMhs}
                     placeholder="Contoh: 140710220001"
                     value={mhsForm.npm}
-                    onChange={(e) => { setMhsForm({...mhsForm, npm: e.target.value}); if (errors.npm) setErrors({...errors, npm: undefined}); }}
-                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${errors.npm ? 'border-red-400' : ''}`}
+                    onChange={(e) => {
+                      setMhsForm({ ...mhsForm, npm: e.target.value });
+                      if (errors.npm) setErrors({ ...errors, npm: undefined });
+                    }}
+                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed ${errors.npm ? "border-red-400" : ""}`}
                   />
-                  {errors.npm && <p className="mt-1 text-[10px] text-red-600">{errors.npm}</p>}
+                  {errors.npm && (
+                    <p className="mt-1 text-[10px] text-red-600">
+                      {errors.npm}
+                    </p>
+                  )}
                 </div>
                 <div>
-                  <label htmlFor="mhs-angkatan" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Angkatan</label>
-                  <input 
+                  <label
+                    htmlFor="mhs-angkatan"
+                    className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5"
+                  >
+                    Angkatan
+                  </label>
+                  <input
                     id="mhs-angkatan"
-                    type="number" 
+                    type="number"
                     required
                     value={mhsForm.angkatan}
-                    onChange={(e) => setMhsForm({...mhsForm, angkatan: Number(e.target.value)})}
-                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 ${errors.angkatan ? 'border-red-400' : ''}`}
+                    onChange={(e) =>
+                      setMhsForm({
+                        ...mhsForm,
+                        angkatan: Number(e.target.value),
+                      })
+                    }
+                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20 ${errors.angkatan ? "border-red-400" : ""}`}
                   />
-                  {errors.angkatan && <p className="mt-1 text-[10px] text-red-600">{errors.angkatan}</p>}
+                  {errors.angkatan && (
+                    <p className="mt-1 text-[10px] text-red-600">
+                      {errors.angkatan}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="mhs-jk" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Jenis Kelamin</label>
+                  <label
+                    htmlFor="mhs-jk"
+                    className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5"
+                  >
+                    Jenis Kelamin
+                  </label>
                   <select
                     id="mhs-jk"
                     value={mhsForm.jenis_kelamin}
-                    onChange={(e) => setMhsForm({...mhsForm, jenis_kelamin: e.target.value})}
+                    onChange={(e) =>
+                      setMhsForm({ ...mhsForm, jenis_kelamin: e.target.value })
+                    }
                     className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]/20"
                   >
                     <option value="L">Laki-laki (L)</option>
@@ -487,13 +624,20 @@ export default function MahasiswaTab({
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="mhs-fakultas" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Fakultas</label>
-                  <input 
+                  <label
+                    htmlFor="mhs-fakultas"
+                    className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5"
+                  >
+                    Fakultas
+                  </label>
+                  <input
                     id="mhs-fakultas"
-                    type="text" 
+                    type="text"
                     required
                     value={mhsForm.fakultas}
-                    onChange={(e) => setMhsForm({...mhsForm, fakultas: e.target.value})}
+                    onChange={(e) =>
+                      setMhsForm({ ...mhsForm, fakultas: e.target.value })
+                    }
                     className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   />
                 </div>
@@ -501,56 +645,106 @@ export default function MahasiswaTab({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="mhs-prodi" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Program Studi</label>
-                  <input 
+                  <label
+                    htmlFor="mhs-prodi"
+                    className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5"
+                  >
+                    Program Studi
+                  </label>
+                  <input
                     id="mhs-prodi"
-                    type="text" 
+                    type="text"
                     required
                     value={mhsForm.prodi}
-                    onChange={(e) => setMhsForm({...mhsForm, prodi: e.target.value})}
+                    onChange={(e) =>
+                      setMhsForm({ ...mhsForm, prodi: e.target.value })
+                    }
                     className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   />
                 </div>
                 <div>
-                  <label htmlFor="mhs-status" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Status Akademik</label>
+                  <label
+                    htmlFor="mhs-status"
+                    className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5"
+                  >
+                    Status Akademik
+                  </label>
                   <select
                     id="mhs-status"
                     value={mhsForm.status}
-                    onChange={(e) => setMhsForm({...mhsForm, status: e.target.value as Mahasiswa['status']})}
-                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.status ? 'border-red-400' : ''}`}
+                    onChange={(e) =>
+                      setMhsForm({
+                        ...mhsForm,
+                        status: e.target.value as Mahasiswa["status"],
+                      })
+                    }
+                    className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.status ? "border-red-400" : ""}`}
                   >
-                    {JENIS_STATUS_MAHASISWA.map(s => (
-                      <option key={s} value={s}>{s}</option>
+                    {JENIS_STATUS_MAHASISWA.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
                     ))}
                   </select>
-                  {errors.status && <p className="mt-1 text-[10px] text-red-600">{errors.status}</p>}
+                  {errors.status && (
+                    <p className="mt-1 text-[10px] text-red-600">
+                      {errors.status}
+                    </p>
+                  )}
                 </div>
-                {mhsForm.status === 'Lulus' && (
+                {mhsForm.status === "Lulus" && (
                   <div className="mt-3">
-                    <label htmlFor="mhs-tahun-lulus" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Tahun Lulus</label>
+                    <label
+                      htmlFor="mhs-tahun-lulus"
+                      className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5"
+                    >
+                      Tahun Lulus
+                    </label>
                     <input
                       id="mhs-tahun-lulus"
                       type="number"
                       placeholder="2024"
-                      value={mhsForm.tahun_lulus || ''}
-                      onChange={(e) => setMhsForm({...mhsForm, tahun_lulus: e.target.value ? Number(e.target.value) : undefined})}
-                      className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.tahun_lulus ? 'border-red-400' : ''}`}
+                      value={mhsForm.tahun_lulus || ""}
+                      onChange={(e) =>
+                        setMhsForm({
+                          ...mhsForm,
+                          tahun_lulus: e.target.value
+                            ? Number(e.target.value)
+                            : undefined,
+                        })
+                      }
+                      className={`w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)] ${errors.tahun_lulus ? "border-red-400" : ""}`}
                     />
-                    {errors.tahun_lulus && <p className="mt-1 text-[10px] text-red-600">{errors.tahun_lulus}</p>}
+                    {errors.tahun_lulus && (
+                      <p className="mt-1 text-[10px] text-red-600">
+                        {errors.tahun_lulus}
+                      </p>
+                    )}
                   </div>
                 )}
                 <div>
-                  <label htmlFor="mhs-wali" className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5">Dosen Wali (Opsional)</label>
+                  <label
+                    htmlFor="mhs-wali"
+                    className="block text-xs font-semibold text-[var(--color-text-main)]/70 mb-1.5"
+                  >
+                    Dosen Wali (Opsional)
+                  </label>
                   <select
                     id="mhs-wali"
-                    value={mhsForm.nip_dosen_wali || ''}
-                    onChange={(e) => setMhsForm({...mhsForm, nip_dosen_wali: e.target.value})}
+                    value={mhsForm.nip_dosen_wali || ""}
+                    onChange={(e) =>
+                      setMhsForm({ ...mhsForm, nip_dosen_wali: e.target.value })
+                    }
                     className="w-full text-sm p-2 border border-gray-200 rounded-xl focus:outline-none focus:border-[var(--color-primary)]"
                   >
                     <option value="">Belum Diplot</option>
-                    {dosen.filter(d => d.is_dosen_wali !== false).map(d => (
-                      <option key={d.nip} value={d.nip}>{d.nama}</option>
-                    ))}
+                    {dosen
+                      .filter((d) => d.is_dosen_wali !== false)
+                      .map((d) => (
+                        <option key={d.nip} value={d.nip}>
+                          {d.nama}
+                        </option>
+                      ))}
                   </select>
                 </div>
               </div>
@@ -567,7 +761,7 @@ export default function MahasiswaTab({
                   Batal
                 </Button>
                 <Button type="submit">
-                  {editingMhs ? 'Simpan Perubahan' : 'Daftarkan'}
+                  {editingMhs ? "Simpan Perubahan" : "Daftarkan"}
                 </Button>
               </div>
             </form>
@@ -577,10 +771,20 @@ export default function MahasiswaTab({
 
       {/* MODAL: IMPORT CSV */}
       {showImport && (
-        <CsvImporter 
+        <CsvImporter
           title="Data Mahasiswa"
-          expectedHeaders={['NPM', 'Nama', 'Angkatan', 'Jenis Kelamin', 'Fakultas', 'Prodi', 'Status', 'NIP Dosen Wali', 'Tahun Lulus']}
-          optionalHeaders={['NIP Dosen Wali', 'Tahun Lulus']}
+          expectedHeaders={[
+            "NPM",
+            "Nama",
+            "Angkatan",
+            "Jenis Kelamin",
+            "Fakultas",
+            "Prodi",
+            "Status",
+            "NIP Dosen Wali",
+            "Tahun Lulus",
+          ]}
+          optionalHeaders={["NIP Dosen Wali", "Tahun Lulus"]}
           templateCsv={`NPM,Nama,Angkatan,Jenis Kelamin,Fakultas,Prodi,Status,NIP Dosen Wali,Tahun Lulus
 31242001,Budi Santoso,2024,L,FMIPA,Geofisika,Regulasi Akademik,198203152008012003,
 31242002,Siti Aminah,2024,P,FMIPA,Geofisika,Lulus,199105202015032002,2028
@@ -588,11 +792,61 @@ export default function MahasiswaTab({
 31242004,Dina Kusuma,2024,P,FMIPA,Geofisika,Alih Prodi,198506232010012008,
 31242005,Ahmad Rizki,2024,L,FMIPA,Geofisika,Regulasi Akademik,199203142014011002,`}
           templateData={[
-            { NPM: '31242001', Nama: 'Budi Santoso', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '198203152008012003', 'Tahun Lulus': '' },
-            { NPM: '31242002', Nama: 'Siti Aminah', Angkatan: 2024, 'Jenis Kelamin': 'P', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Lulus', 'NIP Dosen Wali': '199105202015032002', 'Tahun Lulus': 2028 },
-            { NPM: '31242003', Nama: 'Rully Hermawan', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '198901142013121001', 'Tahun Lulus': '' },
-            { NPM: '31242004', Nama: 'Dina Kusuma', Angkatan: 2024, 'Jenis Kelamin': 'P', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Alih Prodi', 'NIP Dosen Wali': '198506232010012008', 'Tahun Lulus': '' },
-            { NPM: '31242005', Nama: 'Ahmad Rizki', Angkatan: 2024, 'Jenis Kelamin': 'L', Fakultas: 'FMIPA', Prodi: 'Geofisika', Status: 'Regulasi Akademik', 'NIP Dosen Wali': '199203142014011002', 'Tahun Lulus': '' }
+            {
+              NPM: "31242001",
+              Nama: "Budi Santoso",
+              Angkatan: 2024,
+              "Jenis Kelamin": "L",
+              Fakultas: "FMIPA",
+              Prodi: "Geofisika",
+              Status: "Regulasi Akademik",
+              "NIP Dosen Wali": "198203152008012003",
+              "Tahun Lulus": "",
+            },
+            {
+              NPM: "31242002",
+              Nama: "Siti Aminah",
+              Angkatan: 2024,
+              "Jenis Kelamin": "P",
+              Fakultas: "FMIPA",
+              Prodi: "Geofisika",
+              Status: "Lulus",
+              "NIP Dosen Wali": "199105202015032002",
+              "Tahun Lulus": 2028,
+            },
+            {
+              NPM: "31242003",
+              Nama: "Rully Hermawan",
+              Angkatan: 2024,
+              "Jenis Kelamin": "L",
+              Fakultas: "FMIPA",
+              Prodi: "Geofisika",
+              Status: "Regulasi Akademik",
+              "NIP Dosen Wali": "198901142013121001",
+              "Tahun Lulus": "",
+            },
+            {
+              NPM: "31242004",
+              Nama: "Dina Kusuma",
+              Angkatan: 2024,
+              "Jenis Kelamin": "P",
+              Fakultas: "FMIPA",
+              Prodi: "Geofisika",
+              Status: "Alih Prodi",
+              "NIP Dosen Wali": "198506232010012008",
+              "Tahun Lulus": "",
+            },
+            {
+              NPM: "31242005",
+              Nama: "Ahmad Rizki",
+              Angkatan: 2024,
+              "Jenis Kelamin": "L",
+              Fakultas: "FMIPA",
+              Prodi: "Geofisika",
+              Status: "Regulasi Akademik",
+              "NIP Dosen Wali": "199203142014011002",
+              "Tahun Lulus": "",
+            },
           ]}
           onImport={onBulkImportMahasiswa}
           onClose={() => setShowImport(false)}

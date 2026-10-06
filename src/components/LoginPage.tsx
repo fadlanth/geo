@@ -1,8 +1,17 @@
-import React, { useState } from 'react';
-import { Lock, Mail, AlertCircle, ArrowRight, ArrowLeft, KeyRound, CheckCircle2, LogIn } from 'lucide-react';
-import { useAuth } from '../lib/AuthContext';
-import { errMsg } from '../lib/format';
-import Button from './Button';
+import React, { useState } from "react";
+import {
+  Lock,
+  Mail,
+  AlertCircle,
+  ArrowRight,
+  ArrowLeft,
+  KeyRound,
+  CheckCircle2,
+  LogIn,
+} from "lucide-react";
+import { useAuth } from "../lib/AuthContext";
+import { errMsg } from "../lib/format";
+import Button from "./Button";
 
 interface LoginPageProps {
   onBack?: () => void;
@@ -10,28 +19,28 @@ interface LoginPageProps {
 
 export default function LoginPage({ onBack }: LoginPageProps) {
   const { login, resetPassword } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [info, setInfo] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [mode, setMode] = useState<'login' | 'reset'>('login');
+  const [mode, setMode] = useState<"login" | "reset">("login");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setInfo('');
+    setError("");
+    setInfo("");
     setSubmitting(true);
     try {
-      if (mode === 'reset') {
+      if (mode === "reset") {
         await resetPassword(email.trim());
-        setInfo('Tautan reset kata sandi telah dikirim ke email Anda.');
+        setInfo("Tautan reset kata sandi telah dikirim ke email Anda.");
       } else {
         await login(email.trim(), password);
         // Sukses: auth berubah → App otomatis menampilkan dashboard.
       }
     } catch (err) {
-      setError(errMsg(err, 'Gagal masuk. Periksa email dan kata sandi Anda.'));
+      setError(errMsg(err, "Gagal masuk. Periksa email dan kata sandi Anda."));
     } finally {
       setSubmitting(false);
     }
@@ -43,7 +52,11 @@ export default function LoginPage({ onBack }: LoginPageProps) {
         {/* Logo & Header */}
         <div className="text-center mb-8">
           <div className="inline-flex p-3.5 bg-white rounded-3xl shadow-xl border border-gray-100 mb-6 flex items-center justify-center">
-            <img src="/LOGO-01.png" alt="Logo UNPAD" className="w-16 h-16 rounded-2xl object-contain" />
+            <img
+              src="/LOGO-01.png"
+              alt="Logo UNPAD"
+              className="w-16 h-16 rounded-2xl object-contain"
+            />
           </div>
           <h1 className="font-display font-extrabold text-3xl text-[var(--color-text-main)] tracking-tight">
             Geofisika UNPAD
@@ -65,26 +78,30 @@ export default function LoginPage({ onBack }: LoginPageProps) {
           )}
 
           <h2 className="font-display font-bold text-xl text-center mb-1">
-            {mode === 'login' ? 'Masuk' : 'Atur Ulang Kata Sandi'}
+            {mode === "login" ? "Masuk" : "Atur Ulang Kata Sandi"}
           </h2>
           <p className="text-xs text-[var(--color-text-main)]/50 text-center mb-6">
-            {mode === 'login'
-              ? 'Gunakan akun email staf yang telah didaftarkan.'
-              : 'Masukkan email terdaftar untuk menerima tautan reset.'}
+            {mode === "login"
+              ? "Gunakan akun email staf yang telah didaftarkan."
+              : "Masukkan email terdaftar untuk menerima tautan reset."}
           </p>
 
-          {(error || (mode === 'reset' && info)) && (
+          {(error || (mode === "reset" && info)) && (
             <div
               className="mb-6 p-4 rounded-xl text-sm flex items-start gap-3 border"
               style={{
-                backgroundColor: 'color-mix(in srgb, var(--color-primary) 8%, var(--color-base))',
-                borderColor: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
-                color: 'var(--color-primary)',
+                backgroundColor:
+                  "color-mix(in srgb, var(--color-primary) 8%, var(--color-base))",
+                borderColor:
+                  "color-mix(in srgb, var(--color-primary) 12%, transparent)",
+                color: "var(--color-primary)",
               }}
             >
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
               <div>
-                <p className="font-bold">{error ? 'Gagal Masuk' : 'Periksa Email'}</p>
+                <p className="font-bold">
+                  {error ? "Gagal Masuk" : "Periksa Email"}
+                </p>
                 <p className="text-xs mt-1">{error || info}</p>
               </div>
             </div>
@@ -92,7 +109,10 @@ export default function LoginPage({ onBack }: LoginPageProps) {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="login-email" className="block text-xs font-bold text-[var(--color-text-main)]/60 uppercase tracking-wider mb-2">
+              <label
+                htmlFor="login-email"
+                className="block text-xs font-bold text-[var(--color-text-main)]/60 uppercase tracking-wider mb-2"
+              >
                 Email Pengguna
               </label>
               <div className="relative">
@@ -110,9 +130,12 @@ export default function LoginPage({ onBack }: LoginPageProps) {
               </div>
             </div>
 
-            {mode === 'login' && (
+            {mode === "login" && (
               <div>
-                <label htmlFor="login-password" className="block text-xs font-bold text-[var(--color-text-main)]/60 uppercase tracking-wider mb-2">
+                <label
+                  htmlFor="login-password"
+                  className="block text-xs font-bold text-[var(--color-text-main)]/60 uppercase tracking-wider mb-2"
+                >
                   Kata Sandi
                 </label>
                 <div className="relative">
@@ -130,7 +153,7 @@ export default function LoginPage({ onBack }: LoginPageProps) {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setMode('reset')}
+                  onClick={() => setMode("reset")}
                   className="mt-2 text-[11px] font-semibold text-[var(--color-primary)] hover:underline"
                 >
                   Lupa kata sandi?
@@ -138,10 +161,10 @@ export default function LoginPage({ onBack }: LoginPageProps) {
               </div>
             )}
 
-            {mode === 'reset' && (
+            {mode === "reset" && (
               <button
                 type="button"
-                onClick={() => setMode('login')}
+                onClick={() => setMode("login")}
                 className="text-[11px] font-semibold text-[var(--color-primary)] hover:underline"
               >
                 ← Kembali ke masuk
@@ -155,7 +178,7 @@ export default function LoginPage({ onBack }: LoginPageProps) {
             >
               {submitting ? (
                 <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : mode === 'login' ? (
+              ) : mode === "login" ? (
                 <>
                   Masuk ke Dasbor <ArrowRight className="w-5 h-5" />
                 </>
@@ -172,7 +195,8 @@ export default function LoginPage({ onBack }: LoginPageProps) {
           Login admin dikelola lewat Supabase Auth (Autentikasi multi-akun).
         </div>
         <div className="text-center mt-2 text-xs text-[var(--color-text-main)]/40 font-mono">
-          &copy; {new Date().getFullYear()} Program Studi Geofisika, Fakultas MIPA, Universitas Padjadjaran.
+          &copy; {new Date().getFullYear()} Program Studi Geofisika, Fakultas
+          MIPA, Universitas Padjadjaran.
         </div>
       </div>
     </div>

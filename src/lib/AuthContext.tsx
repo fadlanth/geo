@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { Session, User } from "@supabase/supabase-js";
+import { supabase } from "./supabase";
 
-export type UserRole = 'admin' | 'operator' | 'dosen' | 'guest';
+export type UserRole = "admin" | "operator" | "dosen" | "guest";
 
 export interface Profile {
   id: string;
@@ -39,20 +39,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadProfile = async (uid: string, email?: string | null) => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', uid)
+        .from("profiles")
+        .select("*")
+        .eq("id", uid)
         .maybeSingle();
       if (error) throw error;
       if (data) {
         setProfile(data as Profile);
       } else {
-        setProfile({ id: uid, email: email ?? '', role: 'guest', nama: email?.split('@')[0] ?? 'Pengguna' });
+        setProfile({
+          id: uid,
+          email: email ?? "",
+          role: "guest",
+          nama: email?.split("@")[0] ?? "Pengguna",
+        });
       }
     } catch (err) {
-      console.error('[AuthContext] Gagal memuat profil pengguna:', err);
+      console.error("[AuthContext] Gagal memuat profil pengguna:", err);
       // Profil belum ada atau RLS error → fallback aman.
-      setProfile({ id: uid, email: email ?? '', role: 'guest', nama: email?.split('@')[0] ?? 'Pengguna' });
+      setProfile({
+        id: uid,
+        email: email ?? "",
+        role: "guest",
+        nama: email?.split("@")[0] ?? "Pengguna",
+      });
     }
   };
 
@@ -69,15 +79,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     supabase.auth.getSession().then(({ data }) => {
       if (!mounted) return;
-      sessionRef(data.session);
+      setSession(data.session);
       handleAuth(data.session?.user ?? null).finally(() => setIsLoading(false));
     });
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (!mounted) return;
-      sessionRef(currentSession);
-      handleAuth(currentSession?.user ?? null);
-    });
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, currentSession) => {
+        if (!mounted) return;
+        setSession(currentSession);
+        handleAuth(currentSession?.user ?? null);
+      },
+    );
 
     return () => {
       mounted = false;
@@ -86,11 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Helper setter session agar tidak duplikat di dalam closure
-  const sessionRef = (s: Session | null) => setSession(s);
-
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (error) throw new Error(error.message);
   };
 
@@ -107,10 +119,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) await loadProfile(user.id, user.email);
   };
 
-  const role: UserRole = profile?.role ?? 'guest';
-  const username = profile?.nama?.trim() || user?.email?.split('@')[0] || 'Pengguna';
+  const role: UserRole = profile?.role ?? "guest";
+  const username =
+    profile?.nama?.trim() || user?.email?.split("@")[0] || "Pengguna";
   const userId = user?.id ?? null;
-  const email = user?.email ?? '';
+  const email = user?.email ?? "";
 
   const value: AuthContextType = {
     isLoading,
@@ -134,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

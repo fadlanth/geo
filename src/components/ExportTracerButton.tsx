@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
-import { Download, Loader2, FileSpreadsheet } from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { supabase } from '../lib/supabase';
+import React, { useState } from "react";
+import { Download, Loader2, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
+import { supabase } from "../lib/supabase";
 
 export interface RawTracerStudyRecord {
   npm_mahasiswa: string;
   nama_alumni?: string | null;
   tahun_lulus: number;
-  status_lulusan: 'Bekerja' | 'Wiraswasta' | 'Studi Lanjut' | 'Belum Bekerja' | string;
+  status_lulusan:
+    "Bekerja" | "Wiraswasta" | "Studi Lanjut" | "Belum Bekerja" | string;
   masa_tunggu?: string | null;
   masa_tunggu_bulan?: number | null;
   kategori_gaji?: string | null;
@@ -28,9 +29,9 @@ export interface RawTracerStudyRecord {
 
 // Helper untuk ekstrak nilai fleksibel (support format spesifik ataupun skema relasional)
 const extractRowData = (item: RawTracerStudyRecord) => {
-  const npm = item.npm_mahasiswa || '-';
-  const nama = item.nama_alumni || item.mahasiswa?.nama || '-';
-  const tahun = item.tahun_lulus ?? '-';
+  const npm = item.npm_mahasiswa || "-";
+  const nama = item.nama_alumni || item.mahasiswa?.nama || "-";
+  const tahun = item.tahun_lulus ?? "-";
 
   // Format Masa Tunggu
   let masaTunggu = item.masa_tunggu;
@@ -41,23 +42,27 @@ const extractRowData = (item: RawTracerStudyRecord) => {
   // Format Kategori Gaji
   let kategoriGaji = item.kategori_gaji;
   if (!kategoriGaji && item.gaji_pekerjaan != null) {
-    if (item.gaji_pekerjaan <= 0) kategoriGaji = '-';
-    else if (item.gaji_pekerjaan <= 5_000_000) kategoriGaji = '0-5jt';
-    else if (item.gaji_pekerjaan <= 10_000_000) kategoriGaji = '>5-10jt';
-    else kategoriGaji = '>10jt';
+    if (item.gaji_pekerjaan <= 0) kategoriGaji = "-";
+    else if (item.gaji_pekerjaan <= 5_000_000) kategoriGaji = "0-5jt";
+    else if (item.gaji_pekerjaan <= 10_000_000) kategoriGaji = ">5-10jt";
+    else kategoriGaji = ">10jt";
   }
 
   return {
     NPM: npm,
     Nama: nama,
     Tahun: tahun,
-    'Masa Tunggu': masaTunggu || '-',
-    'Kategori Gaji': kategoriGaji || '-',
-    Instansi: item.instansi_perusahaan || item.instansi_pekerjaan || '-',
-    Jabatan: item.jabatan || '-',
-    'Bidang Usaha': item.bidang_usaha || '-',
-    'Kampus Tujuan': item.kampus_tujuan || item.universitas_tujuan || item.kampus_lanjut || '-',
-    'Program Studi': item.program_studi || item.prodi_lanjut || '-'
+    "Masa Tunggu": masaTunggu || "-",
+    "Kategori Gaji": kategoriGaji || "-",
+    Instansi: item.instansi_perusahaan || item.instansi_pekerjaan || "-",
+    Jabatan: item.jabatan || "-",
+    "Bidang Usaha": item.bidang_usaha || "-",
+    "Kampus Tujuan":
+      item.kampus_tujuan ||
+      item.universitas_tujuan ||
+      item.kampus_lanjut ||
+      "-",
+    "Program Studi": item.program_studi || item.prodi_lanjut || "-",
   };
 };
 
@@ -80,15 +85,17 @@ const getColWidths = (rows: Record<string, unknown>[]) => {
  */
 export async function exportTracerMultiSheet(
   onSuccess?: (count: number) => void,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
 ): Promise<number> {
   try {
     const { data, error } = await supabase
-      .from('tracer_study')
-      .select('*, mahasiswa(nama)');
+      .from("tracer_study")
+      .select("*, mahasiswa(nama)");
 
     if (error) {
-      throw new Error(error.message || 'Gagal mengambil data tracer study dari database.');
+      throw new Error(
+        error.message || "Gagal mengambil data tracer study dari database.",
+      );
     }
 
     const records = (data as unknown as RawTracerStudyRecord[]) || [];
@@ -96,83 +103,113 @@ export async function exportTracerMultiSheet(
 
     // Sheet 1: Bekerja
     const bekerjaData = records
-      .filter((r) => r.status_lulusan === 'Bekerja')
+      .filter((r) => r.status_lulusan === "Bekerja")
       .map((r) => {
         const d = extractRowData(r);
         return {
           NPM: d.NPM,
           Nama: d.Nama,
           Tahun: d.Tahun,
-          'Masa Tunggu': d['Masa Tunggu'],
+          "Masa Tunggu": d["Masa Tunggu"],
           Instansi: d.Instansi,
           Jabatan: d.Jabatan,
-          'Kategori Gaji': d['Kategori Gaji']
+          "Kategori Gaji": d["Kategori Gaji"],
         };
       });
 
     const wsBekerja = XLSX.utils.json_to_sheet(
       bekerjaData.length > 0
         ? bekerjaData
-        : [{ NPM: '', Nama: '', Tahun: '', 'Masa Tunggu': '', Instansi: '', Jabatan: '', 'Kategori Gaji': '' }]
+        : [
+            {
+              NPM: "",
+              Nama: "",
+              Tahun: "",
+              "Masa Tunggu": "",
+              Instansi: "",
+              Jabatan: "",
+              "Kategori Gaji": "",
+            },
+          ],
     );
-    wsBekerja['!cols'] = getColWidths(bekerjaData);
-    XLSX.utils.book_append_sheet(workbook, wsBekerja, 'Bekerja');
+    wsBekerja["!cols"] = getColWidths(bekerjaData);
+    XLSX.utils.book_append_sheet(workbook, wsBekerja, "Bekerja");
 
     // Sheet 2: Wiraswasta
     const wiraswastaData = records
-      .filter((r) => r.status_lulusan === 'Wiraswasta')
+      .filter((r) => r.status_lulusan === "Wiraswasta")
       .map((r) => {
         const d = extractRowData(r);
         return {
           NPM: d.NPM,
           Nama: d.Nama,
           Tahun: d.Tahun,
-          'Masa Tunggu': d['Masa Tunggu'],
-          'Bidang Usaha': d['Bidang Usaha'],
-          'Kategori Gaji': d['Kategori Gaji']
+          "Masa Tunggu": d["Masa Tunggu"],
+          "Bidang Usaha": d["Bidang Usaha"],
+          "Kategori Gaji": d["Kategori Gaji"],
         };
       });
 
     const wsWiraswasta = XLSX.utils.json_to_sheet(
       wiraswastaData.length > 0
         ? wiraswastaData
-        : [{ NPM: '', Nama: '', Tahun: '', 'Masa Tunggu': '', 'Bidang Usaha': '', 'Kategori Gaji': '' }]
+        : [
+            {
+              NPM: "",
+              Nama: "",
+              Tahun: "",
+              "Masa Tunggu": "",
+              "Bidang Usaha": "",
+              "Kategori Gaji": "",
+            },
+          ],
     );
-    wsWiraswasta['!cols'] = getColWidths(wiraswastaData);
-    XLSX.utils.book_append_sheet(workbook, wsWiraswasta, 'Wiraswasta');
+    wsWiraswasta["!cols"] = getColWidths(wiraswastaData);
+    XLSX.utils.book_append_sheet(workbook, wsWiraswasta, "Wiraswasta");
 
     // Sheet 3: Studi Lanjut
     const studiLanjutData = records
-      .filter((r) => r.status_lulusan === 'Studi Lanjut')
+      .filter((r) => r.status_lulusan === "Studi Lanjut")
       .map((r) => {
         const d = extractRowData(r);
         return {
           NPM: d.NPM,
           Nama: d.Nama,
           Tahun: d.Tahun,
-          'Kampus Tujuan': d['Kampus Tujuan'],
-          'Program Studi': d['Program Studi']
+          "Kampus Tujuan": d["Kampus Tujuan"],
+          "Program Studi": d["Program Studi"],
         };
       });
 
     const wsStudiLanjut = XLSX.utils.json_to_sheet(
       studiLanjutData.length > 0
         ? studiLanjutData
-        : [{ NPM: '', Nama: '', Tahun: '', 'Kampus Tujuan': '', 'Program Studi': '' }]
+        : [
+            {
+              NPM: "",
+              Nama: "",
+              Tahun: "",
+              "Kampus Tujuan": "",
+              "Program Studi": "",
+            },
+          ],
     );
-    wsStudiLanjut['!cols'] = getColWidths(studiLanjutData);
-    XLSX.utils.book_append_sheet(workbook, wsStudiLanjut, 'Studi Lanjut');
+    wsStudiLanjut["!cols"] = getColWidths(studiLanjutData);
+    XLSX.utils.book_append_sheet(workbook, wsStudiLanjut, "Studi Lanjut");
 
     // Download file
-    XLSX.writeFile(workbook, 'Laporan_Tracer_Study_GEO.xlsx');
+    XLSX.writeFile(workbook, "Laporan_Tracer_Study_GEO.xlsx");
 
     if (onSuccess) {
       onSuccess(records.length);
     }
     return records.length;
   } catch (err) {
-    const errorObj = err instanceof Error ? err : new Error('Terjadi kegagalan saat mengekspor data tracer study.');
-    console.error('[ExportTracerButton] Export failed:', errorObj);
+    const errorObj =
+      err instanceof Error
+        ? err
+        : new Error("Terjadi kegagalan saat mengekspor data tracer study.");
+    console.error("[ExportTracerButton] Export failed:", errorObj);
     if (onError) {
       onError(errorObj);
     }
@@ -187,9 +224,9 @@ interface ExportTracerButtonProps {
 }
 
 export const ExportTracerButton: React.FC<ExportTracerButtonProps> = ({
-  className = '',
+  className = "",
   onSuccess,
-  onError
+  onError,
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -200,7 +237,10 @@ export const ExportTracerButton: React.FC<ExportTracerButtonProps> = ({
       setErrorMessage(null);
       await exportTracerMultiSheet(onSuccess, onError);
     } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error('Terjadi kegagalan saat mengekspor data tracer study.');
+      const errorObj =
+        err instanceof Error
+          ? err
+          : new Error("Terjadi kegagalan saat mengekspor data tracer study.");
       setErrorMessage(errorObj.message);
     } finally {
       setLoading(false);

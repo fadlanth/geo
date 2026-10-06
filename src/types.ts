@@ -1,10 +1,9 @@
 // GEO INFO — Types & Master Data Definition sesuai skema Supabase
 
-
-export type UserRole = 'admin' | 'operator' | 'dosen' | 'guest';
+export type UserRole = "admin" | "operator" | "dosen" | "guest";
 
 export interface Profile {
-  id: string;          // sama dengan auth.users.id
+  id: string; // sama dengan auth.users.id
   email: string;
   nama: string;
   role: UserRole;
@@ -14,19 +13,19 @@ export interface Profile {
 }
 
 export interface Mahasiswa {
-  npm: string;                // Primary key
+  npm: string; // Primary key
   nama: string;
   angkatan: number;
   jenis_kelamin: string;
   fakultas: string;
   prodi: string;
-  status: 'Regulasi Akademik' | 'Lulus' | 'Alih Prodi' | 'Undur Diri';
+  status: "Regulasi Akademik" | "Lulus" | "Alih Prodi" | "Undur Diri";
   nip_dosen_wali: string | null;
   tahun_lulus?: number;
 }
 
 export interface Dosen {
-  nip: string;                // Primary key
+  nip: string; // Primary key
   nama: string;
   kode_dosen: string;
   sandi_dosen?: string;
@@ -41,16 +40,23 @@ export interface Prestasi {
   npm_mahasiswa?: string;
   nama_mahasiswa?: string;
   nama_kompetisi: string;
-  tingkat: 'Internasional' | 'Nasional' | 'Wilayah' | 'Universitas';
+  tingkat: "Internasional" | "Nasional" | "Wilayah" | "Universitas";
   juara_ke: number;
-  jenis_peserta: 'Individu' | 'Kelompok';
+  jenis_peserta: "Individu" | "Kelompok";
   tahun_kegiatan?: number;
   tempat?: string;
   dosen_pembimbing?: string;
 }
 
-export function getPrestasiNamaMahasiswa(p: Prestasi, mahasiswa: { npm: string; nama: string }[]): string {
-  return p.nama_mahasiswa || mahasiswa.find(m => m.npm === p.npm_mahasiswa)?.nama || '-';
+export function getPrestasiNamaMahasiswa(
+  p: Prestasi,
+  mahasiswa: { npm: string; nama: string }[],
+): string {
+  return (
+    p.nama_mahasiswa ||
+    mahasiswa.find((m) => m.npm === p.npm_mahasiswa)?.nama ||
+    "-"
+  );
 }
 
 export interface AnggotaPrestasi {
@@ -63,7 +69,7 @@ export interface AnggotaPrestasi {
   peran?: string | null;
 }
 
-export type JenisKegiatan = 'Magang Industri' | 'Penelitian Dosen';
+export type JenisKegiatan = "Magang Industri" | "Penelitian Dosen";
 
 export interface RiwayatMBKM {
   id_mbkm?: string;
@@ -84,16 +90,16 @@ export interface RiwayatMBKM {
 }
 
 export interface TracerStudy {
-  id_tracer?: string;         // UUID PK
+  id_tracer?: string; // UUID PK
   npm_mahasiswa: string;
   tahun_lulus: number;
-  status_lulusan: 'Bekerja' | 'Studi Lanjut' | 'Wiraswasta' | 'Belum Bekerja';
+  status_lulusan: "Bekerja" | "Studi Lanjut" | "Wiraswasta" | "Belum Bekerja";
   masa_tunggu_bulan: number;
 
   // Bekerja
   instansi_pekerjaan?: string;
   jabatan?: string;
-  tingkat_perusahaan?: 'Lokal' | 'Nasional' | 'Multinasional' | 'Internasional';
+  tingkat_perusahaan?: "Lokal" | "Nasional" | "Multinasional" | "Internasional";
   gaji_pekerjaan?: number;
 
   // Studi Lanjut
@@ -105,16 +111,18 @@ export interface TracerStudy {
 }
 
 export function getMasaTungguKategori(bulan: number): string {
-  if (bulan <= 6) return '0-6 bln';
-  if (bulan <= 12) return '>6-12 bln';
-  return '>12 bln';
+  if (bulan <= 6) return "0-6 bln";
+  if (bulan <= 12) return ">6-12 bln";
+  return ">12 bln";
 }
 
-export function getGajiKategori(gaji: number | undefined | null): '0-5jt' | '>5-10jt' | '>10jt' | '-' {
-  if (!gaji || gaji <= 0) return '-';
-  if (gaji <= 5_000_000) return '0-5jt';
-  if (gaji <= 10_000_000) return '>5-10jt';
-  return '>10jt';
+export function getGajiKategori(
+  gaji: number | undefined | null,
+): "0-5jt" | ">5-10jt" | ">10jt" | "-" {
+  if (!gaji || gaji <= 0) return "-";
+  if (gaji <= 5_000_000) return "0-5jt";
+  if (gaji <= 10_000_000) return ">5-10jt";
+  return ">10jt";
 }
 
 // Helper type for rekap
