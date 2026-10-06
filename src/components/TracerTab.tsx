@@ -54,6 +54,15 @@ import {
   getGajiKategori,
 } from "../types";
 import { useDebounce, useEscapeClose, useFocusTrap } from "../lib/hooks";
+import {
+  buildDosenMap,
+  computeTahunOptions,
+  computeTrackedNpmSet,
+  computeCohortLulusanMahasiswa,
+  computeCohortAlumni,
+  computeUntrackedAlumni,
+} from "../lib/tracerSelectors";
+import { getMahasiswaTahunLulus as getMahasiswaTahunLulusCore } from "../lib/tracerSelectors";
 import { fmt } from "../lib/format";
 import { renderDonutLabel } from "../lib/chartUtils";
 import StatCard from "./StatCard";
@@ -158,60 +167,39 @@ export default function TracerTab({
   });
 
   // Map Dosen Wali (NIP -> Nama)
-  const dosenMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    (dosen || []).forEach((d) => {
-      map[d.nip] = d.nama;
-    });
-    return map;
-  }, [dosen]);
+  const dosenMap = useMemo(() => buildDosenMap(dosen), [dosen]);
 
   // Helper resolusi Tahun Lulus Mahasiswa
-  const getMahasiswaTahunLulus = (m: Mahasiswa): number => {
-    if (m.tahun_lulus) return m.tahun_lulus;
-    const tracerMatch = alumni.find((a) => a.npm_mahasiswa === m.npm);
-    if (tracerMatch?.tahun_lulus) return tracerMatch.tahun_lulus;
-    if (m.angkatan) return m.angkatan + 4; // estimasi 4 tahun kuliah
-    return new Date().getFullYear();
-  };
+  const getMahasiswaTahunLulus = (m: Mahasiswa): number =>
+    getMahasiswaTahunLulusCore(alumni, m);
 
   // Kumpulan Tahun Kelulusan yang terdeteksi
-  const tahunOptions = useMemo(() => {
-    const years = new Set<number>();
-    alumni.forEach((a) => {
-      if (a.tahun_lulus) years.add(a.tahun_lulus);
-    });
-    mahasiswa.forEach((m) => {
-      if (m.status === "Lulus") {
-        years.add(getMahasiswaTahunLulus(m));
-      }
-    });
-    return Array.from(years).sort((a, b) => b - a);
-  }, [alumni, mahasiswa]);
+  const tahunOptions = useMemo(
+    () => computeTahunOptions(alumni, mahasiswa),
+    [alumni, mahasiswa],
+  );
 
   // Set Mahasiswa yang sudah terlacak (ada di tracer)
-  const trackedNpmSet = useMemo(() => {
-    return new Set(alumni.map((a) => a.npm_mahasiswa));
-  }, [alumni]);
+  const trackedNpmSet = useMemo(() => computeTrackedNpmSet(alumni), [alumni]);
 
   // Mahasiswa yang berstatus Lulus di Master Data
-  const semuaLulusanMahasiswa = useMemo(() => {
-    return mahasiswa.filter((m) => m.status === "Lulus");
-  }, [mahasiswa]);
+  const semuaLulusanMahasiswa = useMemo(
+    () => mahasiswa.filter((m) => m.status === "Lulus"),
+    [mahasiswa],
+  );
 
   // Filter Lulusan Mahasiswa berdasarkan Tahun Kelulusan
-  const cohortLulusanMahasiswa = useMemo(() => {
-    if (filterTahun === "All") return semuaLulusanMahasiswa;
-    return semuaLulusanMahasiswa.filter(
-      (m) => getMahasiswaTahunLulus(m).toString() === filterTahun,
-    );
-  }, [semuaLulusanMahasiswa, filterTahun]);
+  const cohortLulusanMahasiswa = useMemo(
+    () =>
+      computeCohortLulusanMahasiswa(mahasiswa, alumni, filterTahun),
+    [mahasiswa, alumni, filterTahun],
+  );
 
   // Alumni Terlacak berdasarkan Tahun Kelulusan
-  const cohortAlumni = useMemo(() => {
-    if (filterTahun === "All") return alumni;
-    return alumni.filter((a) => a.tahun_lulus.toString() === filterTahun);
-  }, [alumni, filterTahun]);
+  const cohortAlumni = useMemo(
+    () => computeCohortAlumni(alumni, filterTahun),
+    [alumni, filterTahun],
+  );
 
   // Hitung Total Lulusan Unik untuk Cohort Terpilih (Master Data ∪ Tracer)
   const totalLulusanCohortCount = useMemo(() => {
@@ -223,13 +211,11 @@ export default function TracerTab({
 
   // Daftar Alumni Belum Terlacak (Status Lulus tapi belum ada di tracer)
   const untrackedAlumniList = useMemo(() => {
-    return cohortLulusanMahasiswa
-      .filter((m) => !trackedNpmSet.has(m.npm))
-      .filter((m) => {
-        if (!searchQuery) return true;
-        const q = searchQuery.toLowerCase();
-        return m.nama.toLowerCase().includes(q) || m.npm.includes(q);
-      });
+    return computeUntrackedAlumni(
+      cohortLulusanMahasiswa,
+      trackedNpmSet,
+      searchQuery,
+    );
   }, [cohortLulusanMahasiswa, trackedNpmSet, searchQuery]);
 
   // Alumni Terlacak terfilter pencarian

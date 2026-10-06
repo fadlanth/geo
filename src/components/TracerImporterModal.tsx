@@ -63,7 +63,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
       const buffer = await file.arrayBuffer();
       setFileRawData(buffer);
 
-      const result = parseTracerFile(buffer, onlyGeofisika);
+      const result = await parseTracerFile(buffer, onlyGeofisika);
       setParseResult(result);
     } catch (err) {
       const errorObj =
@@ -76,12 +76,12 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
     }
   };
 
-  const handleToggleFilter = (checked: boolean) => {
+  const handleToggleFilter = async (checked: boolean) => {
     setFilterGeofisika(checked);
     if (fileRawData) {
       try {
         setParsing(true);
-        const result = parseTracerFile(fileRawData, checked);
+        const result = await parseTracerFile(fileRawData, checked);
         setParseResult(result);
       } catch (err) {
         console.error(err);

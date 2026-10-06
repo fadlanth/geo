@@ -1,5 +1,6 @@
 import React from "react";
 import { AlertTriangle } from "lucide-react";
+import { reportError } from "../lib/monitoring";
 
 interface Props {
   children: React.ReactNode;
@@ -21,7 +22,7 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: React.ErrorInfo) {
-    console.error("ErrorBoundary:", error, info);
+    reportError(error instanceof Error ? error : new Error(String(error)), "ErrorBoundary");
   }
 
   render() {

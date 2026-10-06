@@ -3,6 +3,7 @@ import { TracerStudy, Mahasiswa } from "../types";
 import IconButton from "./IconButton";
 import ComboboxMahasiswa from "./ComboboxMahasiswa";
 import Button from "./Button";
+import { getMahasiswaTahunLulus as getMahasiswaTahunLulusCore } from "../lib/tracerSelectors";
 
 export const TINGKAT_OPTIONS = [
   "Lokal",
@@ -34,13 +35,8 @@ export default function TracerFormModal({
   onClose,
   modalRef,
 }: TracerFormModalProps) {
-  const getMahasiswaTahunLulus = (m: Mahasiswa): number => {
-    if (m.tahun_lulus) return m.tahun_lulus;
-    const tracerMatch = alumni.find((a) => a.npm_mahasiswa === m.npm);
-    if (tracerMatch?.tahun_lulus) return tracerMatch.tahun_lulus;
-    if (m.angkatan) return m.angkatan + 4;
-    return new Date().getFullYear();
-  };
+  const getMahasiswaTahunLulus = (m: Mahasiswa): number =>
+    getMahasiswaTahunLulusCore(alumni, m);
 
   return (
     <div

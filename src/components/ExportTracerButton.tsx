@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Download, Loader2, FileSpreadsheet } from "lucide-react";
-import * as XLSX from "xlsx";
 import { supabase } from "../lib/supabase";
 
 export interface RawTracerStudyRecord {
@@ -99,6 +98,7 @@ export async function exportTracerMultiSheet(
     }
 
     const records = (data as unknown as RawTracerStudyRecord[]) || [];
+    const XLSX = await import("xlsx");
     const workbook = XLSX.utils.book_new();
 
     // Sheet 1: Bekerja

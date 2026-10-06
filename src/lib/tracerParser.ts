@@ -1,7 +1,6 @@
 // Parser Kuesioner Tracer Study Pusat (Kemdikbud).
 // Mendukung file: .xlsx, .xls, .csv, dan XML Spreadsheet 2003.
 
-import * as XLSX from "xlsx";
 import { Mahasiswa, TracerStudy } from "../types";
 
 export interface TracerParseResult {
@@ -56,10 +55,12 @@ function findColIndexStrict(headers: string[], prefixes: string[]): number {
  * Parse file mentah Tracer Study Pusat (ArrayBuffer atau string).
  * Mendukung format survei dari berbagai tahun (2019 s.d. terbaru).
  */
-export function parseTracerFile(
+export async function parseTracerFile(
   fileData: ArrayBuffer | string,
   filterGeofisikaOnly: boolean = true,
-): TracerParseResult {
+): Promise<TracerParseResult> {
+  const XLSX = await import("xlsx");
+
   // 1. Baca workbook dengan SheetJS
   const wb =
     typeof fileData === "string"
