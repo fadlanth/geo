@@ -158,7 +158,7 @@ export default function DosenTab({
     setShowAddModal(true);
   };
 
-  const handleDeleteClick = (nip: string, nama: string) => {
+  const handleDeleteClick = (nip: string) => {
     onDeleteDosen(nip);
   };
 
@@ -509,7 +509,7 @@ export default function DosenTab({
                             <IconButton
                               label="Hapus Dosen"
                               tone="danger"
-                              onClick={() => handleDeleteClick(d.nip, d.nama)}
+                              onClick={() => handleDeleteClick(d.nip)}
                               icon={<Trash2 className="w-3.5 h-3.5" />}
                             />
                           </div>

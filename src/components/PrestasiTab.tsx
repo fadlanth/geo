@@ -64,17 +64,6 @@ interface PrestasiTabProps {
   triggerToast?: (options: ToastOptions) => void;
 }
 
-function formatDate(dateStr?: string): string {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 export default function PrestasiTab({
   prestasi,
   mahasiswa,
@@ -84,9 +73,7 @@ export default function PrestasiTab({
   onDeletePrestasi,
   onSaveAnggota,
   onDeleteAnggota,
-  onBulkReplaceAnggota,
   onBulkImportPrestasi,
-  onRefresh,
   triggerToast,
 }: PrestasiTabProps) {
   const [query, setQuery] = useState("");

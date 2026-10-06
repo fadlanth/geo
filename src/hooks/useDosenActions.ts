@@ -37,7 +37,7 @@ export function useDosenActions(
         title: "Dosen Wali Disimpan",
         message: `Berhasil menyimpan data dosen ${d.nama}.`,
       });
-    } catch (err) {
+    } catch {
       triggerToast({
         kind: "error",
         title: "Gagal Menyimpan",

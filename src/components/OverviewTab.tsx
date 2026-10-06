@@ -4,7 +4,6 @@ import {
   Award,
   GraduationCap,
   Sparkles,
-  BookOpen,
   ArrowUpRight,
   Briefcase,
   ChevronLeft,
@@ -76,12 +75,9 @@ export default function OverviewTab({
   const pctRegulasi =
     totalMhs > 0 ? Math.round((mhsRegulasi / totalMhs) * 100) : 0;
 
-  const totalDosenAll = dosen.length;
   const totalDosenWaliOnly = dosen.filter(
     (d) => d.is_dosen_wali !== false,
   ).length;
-  const rasioMhsPerDosen =
-    totalDosenWaliOnly > 0 ? (totalMhs / totalDosenWaliOnly).toFixed(1) : "0";
 
   const totalPrestasi = prestasi.length;
   const juara1Count = prestasi.filter((p) => p.juara_ke === 1).length;
@@ -107,8 +103,6 @@ export default function OverviewTab({
         ).toFixed(1)
       : "0";
 
-  const pctMbkm =
-    mhsRegulasi > 0 ? Math.round((mbkm.length / mhsRegulasi) * 100) : 0;
   // Instansi unik penempatan magang (untuk label "Total Instansi")
   const totalInstansi = new Set(
     mbkm.map((m) => m.tempat_instansi).filter(Boolean),

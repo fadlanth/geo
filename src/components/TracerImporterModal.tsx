@@ -5,7 +5,6 @@ import {
   AlertCircle,
   X,
   CheckCircle2,
-  Users,
   Briefcase,
   BookOpen,
   Store,

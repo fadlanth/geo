@@ -42,7 +42,6 @@ import { fmt } from "../lib/format";
 import { exportToExcel } from "../lib/exportUtils";
 import { ToastOptions } from "./Toast";
 import { SkeletonTable, SkeletonCard } from "./Skeleton";
-import ComboboxMahasiswa from "./ComboboxMahasiswa";
 import MbkmFormModal, { SKEMA_KETERLIBATAN_OPTIONS } from "./MbkmFormModal";
 
 interface GroupedProject {
@@ -83,7 +82,6 @@ export default function MagangTab({
   dosen,
   loading,
   activeSubTab,
-  onSubTabChange,
   onSaveMbkm,
   onDeleteMbkm,
   onBulkImportMagang,
@@ -91,7 +89,7 @@ export default function MagangTab({
 }: MagangTabProps) {
   // Sub-Tab Switcher State (Induk: Kegiatan Luar Prodi -> Magang vs Penelitian)
   const [subTab, setSubTab] = useState<"magang" | "penelitian">(
-    (activeSubTab as any) || "magang",
+    (activeSubTab as "magang" | "penelitian" | undefined) || "magang",
   );
   const [viewMode, setViewMode] = useState<"individu" | "kelompok">("individu");
 

@@ -65,21 +65,16 @@ import {
 import { getMahasiswaTahunLulus as getMahasiswaTahunLulusCore } from "../lib/tracerSelectors";
 import { fmt } from "../lib/format";
 import { renderDonutLabel } from "../lib/chartUtils";
-import StatCard from "./StatCard";
-import { academicService } from "../lib/academicService";
 import {
   exportToExcel,
-  exportRekapMultiSheetToExcel,
 } from "../lib/exportUtils";
 import { ToastOptions } from "./Toast";
 import { SkeletonTable, SkeletonCard, SkeletonChart } from "./Skeleton";
-import ComboboxMahasiswa from "./ComboboxMahasiswa";
 import TracerFormModal, { TINGKAT_OPTIONS } from "./TracerFormModal";
 import { exportTracerMultiSheet } from "./ExportTracerButton";
 import {
   autoMapColumns,
   validateAndNormalizeRows,
-  getImportSummary,
 } from "../lib/tracerImportUtils";
 
 interface TracerTabProps {

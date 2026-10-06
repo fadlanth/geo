@@ -120,14 +120,14 @@ ALTER TABLE public.tracer_study ADD CONSTRAINT tracer_unique UNIQUE (npm_mahasis
 // Cache kolom yang belum ada di schema database Supabase agar tidak memicu error schema cache
 const unsupportedColumnsCache: Record<string, Set<string>> = {};
 
-function stripUnsupported<T extends Record<string, any>>(
+function stripUnsupported<T extends object>(
   table: string,
   row: T,
-): Record<string, any> {
+): Record<string, unknown> {
   const badCols = unsupportedColumnsCache[table];
-  if (!badCols || badCols.size === 0) return { ...row };
-  const clean: Record<string, any> = {};
-  for (const [k, v] of Object.entries(row)) {
+  if (!badCols || badCols.size === 0) return { ...(row as Record<string, unknown>) };
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(row) as [string, unknown][]) {
     if (!badCols.has(k)) {
       clean[k] = v;
     }
@@ -135,7 +135,7 @@ function stripUnsupported<T extends Record<string, any>>(
   return clean;
 }
 
-async function chunkedUpsert<T extends Record<string, any>>(
+async function chunkedUpsert<T extends object>(
   table: string,
   items: T[],
   onConflict: string,
@@ -155,7 +155,7 @@ async function chunkedUpsert<T extends Record<string, any>>(
       attempts++;
       const { error } = await supabase
         .from(table)
-        .upsert(chunk as any, { onConflict });
+        .upsert(chunk as never[], { onConflict });
       if (!error) break;
 
       const match = error.message.match(
@@ -429,7 +429,7 @@ export const academicService = {
       "Dengan pemerintah/BUMN/BUMD",
       "Dengan dosen tetap dari perguruan tinggi lain",
     ];
-    return (data as any[]).map((m) => {
+    return (data as RiwayatMBKM[]).map((m) => {
       const isPenelitian =
         m.jenis_kegiatan === "Penelitian Dosen" ||
         KETERLIBATAN_PREFIXES.some((prefix) =>
@@ -546,7 +546,7 @@ export const academicService = {
         .select("npm")
         .in("npm", npms);
 
-      const existingSet = new Set((existingMhs || []).map((m: any) => m.npm));
+      const existingSet = new Set((existingMhs || []).map((m: { npm: string }) => m.npm));
       missingMahasiswa = mahasiswaList.filter((m) => !existingSet.has(m.npm));
     }
 

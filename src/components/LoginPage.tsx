@@ -6,8 +6,6 @@ import {
   ArrowRight,
   ArrowLeft,
   KeyRound,
-  CheckCircle2,
-  LogIn,
 } from "lucide-react";
 import { useAuth } from "../lib/AuthContext";
 import { errMsg } from "../lib/format";

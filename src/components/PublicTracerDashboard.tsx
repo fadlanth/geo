@@ -17,7 +17,6 @@ import {
   Briefcase,
   BookOpen,
   Store,
-  Clock,
   TrendingUp,
   AlertCircle,
   RotateCw,
@@ -332,7 +331,7 @@ export const PublicTracerDashboard: React.FC<PublicTracerDashboardProps> = ({
                         color: "#241f20",
                         fontSize: "12px",
                       }}
-                      formatter={(val: any) => [
+                      formatter={(val: number | string | Array<number | string>) => [
                         `${val} Alumni`,
                         "Total Lulusan",
                       ]}
@@ -395,7 +394,7 @@ export const PublicTracerDashboard: React.FC<PublicTracerDashboardProps> = ({
                         color: "#241f20",
                         fontSize: "12px",
                       }}
-                      formatter={(value: any, name: any) => {
+                      formatter={(value: number | string | Array<number | string>, name: string) => {
                         const total = pieData.reduce((s, i) => s + i.value, 0);
                         const pct =
                           total > 0

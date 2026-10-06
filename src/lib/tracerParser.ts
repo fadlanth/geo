@@ -71,7 +71,7 @@ export async function parseTracerFile(
   const sheet = wb.Sheets[sheetName];
 
   // Konversi sheet ke 2D array baris demi baris
-  const rawRows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+  const rawRows: unknown[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
   if (rawRows.length === 0) {
     throw new Error("File kosong atau format tidak dapat dibaca.");
