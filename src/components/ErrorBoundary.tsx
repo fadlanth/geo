@@ -43,15 +43,28 @@ export default class ErrorBoundary extends React.Component<Props, State> {
                 {this.state.error.message}
               </pre>
             )}
-            <button
-              onClick={() => {
-                this.setState({ hasError: false, error: null });
-                window.location.reload();
-              }}
-              className="mt-6 px-4 py-2.5 text-sm font-semibold rounded-xl bg-[var(--color-primary)] text-white hover:opacity-90 transition"
-            >
-              Muat Ulang Halaman
-            </button>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  window.location.reload();
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-xl bg-[var(--color-primary)] text-white hover:opacity-90 transition cursor-pointer"
+              >
+                Muat Ulang Halaman
+              </button>
+              <button
+                onClick={() => {
+                  window.localStorage.clear();
+                  window.sessionStorage.clear();
+                  window.location.reload();
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 text-sm font-semibold rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition cursor-pointer border border-slate-200"
+                title="Hapus filter, cache, dan data sesi lokal, lalu muat ulang"
+              >
+                Reset Data & Muat Ulang
+              </button>
+            </div>
           </div>
         </div>
       );

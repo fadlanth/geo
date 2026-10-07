@@ -170,11 +170,10 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
                 id="tracer-autopilot-title"
                 className="text-base sm:text-lg font-extrabold text-[#241f20]"
               >
-                Auto-Pilot Importer (Tracer Study Pusat)
+                Import Kuesioner Tracer Pusat
               </h3>
               <p className="text-xs text-[#241f20]/60">
-                Otomatis saring Geofisika, bersihkan kolom kuesioner, dan
-                daftarkan mahasiswa baru tanpa error database.
+                Sistem akan menyaring data khusus Geofisika, membersihkan format kolom kuesioner, dan mendaftarkan mahasiswa baru secara otomatis.
               </p>
             </div>
           </div>
@@ -227,7 +226,7 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
               }
             }}
             aria-label="Pilih berkas tracer study atau seret berkas ke sini"
-            className={`border-2 border-dashed rounded-3xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] ${
+            className={`border-2 border-dashed rounded-3xl p-8 text-center transition cursor-pointer flex flex-col items-center justify-center gap-3 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 ${
               dragActive
                 ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5"
                 : "border-stone-300 hover:border-[var(--color-primary)]/50 bg-stone-50/40"

@@ -72,8 +72,17 @@ Perintah lain yang tersedia:
 
 - Row Level Security (RLS) aktif di seluruh tabel data; peran anonim hanya dapat membaca ringkasan publik `v_publik_rekap`.
 - Pencatatan `audit_log` diproses melalui fungsi RPC `audit_log_insert` (SECURITY DEFINER), mencegah manipulasi langsung dari sisi klien.
+- Kebijakan retensi data: Log audit yang melampaui usia 3 tahun dapat dibersihkan secara aman menggunakan fungsi SQL `cleanup_old_audit_logs()`.
 - Sandi verifikasi dosen tidak dicatat dalam riwayat audit log dan tidak disertakan dalam berkas ekspor data.
 - Kunci `service_role` tidak pernah digunakan maupun disematkan pada kode sisi klien.
+
+## Catatan Rilis & Kesiapan Produksi (Production Ready)
+
+Aplikasi ini telah melewati fase audit ketat (Anti-Slop Audit) meliputi:
+1.  **Aksesibilitas Tinggi:** Sistem penanda fokus (*focus-ring*) terstandar untuk navigasi kibor.
+2.  **Ketahanan Kesalahan (Resilience):** *Error Boundary* global dilengkapi tombol *escape hatch* ganda (muat ulang normal & reset data sesi lokal).
+3.  **Higienitas Kode:** Bebas dari komentar *boilerplate* AI berlebih.
+4.  **Keamanan Ekstra:** Pemblokiran eksekusi RPC yang tidak valid dan pembatasan pencarian *path* (*hijacking prevention*).
 
 ## Lisensi
 

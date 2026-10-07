@@ -26,19 +26,16 @@ export interface RawTracerStudyRecord {
   } | null;
 }
 
-// Helper untuk ekstrak nilai fleksibel (support format spesifik ataupun skema relasional)
 const extractRowData = (item: RawTracerStudyRecord) => {
   const npm = item.npm_mahasiswa || "-";
   const nama = item.nama_alumni || item.mahasiswa?.nama || "-";
   const tahun = item.tahun_lulus ?? "-";
 
-  // Format Masa Tunggu
   let masaTunggu = item.masa_tunggu;
   if (!masaTunggu && item.masa_tunggu_bulan != null) {
     masaTunggu = `${item.masa_tunggu_bulan} Bulan`;
   }
 
-  // Format Kategori Gaji
   let kategoriGaji = item.kategori_gaji;
   if (!kategoriGaji && item.gaji_pekerjaan != null) {
     if (item.gaji_pekerjaan <= 0) kategoriGaji = "-";
@@ -79,9 +76,6 @@ const getColWidths = (rows: Record<string, unknown>[]) => {
   });
 };
 
-/**
- * Generate dan download file Excel Multi-Sheet dari tabel tracer_study
- */
 export async function exportTracerMultiSheet(
   onSuccess?: (count: number) => void,
   onError?: (error: Error) => void,
@@ -101,7 +95,6 @@ export async function exportTracerMultiSheet(
     const XLSX = await import("xlsx");
     const workbook = XLSX.utils.book_new();
 
-    // Sheet 1: Bekerja
     const bekerjaData = records
       .filter((r) => r.status_lulusan === "Bekerja")
       .map((r) => {
@@ -135,7 +128,6 @@ export async function exportTracerMultiSheet(
     wsBekerja["!cols"] = getColWidths(bekerjaData);
     XLSX.utils.book_append_sheet(workbook, wsBekerja, "Bekerja");
 
-    // Sheet 2: Wiraswasta
     const wiraswastaData = records
       .filter((r) => r.status_lulusan === "Wiraswasta")
       .map((r) => {
@@ -167,7 +159,6 @@ export async function exportTracerMultiSheet(
     wsWiraswasta["!cols"] = getColWidths(wiraswastaData);
     XLSX.utils.book_append_sheet(workbook, wsWiraswasta, "Wiraswasta");
 
-    // Sheet 3: Studi Lanjut
     const studiLanjutData = records
       .filter((r) => r.status_lulusan === "Studi Lanjut")
       .map((r) => {
@@ -197,7 +188,6 @@ export async function exportTracerMultiSheet(
     wsStudiLanjut["!cols"] = getColWidths(studiLanjutData);
     XLSX.utils.book_append_sheet(workbook, wsStudiLanjut, "Studi Lanjut");
 
-    // Download file
     XLSX.writeFile(workbook, "Laporan_Tracer_Study_GEO.xlsx");
 
     if (onSuccess) {
