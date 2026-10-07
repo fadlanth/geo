@@ -46,6 +46,31 @@ interface ChartAngkatanRow {
   "Undur Diri": number;
 }
 
+interface CountCellProps {
+  angkatan?: number;
+  status?: string;
+  count: number;
+  chipClass: string;
+  title: string;
+  onDrill: (filter: { angkatan?: number; status?: string }) => void;
+}
+
+function CountCell({ angkatan, status, count, chipClass, title, onDrill }: CountCellProps) {
+  if (!count) return <span className={`chip ${chipClass}`}>{count}</span>;
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onDrill({ angkatan, status });
+      }}
+      className={`chip ${chipClass} cursor-pointer hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]`}
+      title={title}
+    >
+      {count}
+    </button>
+  );
+}
+
 interface OverviewTabProps {
   mahasiswa: Mahasiswa[];
   dosen: Dosen[];
@@ -135,36 +160,12 @@ export default function OverviewTab({
         .sort((a, b) => a.nama.localeCompare(b.nama))
     : [];
 
-  // Tombol sel angka (status / total-baris / total-kolom) pada tabel ringkasan:
-  // klik angka untuk filter daftar mahasiswa per individu.
-  const CountCell = ({
-    angkatan,
-    status,
-    count,
-    chipClass,
-    title,
-  }: {
-    angkatan?: number;
-    status?: string;
-    count: number;
-    chipClass: string;
-    title: string;
-  }) => {
-    if (!count) return <span className={`chip ${chipClass}`}>{count}</span>;
-    return (
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setDrillFilter({ angkatan, status });
-          setShowAngkatanDetail(true);
-        }}
-        className={`chip ${chipClass} cursor-pointer hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]`}
-        title={title}
-      >
-        {count}
-      </button>
-    );
+  // Callback untuk drill-down dari CountCell
+  const handleDrill = (filter: { angkatan?: number; status?: string }) => {
+    setDrillFilter(filter);
+    setShowAngkatanDetail(true);
   };
+
 
   // Per-angkatan detail data
   const angkatanDetail = mahasiswa.reduce<Record<number, AngkatanRow>>(
@@ -700,6 +701,7 @@ export default function OverviewTab({
                         </td>
                         <td className="p-3 font-bold">
                           <CountCell
+                            onDrill={handleDrill}
                             angkatan={row.angkatan}
                             count={row.total}
                             chipClass="status-neutral"
@@ -708,6 +710,7 @@ export default function OverviewTab({
                         </td>
                         <td className="p-3">
                           <CountCell
+                            onDrill={handleDrill}
                             angkatan={row.angkatan}
                             status="Regulasi Akademik"
                             count={row["Regulasi Akademik"]}
@@ -717,6 +720,7 @@ export default function OverviewTab({
                         </td>
                         <td className="p-3">
                           <CountCell
+                            onDrill={handleDrill}
                             angkatan={row.angkatan}
                             status="Lulus"
                             count={row.Lulus}
@@ -726,6 +730,7 @@ export default function OverviewTab({
                         </td>
                         <td className="p-3">
                           <CountCell
+                            onDrill={handleDrill}
                             angkatan={row.angkatan}
                             status="Alih Prodi"
                             count={row["Alih Prodi"]}
@@ -735,6 +740,7 @@ export default function OverviewTab({
                         </td>
                         <td className="p-3 pr-0">
                           <CountCell
+                            onDrill={handleDrill}
                             angkatan={row.angkatan}
                             status="Undur Diri"
                             count={row["Undur Diri"]}
@@ -750,6 +756,7 @@ export default function OverviewTab({
                       <td className="p-3 pl-0">Total</td>
                       <td className="p-3">
                         <CountCell
+                          onDrill={handleDrill}
                           count={angkatanDetailData.reduce(
                             (s, r) => s + r.total,
                             0,
@@ -760,6 +767,7 @@ export default function OverviewTab({
                       </td>
                       <td className="p-3">
                         <CountCell
+                          onDrill={handleDrill}
                           status="Regulasi Akademik"
                           count={angkatanDetailData.reduce(
                             (s, r) => s + r["Regulasi Akademik"],
@@ -771,6 +779,7 @@ export default function OverviewTab({
                       </td>
                       <td className="p-3">
                         <CountCell
+                          onDrill={handleDrill}
                           status="Lulus"
                           count={angkatanDetailData.reduce(
                             (s, r) => s + r.Lulus,
@@ -782,6 +791,7 @@ export default function OverviewTab({
                       </td>
                       <td className="p-3">
                         <CountCell
+                          onDrill={handleDrill}
                           status="Alih Prodi"
                           count={angkatanDetailData.reduce(
                             (s, r) => s + r["Alih Prodi"],
@@ -793,6 +803,7 @@ export default function OverviewTab({
                       </td>
                       <td className="p-3 pr-0">
                         <CountCell
+                          onDrill={handleDrill}
                           status="Undur Diri"
                           count={angkatanDetailData.reduce(
                             (s, r) => s + r["Undur Diri"],

@@ -78,7 +78,9 @@ export const PublicTracerDashboard: React.FC<PublicTracerDashboardProps> = ({
   };
 
   useEffect(() => {
-    fetchData();
+    void (async () => {
+      await fetchData();
+    })();
   }, []);
 
   // Agregasi status seluruh tahun untuk PieChart

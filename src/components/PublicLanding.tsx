@@ -58,7 +58,9 @@ export default function PublicLanding({ onLogin }: PublicLandingProps) {
   };
 
   useEffect(() => {
-    loadRekap();
+    void (async () => {
+      await loadRekap();
+    })();
   }, []);
 
   const stats = [
