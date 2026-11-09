@@ -173,7 +173,9 @@ export const TracerImporterModal: React.FC<TracerImporterModalProps> = ({
                 Import Kuesioner Tracer Pusat
               </h3>
               <p className="text-xs text-[#241f20]/60">
-                Sistem akan menyaring data khusus Geofisika, membersihkan format kolom kuesioner, dan mendaftarkan mahasiswa baru secara otomatis.
+                Sistem akan menyaring data khusus Geofisika, membersihkan format
+                kolom kuesioner, dan mendaftarkan mahasiswa baru secara
+                otomatis.
               </p>
             </div>
           </div>

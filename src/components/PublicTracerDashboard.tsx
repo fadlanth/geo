@@ -333,10 +333,9 @@ export const PublicTracerDashboard: React.FC<PublicTracerDashboardProps> = ({
                         color: "#241f20",
                         fontSize: "12px",
                       }}
-                      formatter={(val: number | string | Array<number | string>) => [
-                        `${val} Alumni`,
-                        "Total Lulusan",
-                      ]}
+                      formatter={(
+                        val: number | string | Array<number | string>,
+                      ) => [`${val} Alumni`, "Total Lulusan"]}
                       labelFormatter={(label) => `Tahun Lulus: ${label}`}
                     />
                     <Bar
@@ -396,7 +395,10 @@ export const PublicTracerDashboard: React.FC<PublicTracerDashboardProps> = ({
                         color: "#241f20",
                         fontSize: "12px",
                       }}
-                      formatter={(value: number | string | Array<number | string>, name: string) => {
+                      formatter={(
+                        value: number | string | Array<number | string>,
+                        name: string,
+                      ) => {
                         const total = pieData.reduce((s, i) => s + i.value, 0);
                         const pct =
                           total > 0

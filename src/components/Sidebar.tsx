@@ -182,13 +182,15 @@ export default function Sidebar({
               const isActive = activeTab === item.id;
               const subItems =
                 "subItems" in item
-                  ? (item as {
-                      subItems?: {
-                        id: string;
-                        label: string;
-                        icon: React.ComponentType<{ className?: string }>;
-                      }[];
-                    }).subItems
+                  ? (
+                      item as {
+                        subItems?: {
+                          id: string;
+                          label: string;
+                          icon: React.ComponentType<{ className?: string }>;
+                        }[];
+                      }
+                    ).subItems
                   : undefined;
 
               return (

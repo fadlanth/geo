@@ -17,7 +17,10 @@ function sendReport(report: ErrorReport): void {
   try {
     const body = JSON.stringify(report);
     if (navigator.sendBeacon) {
-      navigator.sendBeacon(REPORT_URL, new Blob([body], { type: "application/json" }));
+      navigator.sendBeacon(
+        REPORT_URL,
+        new Blob([body], { type: "application/json" }),
+      );
       return;
     }
     fetch(REPORT_URL, {

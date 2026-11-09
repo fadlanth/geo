@@ -22,7 +22,10 @@ export default class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, _info: React.ErrorInfo) {
-    reportError(error instanceof Error ? error : new Error(String(error)), "ErrorBoundary");
+    reportError(
+      error instanceof Error ? error : new Error(String(error)),
+      "ErrorBoundary",
+    );
   }
 
   render() {

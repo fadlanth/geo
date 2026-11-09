@@ -125,7 +125,8 @@ function stripUnsupported<T extends object>(
   row: T,
 ): Record<string, unknown> {
   const badCols = unsupportedColumnsCache[table];
-  if (!badCols || badCols.size === 0) return { ...(row as Record<string, unknown>) };
+  if (!badCols || badCols.size === 0)
+    return { ...(row as Record<string, unknown>) };
   const clean: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(row) as [string, unknown][]) {
     if (!badCols.has(k)) {
@@ -546,7 +547,9 @@ export const academicService = {
         .select("npm")
         .in("npm", npms);
 
-      const existingSet = new Set((existingMhs || []).map((m: { npm: string }) => m.npm));
+      const existingSet = new Set(
+        (existingMhs || []).map((m: { npm: string }) => m.npm),
+      );
       missingMahasiswa = mahasiswaList.filter((m) => !existingSet.has(m.npm));
     }
 

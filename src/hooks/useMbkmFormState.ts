@@ -69,8 +69,7 @@ export function useMbkmFormState({ subTab }: UseMbkmFormStateArgs) {
           ? m.tempat_instansi
           : "Dengan dosen tetap dari perguruan tinggi homebase"),
       sumber_dana: m.sumber_dana || "",
-      nama_ketua_riset:
-        m.nama_ketua_riset || m.dosen_pembimbing_lapangan || "",
+      nama_ketua_riset: m.nama_ketua_riset || m.dosen_pembimbing_lapangan || "",
       bukti_dokumen: m.bukti_dokumen || "",
     });
     setShowAddModal(true);

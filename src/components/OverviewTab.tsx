@@ -55,7 +55,14 @@ interface CountCellProps {
   onDrill: (filter: { angkatan?: number; status?: string }) => void;
 }
 
-function CountCell({ angkatan, status, count, chipClass, title, onDrill }: CountCellProps) {
+function CountCell({
+  angkatan,
+  status,
+  count,
+  chipClass,
+  title,
+  onDrill,
+}: CountCellProps) {
   if (!count) return <span className={`chip ${chipClass}`}>{count}</span>;
   return (
     <button
@@ -165,7 +172,6 @@ export default function OverviewTab({
     setDrillFilter(filter);
     setShowAngkatanDetail(true);
   };
-
 
   // Per-angkatan detail data
   const angkatanDetail = mahasiswa.reduce<Record<number, AngkatanRow>>(

@@ -192,14 +192,26 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-function buildPrestasiRekapSvg(tingkatRows: Record<string, number | string>[], juaraRows: Record<string, number | string>[]) {
+function buildPrestasiRekapSvg(
+  tingkatRows: Record<string, number | string>[],
+  juaraRows: Record<string, number | string>[],
+) {
   const tingkatMax = Math.max(
     1,
-    ...tingkatRows.flatMap((row) => [Number(row.Internasional), Number(row.Nasional), Number(row.Jumlah)]),
+    ...tingkatRows.flatMap((row) => [
+      Number(row.Internasional),
+      Number(row.Nasional),
+      Number(row.Jumlah),
+    ]),
   );
   const juaraMax = Math.max(
     1,
-    ...juaraRows.flatMap((row) => [Number(row["Juara 1"]), Number(row["Juara 2"]), Number(row["Juara 3"]), Number(row.Jumlah)]),
+    ...juaraRows.flatMap((row) => [
+      Number(row["Juara 1"]),
+      Number(row["Juara 2"]),
+      Number(row["Juara 3"]),
+      Number(row.Jumlah),
+    ]),
   );
 
   const renderBarChart = (
