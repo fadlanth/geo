@@ -1,4 +1,10 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import CsvImporter from "./CsvImporter";
 import Pagination from "./Pagination";
 import DataActions from "./DataActions";
@@ -112,7 +118,6 @@ export default function MagangTab({
   useEscapeClose(showAddModal, () => setShowAddModal(false));
   useFocusTrap(showAddModal, magangModalRef);
 
-
   const [query, setQuery] = useState("");
   const searchQuery = useDebounce(query, 350);
   const [filterSemester, setFilterSemester] = useState("All");
@@ -122,7 +127,9 @@ export default function MagangTab({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const ROWS_PER_PAGE = 25;
 
-  useEffect(() => {
+  const [prevActiveSubTab, setPrevActiveSubTab] = useState(activeSubTab);
+  if (activeSubTab !== prevActiveSubTab) {
+    setPrevActiveSubTab(activeSubTab);
     if (activeSubTab === "magang" || activeSubTab === "penelitian") {
       setSubTab(activeSubTab);
       setViewMode("individu");
@@ -132,7 +139,7 @@ export default function MagangTab({
       setFilterSemester("All");
       setExpandedId(null);
     }
-  }, [activeSubTab]);
+  }
 
   const [showImport, setShowImport] = useState(false);
 
@@ -143,19 +150,26 @@ export default function MagangTab({
       tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [page]);
 
-
   // Partisi data
-  const magangList = mbkm.filter(
-    (m) => (m.jenis_kegiatan || "Magang Industri") === "Magang Industri",
+  const magangList = useMemo(
+    () =>
+      mbkm.filter(
+        (m) => (m.jenis_kegiatan || "Magang Industri") === "Magang Industri",
+      ),
+    [mbkm],
   );
-  const penelitianList = mbkm.filter(
-    (m) => m.jenis_kegiatan === "Penelitian Dosen",
+  const penelitianList = useMemo(
+    () => mbkm.filter((m) => m.jenis_kegiatan === "Penelitian Dosen"),
+    [mbkm],
   );
 
   const countMagang = magangList.length;
   const countPenelitian = penelitianList.length;
 
-  const currentDataset = subTab === "magang" ? magangList : penelitianList;
+  const currentDataset = useMemo(
+    () => (subTab === "magang" ? magangList : penelitianList),
+    [subTab, magangList, penelitianList],
+  );
 
   // Statistik Magang Industri
   const mhsMagang = new Set(magangList.map((m) => m.npm_mahasiswa)).size;
@@ -184,50 +198,63 @@ export default function MagangTab({
     {},
   );
 
-  const getDospemDalamName = (nip: string | null | undefined): string => {
-    if (!nip) return "";
-    const d = dosen.find((ds) => ds.nip === nip);
-    return d ? d.nama : nip;
-  };
+  const getDospemDalamName = useCallback(
+    (nip: string | null | undefined): string => {
+      if (!nip) return "";
+      const d = dosen.find((ds) => ds.nip === nip);
+      return d ? d.nama : nip;
+    },
+    [dosen],
+  );
 
   // Filter dataset aktif
-  const filteredCurrentData = currentDataset.filter((m) => {
-    const mhs = mahasiswa.find((s) => s.npm === m.npm_mahasiswa);
-    const mhsName = mhs ? mhs.nama.toLowerCase() : "";
-    const instansi = (m.tempat_instansi || "").toLowerCase();
-    const judul = (m.judul_topik_magang || "").toLowerCase();
-    const dospemDalam = getDospemDalamName(
-      m.nip_dosen_pembimbing_dalam,
-    ).toLowerCase();
-    const dospemLuar = (m.dosen_pembimbing_lapangan || "").toLowerCase();
-    const ketuaRiset = (m.nama_ketua_riset || "").toLowerCase();
-    const sumberDana = (m.sumber_dana || "").toLowerCase();
-    const bukti = (m.bukti_dokumen || "").toLowerCase();
-    const q = searchQuery.toLowerCase();
+  const filteredCurrentData = useMemo(() => {
+    return currentDataset.filter((m) => {
+      const mhs = mahasiswa.find((s) => s.npm === m.npm_mahasiswa);
+      const mhsName = mhs ? mhs.nama.toLowerCase() : "";
+      const instansi = (m.tempat_instansi || "").toLowerCase();
+      const judul = (m.judul_topik_magang || "").toLowerCase();
+      const dospemDalam = getDospemDalamName(
+        m.nip_dosen_pembimbing_dalam,
+      ).toLowerCase();
+      const dospemLuar = (m.dosen_pembimbing_lapangan || "").toLowerCase();
+      const ketuaRiset = (m.nama_ketua_riset || "").toLowerCase();
+      const sumberDana = (m.sumber_dana || "").toLowerCase();
+      const bukti = (m.bukti_dokumen || "").toLowerCase();
+      const q = searchQuery.toLowerCase();
 
-    const matchesSearch =
-      mhsName.includes(q) ||
-      instansi.includes(q) ||
-      judul.includes(q) ||
-      dospemDalam.includes(q) ||
-      dospemLuar.includes(q) ||
-      ketuaRiset.includes(q) ||
-      sumberDana.includes(q) ||
-      bukti.includes(q) ||
-      m.npm_mahasiswa.toLowerCase().includes(q);
+      const matchesSearch =
+        mhsName.includes(q) ||
+        instansi.includes(q) ||
+        judul.includes(q) ||
+        dospemDalam.includes(q) ||
+        dospemLuar.includes(q) ||
+        ketuaRiset.includes(q) ||
+        sumberDana.includes(q) ||
+        bukti.includes(q) ||
+        m.npm_mahasiswa.toLowerCase().includes(q);
 
-    const matchesSemester =
-      filterSemester === "All" || m.semester === filterSemester;
-    const matchesKeterlibatan =
-      filterKeterlibatan === "All" ||
-      (m.keterlibatan || "") === filterKeterlibatan;
+      const matchesSemester =
+        filterSemester === "All" || m.semester === filterSemester;
+      const matchesKeterlibatan =
+        filterKeterlibatan === "All" ||
+        (m.keterlibatan || "") === filterKeterlibatan;
 
-    return (
-      matchesSearch &&
-      matchesSemester &&
-      (subTab === "magang" ? true : matchesKeterlibatan)
-    );
-  });
+      return (
+        matchesSearch &&
+        matchesSemester &&
+        (subTab === "magang" ? true : matchesKeterlibatan)
+      );
+    });
+  }, [
+    currentDataset,
+    mahasiswa,
+    getDospemDalamName,
+    searchQuery,
+    filterSemester,
+    filterKeterlibatan,
+    subTab,
+  ]);
 
   const groupedProjects: GroupedProject[] = useMemo(() => {
     if (subTab !== "penelitian") return [];
@@ -313,9 +340,6 @@ export default function MagangTab({
     setEditingMbkm(null);
     setShowAddModal(true);
   };
-
-
-
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1598,7 +1622,8 @@ export default function MagangTab({
                                       <button
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          if (m.id_mbkm) onDeleteMbkm(m.id_mbkm);
+                                          if (m.id_mbkm)
+                                            onDeleteMbkm(m.id_mbkm);
                                         }}
                                         aria-label={`Hapus data ${subTab === "magang" ? "magang" : "riset"} ${m.npm_mahasiswa}`}
                                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 hover:border-rose-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 transition cursor-pointer"

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { Activity, Search, RefreshCw, Eye, X, Copy, Check } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { SkeletonTable } from "./Skeleton";
@@ -41,44 +41,51 @@ export default function AuditTab({
 
   useEscapeClose(Boolean(selectedLog), () => setSelectedLog(null));
 
-  const loadLogs = useCallback(async () => {
-    setIsLoadingLogs(true);
-    try {
-      const from = (page - 1) * ROWS_PER_PAGE;
-      const to = from + ROWS_PER_PAGE - 1;
-
-      let query = supabase
-        .from("audit_log")
-        .select("*", { count: "exact" })
-        .order("created_at", { ascending: false })
-        .range(from, to);
-
-      const cleanSearch = search.trim().replace(/[%_(),]/g, "");
-      if (cleanSearch) {
-        query = query.or(
-          `entitas.ilike.%${cleanSearch}%,aksi.ilike.%${cleanSearch}%,entitas_id.ilike.%${cleanSearch}%,actor_email.ilike.%${cleanSearch}%`,
-        );
-      }
-      const { data, error, count } = await query;
-      if (error) throw error;
-      setLogs((data as AuditLog[]) || []);
-      setTotalCount(count ?? 0);
-    } catch (err) {
-      triggerToast?.({
-        kind: "error",
-        title: "Gagal Memuat",
-        message: errMsg(err, "Tidak dapat memuat log audit."),
-      });
-      setLogs([]);
-      setTotalCount(0);
-    } finally {
-      setIsLoadingLogs(false);
-    }
-  }, [page, search, triggerToast]);
-
   useEffect(() => {
-    loadLogs();
-  }, [loadLogs, refreshKey]);
+    let ignore = false;
+    const fetchLogs = async () => {
+      try {
+        const from = (page - 1) * ROWS_PER_PAGE;
+        const to = from + ROWS_PER_PAGE - 1;
+
+        let query = supabase
+          .from("audit_log")
+          .select("*", { count: "exact" })
+          .order("created_at", { ascending: false })
+          .range(from, to);
+
+        const cleanSearch = search.trim().replace(/[%_(),]/g, "");
+        if (cleanSearch) {
+          query = query.or(
+            `entitas.ilike.%${cleanSearch}%,aksi.ilike.%${cleanSearch}%,entitas_id.ilike.%${cleanSearch}%,actor_email.ilike.%${cleanSearch}%`,
+          );
+        }
+        const { data, error, count } = await query;
+        if (ignore) return;
+        if (error) throw error;
+        setLogs((data as AuditLog[]) || []);
+        setTotalCount(count ?? 0);
+      } catch (err) {
+        if (ignore) return;
+        triggerToast?.({
+          kind: "error",
+          title: "Gagal Memuat",
+          message: errMsg(err, "Tidak dapat memuat log audit."),
+        });
+        setLogs([]);
+        setTotalCount(0);
+      } finally {
+        if (!ignore) {
+          setIsLoadingLogs(false);
+        }
+      }
+    };
+
+    void fetchLogs();
+    return () => {
+      ignore = true;
+    };
+  }, [page, search, refreshKey, triggerToast]);
 
   const totalPages = Math.ceil(totalCount / ROWS_PER_PAGE) || 1;
 
@@ -142,7 +149,10 @@ export default function AuditTab({
           </div>
           <IconButton
             label="Muat ulang log"
-            onClick={() => setRefreshKey((k) => k + 1)}
+            onClick={() => {
+              setIsLoadingLogs(true);
+              setRefreshKey((k) => k + 1);
+            }}
             icon={
               <RefreshCw
                 className={`w-4 h-4 ${isLoadingLogs ? "animate-spin" : ""}`}

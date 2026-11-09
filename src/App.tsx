@@ -123,7 +123,7 @@ export default function App() {
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
       if (!isTabAuthorized(activeTab, role)) {
-        setActiveTab("ringkasan");
+        queueMicrotask(() => setActiveTab("ringkasan"));
       }
     }
   }, [authLoading, isAuthenticated, activeTab, role, setActiveTab]);
@@ -237,32 +237,48 @@ export default function App() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchAllData = useCallback(async () => {
-    setIsRefreshing(true);
-    await Promise.all([
-      refreshDosen(),
-      refreshMahasiswa(),
-      refreshPrestasi(),
-      refreshAnggota(),
-      refreshAlumni(),
-      refreshMbkm(),
-    ]);
-    setIsRefreshing(false);
-  }, [
-    refreshDosen,
-    refreshMahasiswa,
-    refreshPrestasi,
-    refreshAnggota,
-    refreshAlumni,
-    refreshMbkm,
-  ]);
+  const fetchAllData = useCallback(
+    async (isManual = true) => {
+      if (isManual) {
+        setIsRefreshing(true);
+      }
+      try {
+        await Promise.all([
+          refreshDosen(),
+          refreshMahasiswa(),
+          refreshPrestasi(),
+          refreshAnggota(),
+          refreshAlumni(),
+          refreshMbkm(),
+        ]);
+      } finally {
+        if (isManual) {
+          setIsRefreshing(false);
+        }
+      }
+    },
+    [
+      refreshDosen,
+      refreshMahasiswa,
+      refreshPrestasi,
+      refreshAnggota,
+      refreshAlumni,
+      refreshMbkm,
+    ],
+  );
 
   // Muat data HANYA saat sesi sudah aktif
   useEffect(() => {
+    let ignore = false;
     if (!authLoading && isAuthenticated) {
-      setInitialLoading(true);
-      fetchAllData().finally(() => setInitialLoading(false));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sinkronisasi data awal saat sesi login aktif
+      fetchAllData(false).finally(() => {
+        if (!ignore) setInitialLoading(false);
+      });
     }
+    return () => {
+      ignore = true;
+    };
   }, [authLoading, isAuthenticated, fetchAllData]);
 
   if (authLoading) {

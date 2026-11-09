@@ -21,18 +21,22 @@ export default function ComboboxMahasiswa({
   required,
   disabled,
 }: ComboboxMahasiswaProps) {
-  const [inputValue, setInputValue] = useState("");
+  const selected = mahasiswa.find((m) => m.npm === value);
+  const [inputValue, setInputValue] = useState(
+    selected ? `${selected.nama} (${selected.npm})` : "",
+  );
+  const [prevValue, setPrevValue] = useState(value);
+
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightIdx, setHighlightIdx] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const selected = mahasiswa.find((m) => m.npm === value);
-
   // Sync inputValue when value changes externally (editing)
-  useEffect(() => {
+  if (value !== prevValue) {
+    setPrevValue(value);
     setInputValue(selected ? `${selected.nama} (${selected.npm})` : "");
-  }, [value, selected]);
+  }
 
   const filtered = mahasiswa.filter((m) => {
     const q = inputValue.toLowerCase();
