@@ -1,8 +1,14 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
 import CsvImporter from "./CsvImporter";
 import TracerImporterModal from "./TracerImporterModal";
 import Pagination from "./Pagination";
-import DataActions from "./DataActions";
+import TracerDataActions from "./TracerDataActions";
 import Button from "./Button";
 import IconButton from "./IconButton";
 import StatusChip from "./StatusChip";
@@ -65,9 +71,7 @@ import {
 import { getMahasiswaTahunLulus as getMahasiswaTahunLulusCore } from "../lib/tracerSelectors";
 import { fmt } from "../lib/format";
 import { renderDonutLabel } from "../lib/chartUtils";
-import {
-  exportToExcel,
-} from "../lib/exportUtils";
+import { exportToExcel } from "../lib/exportUtils";
 import { ToastOptions } from "./Toast";
 import { SkeletonTable, SkeletonCard, SkeletonChart } from "./Skeleton";
 import TracerFormModal, { TINGKAT_OPTIONS } from "./TracerFormModal";
@@ -132,6 +136,7 @@ export default function TracerTab({
 
   const [showImport, setShowImport] = useState(false);
   const [showDiktiImporter, setShowDiktiImporter] = useState(false);
+  const [isExportingMultiSheet, setIsExportingMultiSheet] = useState(false);
   const tracerModalRef = useRef<HTMLDivElement>(null);
 
   useEscapeClose(showImport, () => setShowImport(false));
@@ -141,7 +146,6 @@ export default function TracerTab({
     if (page > 1)
       tableRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [page]);
-
 
   // Map Dosen Wali (NIP -> Nama)
   const dosenMap = useMemo(() => buildDosenMap(dosen), [dosen]);
@@ -170,7 +174,6 @@ export default function TracerTab({
   useEscapeClose(showAddModal, () => setShowAddModal(false));
   useFocusTrap(showAddModal, tracerModalRef);
 
-
   // Kumpulan Tahun Kelulusan yang terdeteksi
   const tahunOptions = useMemo(
     () => computeTahunOptions(alumni, mahasiswa),
@@ -188,8 +191,7 @@ export default function TracerTab({
 
   // Filter Lulusan Mahasiswa berdasarkan Tahun Kelulusan
   const cohortLulusanMahasiswa = useMemo(
-    () =>
-      computeCohortLulusanMahasiswa(mahasiswa, alumni, filterTahun),
+    () => computeCohortLulusanMahasiswa(mahasiswa, alumni, filterTahun),
     [mahasiswa, alumni, filterTahun],
   );
 
@@ -420,8 +422,6 @@ export default function TracerTab({
     });
   }, [tahunOptions, mahasiswa, alumni, getMahasiswaTahunLulus]);
 
-
-
   const handleCopyUntrackedList = () => {
     if (untrackedAlumniList.length === 0) return;
     const textHeader = `Daftar Alumni Belum Terlacak (${filterTahun === "All" ? "Semua Tahun Lulus" : "Tahun Kelulusan " + filterTahun}) - Total: ${untrackedAlumniList.length} orang\n`;
@@ -508,7 +508,6 @@ export default function TracerTab({
       setIsSubmitting(false);
     }
   };
-
 
   const handleBulkImport = async (rawData: Record<string, unknown>[]) => {
     if (!onBulkImportAlumni || rawData.length === 0) return;
@@ -739,12 +738,13 @@ export default function TracerTab({
           >
             Tambah Data Tracer
           </Button>
-          <DataActions
+          <TracerDataActions
             onImportPusat={() => setShowDiktiImporter(true)}
-            onImportCsv={() => setShowImport(true)}
-            onImportExcel={() => setShowImport(true)}
+            onImportStandar={() => setShowImport(true)}
+            onExportCohort={handleExportAlumni}
             onExportMultiSheet={async () => {
               try {
+                setIsExportingMultiSheet(true);
                 const total = await exportTracerMultiSheet();
                 triggerToast?.({
                   kind: "success",
@@ -757,9 +757,12 @@ export default function TracerTab({
                   title: "Ekspor Gagal",
                   message: "Gagal mengekspor data tracer study ke Excel.",
                 });
+              } finally {
+                setIsExportingMultiSheet(false);
               }
             }}
-            onExportExcel={handleExportAlumni}
+            onExportAkreditasi={handleExportAkreditasiExcel}
+            isExportingMultiSheet={isExportingMultiSheet}
           />
         </div>
       </div>
